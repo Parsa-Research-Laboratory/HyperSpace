@@ -192,6 +192,9 @@ def run_hyperspace_experiment(X_true: Tensor, Y_true: Tensor, args: dict) -> tup
         ValueEncoderModule
     )
 
+    print("Initializing HyperSpace modules...")
+    print(f"X_true shape: {X_true.shape}, Y_true shape: {Y_true.shape}")
+
     # ------------------------------------------
     # Step 1: Initialize the HyperSpace modules
     # ------------------------------------------
@@ -203,7 +206,8 @@ def run_hyperspace_experiment(X_true: Tensor, Y_true: Tensor, args: dict) -> tup
         backend=hrr_backend
     )
     positional_encoder_module = PositionalEncoderModule(
-        backend=hrr_backend
+        backend=hrr_backend,
+        env_dim=X_true.shape[1]
     )
     positional_inversion_module = PositionalInversionModule(
         backend=hrr_backend
@@ -212,8 +216,15 @@ def run_hyperspace_experiment(X_true: Tensor, Y_true: Tensor, args: dict) -> tup
         backend=hrr_backend
     )
     value_encoder_module = ValueEncoderModule(
-        backend=hrr_backend
+        backend=hrr_backend,
+        value_dim=Y_true.shape[1]
     )
+
+    # ----------------
+    # "Training Loop"
+    # ----------------
+    positional_encodings, pe_latency, pe_macs = positional_encoder_module(X_true)
+    value_encodings, ve_latency, ve_macs = value_encoder_module(Y_true)
 
     # Placeholder for HyperSpace experiment logic
     print("Running HyperSpace experiment... (this is a placeholder)")
