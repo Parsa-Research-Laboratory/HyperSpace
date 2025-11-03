@@ -10,10 +10,12 @@ TODO
 
 ## Dependencies
 
-HyperSpace leverages Python 3.12, Pytorch, and Conda to enable the development and exploration of vector symbolic architectures applies to continuous spatial domains. Assuming you have conda or miniconda installed, you can create the dedicated hyperspace environment with the following command:
+HyperSpace leverages Python 3.12, Pytorch, and Conda to enable the development and exploration of vector symbolic architectures applies to continuous spatial domains. Assuming you have conda or miniconda installed, you can create the dedicated hyperspace environment with the following commands:
 
 ```bash
-bash create_env.sh
+conda create -n hyperspace_env python=3.12 -y
+conda activate hyperspace_env
+pip install -e .
 ```
 
 Once the environment is created, you can activate it with the following command:
