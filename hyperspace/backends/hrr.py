@@ -2,6 +2,8 @@
 import numpy as np
 import torch
 from torch import Tensor
+import torch.nn as nn
+from typing import Tuple
 
 from .base import BaseBackend
 
@@ -12,9 +14,54 @@ class HRRBackend(BaseBackend):
     Implements the continuous encoding, binding, and bundling operations
     as defined in the HyperSpace paper using HRR principles.
     """
-    def __init__(self, vector_dim: int, device: str = "cpu"):
+    def __init__(self, vector_dim: int, length_scale: float = 1.0, device: str = "cpu"):
         super().__init__(vector_dim, device)
         self.name = "HRR"
+        self.length_scale: float = length_scale
+
+        # Cache inverse length scale (replace division with mul)
+        self.register_buffer(
+            "_inv_length_scale",
+            torch.tensor(1.0 / float(length_scale), dtype=torch.float32),
+            persistent=False)
+        
+        # Register empty buffers
+        self.register_buffer(
+            "env_log_basis_fp32",
+            torch.empty(0, self.vector_dim, dtype=torch.float32, device=self.device),
+            persistent=False
+        )
+        self.register_buffer(
+            "value_basis_vectors",
+            torch.empty(0, self.vector_dim, dtype=torch.float32, device=self.device),
+            persistent=False
+        )
+        self.register_buffer(
+            "value_log_basis_fp32",
+            torch.empty(0, self.vector_dim, dtype=torch.float16, device=self.device),
+            persistent=False
+        )
+
+        # compile encoding kernel
+        self._encode_impl = torch.compile(
+            self._encode_impl,
+            mode="reduce-overhead",
+            fullgraph=False
+        )
+        self._bundle_impl = torch.compile(
+            self._bundle_impl,
+            mode="reduce-overhead",
+            fullgraph=False
+        )
+        
+    @staticmethod
+    def _encode_impl(basis_log: Tensor, x_norm: Tensor) -> Tensor:
+        return torch.exp(x_norm.unsqueeze(1) * basis_log)  # (B,D)
+
+    @staticmethod
+    def _bundle_impl(x: Tensor, dim: int) -> Tensor:
+        # simple unweighted superposition along `dim`
+        return x.sum(dim=dim)
 
     def create_random_vector(self, eps: float = 1e-3) -> Tensor:
         """
@@ -65,24 +112,83 @@ class HRRBackend(BaseBackend):
 
         return v
     
-    def continuous_encoding(self, basis: Tensor, x: Tensor) -> Tensor:
+    @torch.inference_mode()
+    def continuous_encoding(self, x: Tensor, indexes: Tensor) -> Tuple[Tensor, dict]:
         """
-        Continuous encoding method for HRR backend.
-        """
-        return super().continuous_encoding(basis, x)
+        Abstract definition of the continuous encoding method (\\mathcal{E})
+        from the HyperSpace paper.
+
+        Arguments:
+        ----------
+        x : torch.Tensor
+            Continuous value to be encoded. Shape should be (batch_size, ).
     
+        indexes : torch.Tensor
+            Indexes of the basis vectors to use for encoding. Shape should be (batch_size, ).
+
+        Returns:
+        -------
+        torch.Tensor
+            Encoded representation of the input value. Shape should be (batch_size, vectorD).
+        dict
+            Information dictionary containing any relevant metadata.
+        """
+
+        # --------------------------------
+        # validate input shapes
+        # --------------------------------
+        if x.dim() != 1:
+            raise ValueError("Input x must be a 1D tensor of shape (batch_size, ).")
+        if indexes.dim() != 1:
+            raise ValueError("Input indexes must be a 1D tensor of shape (batch_size, ).")
+        if x.shape[0] != indexes.shape[0]:
+            raise ValueError("Input x and indexes must have the same batch size.")
+        
+        # ------------------------------------------------
+        # perform fractional power encoding of each value
+        # ------------------------------------------------
+        bases_log = self.env_log_basis_fp32.index_select(0, indexes).float()
+        x_norm = (x * self._inv_length_scale).float()
+
+        encoded = self._encode_impl(bases_log, x_norm)
+
+        encoded = x.unsqueeze(1) ** indexes.unsqueeze(0)
+        info_dict = {
+            "original_values": x,
+            "indexes": indexes,
+        }
+
+        return encoded, info_dict
+
     def bind(self, a: Tensor, b: Tensor) -> Tensor:
         """
         Binding operation for HRR backend using circular convolution.
         """
         return super().bind(a, b)
 
-    def bundle(self, a: Tensor, b: Tensor) -> Tensor:
+    def bundle(self, a: Tensor, dim: int = 1) -> Tensor:
         """
         Bundling operation for HRR backend using vector addition.
         """
-        return super().bundle(a, b)
-    
+
+        if a.ndim != 3:
+            raise ValueError("Input tensor a must be 3-dimensional for bundling.")
+        
+        if a.shape[dim] < 1:
+            raise ValueError(f"Cannot bundle along dimension dim={dim} with size less than 1.")
+        
+        if dim != 1:
+            raise ValueError("Currently, only bundling along dimension 1 is supported.")
+
+        if a.dim() < 3:
+            raise ValueError("Input tensor a must have at least 2 dimensions for bundling.")
+
+        bundle = self._bundle_impl(a, dim)
+
+        info_dict = {}
+
+        return bundle, info_dict
+
     def similarity(self, a: Tensor, b: Tensor) -> Tensor:
         """
         Similarity operation for HRR backend using cosine similarity.
@@ -123,27 +229,51 @@ class HRRBackend(BaseBackend):
             print(f"Warning: env_dim {env_dim} is not an integer. Converting to {env_dim_new}.")
             env_dim = env_dim_new
 
+        # Build a fresh basis locally (avoid touching buffers until ready)
+        rows = []
         for _ in range(env_dim):
-            self.env_basis_vectors.append(self.create_random_vector())
+            v = self.create_random_vector()        # (D,)
+            v_f = torch.fft.fft(v)                 # HRR often stores basis in freq; if you want time-domain, remove this
+            rows.append(v_f.real)                  # ensure real (HRR base vectors are real in time; freq mag=1)
 
+        env = torch.stack(rows).to(self.device)    # (env_dim, D)
+        env = env.contiguous()
+
+        # Update buffers IN-PLACE
+        self.env_basis_vectors.resize_(env.shape).copy_(env)
+
+        # Precompute log basis for fractional encoding
+        eps = 1e-12
+        log_basis = torch.log(self.env_basis_vectors.clamp_min(eps))  # fp32 compute
+
+        self.env_log_basis_fp32.resize_(log_basis.shape).copy_(log_basis)
+
+    @torch.no_grad()
     def initialize_value_basis_vectors(self, value_dim: int) -> None:
         """
-        Initialize value basis vectors for HRR backend.
-
-        Arguments:
-            value_dim : int
-                The dimensionality of the values to encode.
+        Idempotent initializer for value basis vectors.
+        Populates buffers in-place: value_basis_vectors (value_dim, D)
+        and value_log_basis_fp16 (value_dim, D in fp16).
         """
-        if value_dim < 1:
-            raise ValueError("value_dim must be at least 1.")
-        
         if not isinstance(value_dim, int):
             value_dim_new = int(value_dim)
             print(f"Warning: value_dim {value_dim} is not an integer. Converting to {value_dim_new}.")
             value_dim = value_dim_new
+        if value_dim < 1:
+            raise ValueError("value_dim must be at least 1.")
 
-        for _ in range(value_dim):
-            self.value_basis_vectors.append(self.create_random_vector())
+        # Build locally first
+        rows = [self.create_random_vector() for _ in range(value_dim)]  # each (D,)
+        vals = torch.stack(rows).to(self.device).contiguous()           # (value_dim, D)
+
+        # Update buffers in-place (no re-register)
+        self.value_basis_vectors.resize_(vals.shape).copy_(vals)
+
+        # Precompute logs (clamp to keep log finite), store compact
+        eps = 1e-12
+        v_log = torch.log(self.value_basis_vectors.clamp_min(eps))      # fp32 compute
+        self.value_log_basis_fp32.resize_(v_log.shape).copy_(v_log)
+
     
     def _nearest_neighbor_regression(self, vectors: Tensor) -> Tensor:
         """
