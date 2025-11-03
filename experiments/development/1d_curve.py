@@ -24,6 +24,11 @@ def parse_arguments() -> dict:
         help="Directory to store experiment results."
     )
     parser.add_argument(
+        "--overwrite_scratch",
+        action="store_true",
+        help="Overwrite the scratch directory if it exists."
+    )
+    parser.add_argument(
         "--experiment_name",
         type=str,
         default="1d_curve_experiment",
@@ -57,7 +62,18 @@ def main():
         os.makedirs(experiment_dir)
         print(f"Created experiment directory at {experiment_dir}.")
     else:
-        raise FileExistsError("Experiment directory already exists. Please choose a different name or delete the existing directory.")
+        if args["overwrite_scratch"]:
+            print(f"Overwriting existing experiment directory at {experiment_dir}.")
+        else:
+            raise FileExistsError("Experiment directory already exists. Please choose a different name or delete the existing directory.")
+
+    # -------------------------------
+    # Save parameters to a JSON file
+    # -------------------------------
+    params_path: str = os.path.join(experiment_dir, "params.json")
+    with open(params_path, "w") as f:
+        json.dump(args, f, indent=4)
+    print(f"Saved experiment parameters to {params_path}.")
 
 if __name__ == "__main__":
     main()
