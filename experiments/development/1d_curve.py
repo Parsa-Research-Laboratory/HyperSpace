@@ -234,8 +234,8 @@ def run_hyperspace_experiment(X_true: Tensor, Y_true: Tensor, args: dict) -> tup
     # ----------------
     # "Training Loop"
     # ----------------
-    positional_encodings, pe_latency, pe_macs = positional_encoder_module(X_true)
-    value_encodings, ve_latency, ve_macs = value_encoder_module(Y_true)
+    positional_encodings, pe_info = positional_encoder_module(X_true)
+    value_encodings, ve_info = value_encoder_module(Y_true)
 
     # Placeholder for HyperSpace experiment logic
     print("Running HyperSpace experiment... (this is a placeholder)")
