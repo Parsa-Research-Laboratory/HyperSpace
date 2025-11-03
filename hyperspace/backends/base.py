@@ -1,8 +1,9 @@
 import torch
 from torch import Tensor
+import torch.nn as nn
 from typing import List, Tuple
 
-class BaseBackend:
+class BaseBackend(nn.Module):
     """
     Abstract base class for HyperSpace backends.
     """
@@ -17,10 +18,21 @@ class BaseBackend:
         device : str
             Device to run computations on (e.g., 'cpu' or 'cuda').
         """
+        super().__init__()
         self.vector_dim: int = vector_dim
         self.device = torch.device(device)
-        self.env_basis_vectors: List[Tensor] = []
-        self.value_basis_vectors: List[Tensor] = []
+
+        self.register_buffer(
+            "env_basis_vectors",
+            torch.empty(0, self.vector_dim, dtype=torch.float32, device=self.device),
+            persistent=False
+        )
+
+        self.register_buffer(
+            "value_basis_vectors",
+            torch.empty(0, self.vector_dim, dtype=torch.float32, device=self.device),
+            persistent=False
+        )
 
     def create_random_vector(self) -> torch.Tensor:
         """
@@ -33,22 +45,25 @@ class BaseBackend:
         """
         raise NotImplementedError("create_random_vector method must be implemented by subclasses.")
 
-    def continuous_encoding(self, basis: torch.Tensor, x: torch.Tensor) -> torch.Tensor:
+    def continuous_encoding(self, x: Tensor, indexes: Tensor) -> Tuple[Tensor, dict]:
         """
         Abstract definition of the continuous encoding method (\\mathcal{E})
         from the HyperSpace paper.
 
         Arguments:
         ----------
-        basis : torch.Tensor
-            Basis vectors for the encoding. Shape should be (batch_size, self.vectorD).
         x : torch.Tensor
             Continuous value to be encoded. Shape should be (batch_size, ).
     
+        indexes : torch.Tensor
+            Indexes of the basis vectors to use for encoding. Shape should be (batch_size, ).
+
         Returns:
         -------
         torch.Tensor
             Encoded representation of the input value. Shape should be (batch_size, vectorD).
+        dict
+            Information dictionary containing any relevant metadata.
         """
         raise NotImplementedError("continuous_encoding method must be implemented by subclasses.")
     
