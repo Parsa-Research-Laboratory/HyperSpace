@@ -182,6 +182,7 @@ def run_hyperspace_experiment(X_true: Tensor, Y_true: Tensor, args: dict) -> tup
     Run the HyperSpace experiment using the provided dataset and parameters.
     """
 
+    from hyperspace.backends import HRRBackend
     from hyperspace.core import (
         CleanupModule,
         MemoryStorageModule,
@@ -189,6 +190,29 @@ def run_hyperspace_experiment(X_true: Tensor, Y_true: Tensor, args: dict) -> tup
         PositionalInversionModule,
         RegressionModule,
         ValueEncoderModule
+    )
+
+    # ------------------------------------------
+    # Step 1: Initialize the HyperSpace modules
+    # ------------------------------------------
+    hrr_backend = HRRBackend(vector_dim=args["vectorD"], device=args["device"])
+    cleanup_module = CleanupModule(
+        backend=hrr_backend
+    )
+    memory_storage_module = MemoryStorageModule(
+        backend=hrr_backend
+    )
+    positional_encoder_module = PositionalEncoderModule(
+        backend=hrr_backend
+    )
+    positional_inversion_module = PositionalInversionModule(
+        backend=hrr_backend
+    )
+    regression_module = RegressionModule(
+        backend=hrr_backend
+    )
+    value_encoder_module = ValueEncoderModule(
+        backend=hrr_backend
     )
 
     # Placeholder for HyperSpace experiment logic
