@@ -62,7 +62,7 @@ class ValueEncoderModule(BaseModule):
         # encodings together
         # ----------------------------------------------------------
         phi_x_flat = phi_x_flat.view(values.shape[0], self.value_dim, -1) # Shape: (num_samples, env_dim, vectorD)
-        phi_x, bundle_info_dict = self.backend.bundle(phi_x_flat, dim=1) # Shape: (num_samples, vectorD)
+        phi_x, bind_info_dict = self.backend.bind(phi_x_flat) # Shape: (num_samples, vectorD)
 
-        total_dict = {**bind_info_dict, **bundle_info_dict}
+        total_dict = {**bind_info_dict, **bind_info_dict}
         return phi_x, total_dict

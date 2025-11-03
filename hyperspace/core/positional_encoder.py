@@ -67,6 +67,11 @@ class PositionalEncoderModule(BaseModule):
         # ----------------------------------------------------------
         # Shape: (num_samples * env_dim, vectorD)
         phi_x_flat, bind_info_dict = self.backend.continuous_encoding(x_flat, x_indexes)
+        # print(f"Positional Encodings shape: {phi_x_flat.shape}")
+        # print(f"Encoded {x_flat.shape[0]} positions into positional encodings.")
+        # print(f"Data Type: {phi_x_flat.dtype}, Device: {phi_x_flat.device}")
+
+        assert not torch.isnan(phi_x_flat).any(), "NaN detected"
 
         # ----------------------------------------------------------
         # Combine the individual axis encodings into a single
@@ -74,7 +79,9 @@ class PositionalEncoderModule(BaseModule):
         # encodings together
         # ----------------------------------------------------------
         phi_x_flat = phi_x_flat.view(x.shape[0], self.env_dim, -1) # Shape: (num_samples, env_dim, vectorD)
-        phi_x, bundle_info_dict = self.backend.bundle(phi_x_flat, dim=1) # Shape: (num_samples, vectorD)
+        # print(f"Reshaped Positional Encodings for binding: {phi_x_flat.shape}")
+        phi_x, bind_info_dict = self.backend.bind(phi_x_flat) # Shape: (num_samples, vectorD)
+        # assert not torch.isnan(phi_x).any(), "NaN detected"
 
-        total_dict = {**bind_info_dict, **bundle_info_dict}
+        total_dict = {**bind_info_dict, **bind_info_dict}
         return phi_x, total_dict
