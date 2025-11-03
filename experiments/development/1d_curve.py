@@ -47,6 +47,12 @@ def parse_arguments() -> dict:
         default="cpu",
         help="Device to run the experiment on."
     )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=42,
+        help="Random seed for reproducibility."
+    )
     args = parser.parse_args()
     return vars(args)
 
@@ -60,6 +66,11 @@ def main():
     print(f"Parameters:")
     print(json.dumps(args, indent=4))
     print("\n")
+
+    print("Setting random seed...")
+    torch.manual_seed(args["seed"])
+    np.random.seed(args["seed"])
+    print(f"Random seed set to {args['seed']}.")
 
     # -------------------------------
     # Set up experiment directory
