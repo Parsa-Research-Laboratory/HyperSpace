@@ -1,5 +1,6 @@
 import torch
-from typing import Tuple
+from torch import Tensor
+from typing import List, Tuple
 
 class BaseBackend:
     """
@@ -18,6 +19,8 @@ class BaseBackend:
         """
         self.vector_dim: int = vector_dim
         self.device = torch.device(device)
+        self.env_basis_vectors: List[Tensor] = []
+        self.value_basis_vectors: List[Tensor] = []
 
     def create_random_vector(self) -> torch.Tensor:
         """
@@ -236,6 +239,28 @@ class BaseBackend:
             Tensor on the appropriate device. Shape should be (batch_size, vectorD).
         """
         return tensor.to(self.device)
+    
+    def initialize_env_basis_vectors(self, env_dimensionality: int) -> None:
+        """
+        Initialize the environment basis vectors for positional encoding.
+
+        Arguments:
+        ----------
+        env_dimensionality : int
+            Dimensionality of the environment.
+        """
+        raise NotImplementedError("initialize_env_basis_vectors method must be implemented by subclasses.")
+    
+    def initialize_value_basis_vectors(self, value_dimensionality: int) -> None:
+        """
+        Initialize the value basis vectors for value encoding.
+
+        Arguments:
+        ----------
+        value_dimensionality : int
+            Dimensionality of the values.
+        """
+        raise NotImplementedError("initialize_value_basis_vectors method must be implemented by subclasses.")
     
     def _nearest_neighbor_regression(self, vectors: torch.Tensor) -> torch.Tensor:
         """

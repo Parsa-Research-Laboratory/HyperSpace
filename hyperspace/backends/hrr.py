@@ -1,5 +1,7 @@
 
 from torch._tensor import Tensor
+from typing import List
+
 from .base import BaseBackend
 
 class HRRBackend(BaseBackend):
@@ -60,6 +62,18 @@ class HRRBackend(BaseBackend):
         Apply weighting to the input tensor using the specified method.
         """
         return super().weight(tensor, weight)
+    
+    def initialize_env_basis_vectors(self, env_dim: int) -> None:
+        """
+        Initialize environment basis vectors for HRR backend.
+        """
+        return super().initialize_env_basis_vectors(env_dim)
+    
+    def initialize_value_basis_vectors(self, value_dimensionality: int) -> None:
+        """
+        Initialize value basis vectors for HRR backend.
+        """
+        return super().initialize_value_basis_vectors(value_dimensionality)
     
     def _nearest_neighbor_regression(self, vectors: Tensor) -> Tensor:
         """
