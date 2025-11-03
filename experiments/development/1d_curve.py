@@ -181,6 +181,16 @@ def run_hyperspace_experiment(X_true: Tensor, Y_true: Tensor, args: dict) -> tup
     """
     Run the HyperSpace experiment using the provided dataset and parameters.
     """
+
+    from hyperspace.core import (
+        CleanupModule,
+        MemoryStorageModule,
+        PositionalEncoderModule,
+        PositionalInversionModule,
+        RegressionModule,
+        ValueEncoderModule
+    )
+
     # Placeholder for HyperSpace experiment logic
     print("Running HyperSpace experiment... (this is a placeholder)")
     # Here you would initialize your HyperSpace model, train it, and get predictions
