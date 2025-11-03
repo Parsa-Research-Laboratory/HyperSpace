@@ -84,13 +84,16 @@ def main():
     # -------------------------------
     # Generate base curve data
     # -------------------------------
-    x_values: np.ndarray = np.linspace(-5, 5, 100)
-    y_values: np.ndarray = np.sin(x_values)
+    x_values: np.ndarray = np.linspace(0, 2 * np.pi, 100)
+    y_values: np.ndarray = np.sin(x_values)   
+    x_values /= (2 * np.pi)  # Normalize x to [0, 1]
+    y_values += 1
+    y_values /= 2  # Normalize y to [0, 1] 
     plt.figure(figsize=(10, 6))
     plt.plot(x_values, y_values, label="sin(x)", color="blue")
     plt.title("1D Curve: sin(x)")
-    plt.xlabel("x")
-    plt.ylabel("sin(x)")
+    plt.xlabel("x (rad normalized to [0, 1])")
+    plt.ylabel("sin(x) (normalized to [0, 1])")
     plt.legend()
     curve_path: str = os.path.join(experiment_dir, "curve.png")
     plt.savefig(curve_path)
@@ -100,8 +103,11 @@ def main():
     # -------------------------------
     # Sample points on the curve
     # -------------------------------
-    sampled_x: np.ndarray = np.linspace(-5, 5, args["num_points"])
+    sampled_x: np.ndarray = np.linspace(0, 2 * np.pi, args["num_points"])
     sampled_y: np.ndarray = np.sin(sampled_x)
+    sampled_x /= (2 * np.pi)  # Normalize x to [0, 1]
+    sampled_y += 1
+    sampled_y /= 2  # Normalize y to [0, 1]
     samples_path: str = os.path.join(experiment_dir, "sampled_points.npz")
     np.savez(samples_path, x=sampled_x, y=sampled_y)
     print(f"Saved sampled points to {samples_path}.")
@@ -113,8 +119,8 @@ def main():
     plt.plot(x_values, y_values, label="sin(x)", color="blue")
     plt.scatter(sampled_x, sampled_y, color="red", label="Sampled Points")
     plt.title("Sampled Points on 1D Curve")
-    plt.xlabel("x")
-    plt.ylabel("sin(x)")
+    plt.xlabel("x (rad normalized to [0, 1])")
+    plt.ylabel("sin(x) (normalized to [0, 1])")
     plt.legend()
     sampled_curve_path: str = os.path.join(experiment_dir, "sampled_curve.png")
     plt.savefig(sampled_curve_path)
