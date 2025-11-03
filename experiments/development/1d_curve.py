@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 import torch
+from torch import Tensor
 
 def parse_arguments() -> dict:
     """
@@ -127,6 +128,66 @@ def main():
     plt.close()
     print(f"Saved sampled curve plot to {sampled_curve_path}.")
 
+    # -----------------------------------
+    # Extract the dataset for HyperSpace
+    # -----------------------------------
+    X_true: Tensor = torch.from_numpy(sampled_x).float().unsqueeze(1)
+    Y_true: Tensor = torch.from_numpy(sampled_y).float().unsqueeze(1)
+
+    # --------------------------------------
+    # Run HyperSpace
+    # --------------------------------------
+    X_hat, y_hat, run_info = run_hyperspace_experiment(X_true, Y_true, args)
+
+    # ---------------------------------------
+    # Save predictions
+    # ---------------------------------------
+    predictions_path: str = os.path.join(experiment_dir, "predictions.npz")
+    np.savez(predictions_path, X_hat=X_hat.numpy(), y_hat=y_hat.numpy())
+    print(f"Saved predictions to {predictions_path}.")
+
+    # Plot predictions vs true values
+    plt.figure(figsize=(10, 6))
+    plt.plot(x_values, y_values, label="sin(x)", color="blue")
+    plt.scatter(sampled_x, sampled_y, color="red", label="Sampled Points", alpha=0.5)
+    plt.scatter(X_hat.numpy(), y_hat.numpy(), color="green", label="Predictions", alpha=0.5)
+    plt.title("HyperSpace Predictions on 1D Curve")
+    plt.xlabel("x (rad normalized to [0, 1])")
+    plt.ylabel("sin(x) (normalized to [0, 1])")
+    plt.legend()
+    predictions_curve_path: str = os.path.join(experiment_dir, "predictions_curve.png")
+    plt.savefig(predictions_curve_path)
+    plt.close()
+    print(f"Saved predictions curve plot to {predictions_curve_path}.")
+
+    # ----------------------------------
+    # Calculate and print error metrics
+    # ----------------------------------
+    mse: float = torch.mean((y_hat - Y_true) ** 2).item()
+    print(f"Mean Squared Error (MSE): {mse:.4f}")
+
+    # ----------------------------------
+    # print run info
+    # ----------------------------------
+    print("Run Info:")
+    print(json.dumps(run_info, indent=4))
+
+    # ----------------------------------
+    # Finish
+    # ----------------------------------
+    print("1D curve experiment completed successfully.")
+
+def run_hyperspace_experiment(X_true: Tensor, Y_true: Tensor, args: dict) -> tuple[Tensor, Tensor]:
+    """
+    Run the HyperSpace experiment using the provided dataset and parameters.
+    """
+    # Placeholder for HyperSpace experiment logic
+    print("Running HyperSpace experiment... (this is a placeholder)")
+    # Here you would initialize your HyperSpace model, train it, and get predictions
+    X_hat = X_true  # Placeholder: replace with actual predictions
+    y_hat = Y_true.clone()  # Placeholder: replace with actual predictions
+    y_hat += torch.randn_like(y_hat) * 0.05  # Add slight noise for demonstration
+    return X_hat, y_hat, {}
 
 
 if __name__ == "__main__":
