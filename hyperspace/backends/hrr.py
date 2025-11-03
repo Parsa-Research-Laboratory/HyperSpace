@@ -66,14 +66,40 @@ class HRRBackend(BaseBackend):
     def initialize_env_basis_vectors(self, env_dim: int) -> None:
         """
         Initialize environment basis vectors for HRR backend.
+
+        Arguments:
+            env_dim : int
+                The dimensionality of the environment to encode.
         """
-        return super().initialize_env_basis_vectors(env_dim)
-    
-    def initialize_value_basis_vectors(self, value_dimensionality: int) -> None:
+        if env_dim < 1:
+            raise ValueError("env_dim must be at least 1.")
+        
+        if not isinstance(env_dim, int):
+            env_dim_new = int(env_dim)
+            print(f"Warning: env_dim {env_dim} is not an integer. Converting to {env_dim_new}.")
+            env_dim = env_dim_new
+
+        for _ in range(env_dim):
+            self.env_basis_vectors.append(self.create_random_vector())
+
+    def initialize_value_basis_vectors(self, value_dim: int) -> None:
         """
         Initialize value basis vectors for HRR backend.
+
+        Arguments:
+            value_dim : int
+                The dimensionality of the values to encode.
         """
-        return super().initialize_value_basis_vectors(value_dimensionality)
+        if value_dim < 1:
+            raise ValueError("value_dim must be at least 1.")
+        
+        if not isinstance(value_dim, int):
+            value_dim_new = int(value_dim)
+            print(f"Warning: value_dim {value_dim} is not an integer. Converting to {value_dim_new}.")
+            value_dim = value_dim_new
+
+        for _ in range(value_dim):
+            self.value_basis_vectors.append(self.create_random_vector())
     
     def _nearest_neighbor_regression(self, vectors: Tensor) -> Tensor:
         """
