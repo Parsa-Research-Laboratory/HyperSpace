@@ -230,12 +230,15 @@ def run_hyperspace_experiment(X_true: Tensor, Y_true: Tensor, args: dict) -> tup
         backend=hrr_backend,
         value_dim=Y_true.shape[1]
     )
+    print("HyperSpace modules initialized.\n")
 
     # ----------------
     # "Training Loop"
     # ----------------
+    print("Encoding data...")
     positional_encodings, pe_info = positional_encoder_module(X_true)
     value_encodings, ve_info = value_encoder_module(Y_true)
+    memory, memory_info = memory_storage_module(positional_encodings, value_encodings)
 
     # Placeholder for HyperSpace experiment logic
     print("Running HyperSpace experiment... (this is a placeholder)")
