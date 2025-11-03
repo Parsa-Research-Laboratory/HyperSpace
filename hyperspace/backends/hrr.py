@@ -1,6 +1,7 @@
 
-from torch._tensor import Tensor
-from typing import List
+import numpy as np
+import torch
+from torch import Tensor
 
 from .base import BaseBackend
 
@@ -15,11 +16,54 @@ class HRRBackend(BaseBackend):
         super().__init__(vector_dim, device)
         self.name = "HRR"
 
-    def create_random_vector(self) -> Tensor:
+    def create_random_vector(self, eps: float = 1e-3) -> Tensor:
         """
         Create a random vector of dimension self.vectorD.
+
+        Arguments:
+            eps : float
+                Small value to avoid extreme angles in frequency domain.
+
+        Returns:
+            Tensor
+                A random vector of dimension self.vectorD.
         """
-        return super().create_random_vector()
+
+        a = torch.rand((self.vector_dim - 1) // 2)
+        sign = np.random.choice((-1, +1), len(a))
+        
+        sign = torch.from_numpy(sign).to(self.device)
+        a = a.to(self.device)
+
+        phi = sign * torch.pi * (eps + a * (1 - 2 * eps))
+
+        if not torch.all(torch.abs(phi) >= torch.pi * eps):
+            raise ValueError("Generated phi values are out of bounds (lower).")
+        if not torch.all(torch.abs(phi) <= torch.pi * (1 - eps)):
+            raise ValueError("Generated phi values are out of bounds (upper).")
+
+        fv = torch.zeros(self.vector_dim, dtype=torch.complex64, device=self.device)
+        fv[0] = 1
+        fv[1:(self.vector_dim + 1) // 2] = torch.cos(phi) + 1j * torch.sin(phi)
+        fv[(self.vector_dim // 2) + 1:] = torch.flip(torch.conj(fv[1:(self.vector_dim + 1) // 2]), dims=[0])
+
+        if self.vector_dim % 2 == 0:
+            fv[self.vector_dim // 2] = 1
+
+        if not torch.allclose(torch.abs(fv), torch.ones(fv.shape, device=self.device)):
+            raise ValueError("Generated frequency vector is not unit magnitude.")
+
+        v = torch.fft.ifft(fv)
+        v = v.real
+        v = v.to(self.device)
+
+        if not torch.allclose(torch.fft.fft(v), fv):
+            raise ValueError("Inverse FFT did not produce the expected frequency vector.")
+
+        if not torch.allclose(torch.linalg.norm(v), torch.ones(v.shape, device=self.device)):
+            raise ValueError("Inverse FFT did not produce the expected norm.")
+
+        return v
     
     def continuous_encoding(self, basis: Tensor, x: Tensor) -> Tensor:
         """
