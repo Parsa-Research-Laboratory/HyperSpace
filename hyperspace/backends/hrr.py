@@ -9,8 +9,8 @@ class HRRBackend(BaseBackend):
     Implements the continuous encoding, binding, and bundling operations
     as defined in the HyperSpace paper using HRR principles.
     """
-    def __init__(self, vectorDim: int, device: str = "cpu"):
-        super().__init__(vectorDim, device)
+    def __init__(self, vector_dim: int, device: str = "cpu"):
+        super().__init__(vector_dim, device)
         self.name = "HRR"
 
     def create_random_vector(self) -> Tensor:

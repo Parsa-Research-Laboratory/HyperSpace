@@ -5,7 +5,7 @@ class BaseBackend:
     """
     Abstract base class for HyperSpace backends.
     """
-    def __init__(self, vectorD: int, device: str = "cpu"):
+    def __init__(self, vector_dim: int, device: str = "cpu"):
         """
         Initialize the backend with the specified vector dimension and device.
 
@@ -16,7 +16,7 @@ class BaseBackend:
         device : str
             Device to run computations on (e.g., 'cpu' or 'cuda').
         """
-        self.vectorD: int = vectorD
+        self.vector_dim: int = vector_dim
         self.device = torch.device(device)
 
     def create_random_vector(self) -> torch.Tensor:
