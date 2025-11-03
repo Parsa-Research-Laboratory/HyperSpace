@@ -7,6 +7,59 @@ from typing import Tuple
 
 from .base import BaseBackend
 
+
+def _base_batch_encode_impl(basis_log: Tensor, x_norm: Tensor) -> Tensor:
+    """
+    Fractional power encoding implementation with all bases
+    already in complex log form.
+
+    Arguments:
+        basis_log : Tensor
+            Logarithm of basis vectors. Shape should be (B,D).
+        x_norm : Tensor
+            Normalized input values. Shape should be (B,).
+
+    Returns:
+        Tensor
+            Encoded representations in real domain. Shape
+            should be (B,D).
+    """
+    y = torch.exp(x_norm.unsqueeze(1) * basis_log)
+    y = torch.fft.ifft(y, dim=-1)
+    return y.real
+
+def _base_batch_bundle_impl(x: Tensor, dim: int) -> Tensor:
+    """
+    Batch bundling implementation for HRR backend.
+
+    Arguments:
+        x : Tensor
+            Input tensor to bundle. Shape should be (N, M, D).
+        dim : int
+            Dimension along which to bundle.
+    """
+    # simple unweighted superposition along `dim`
+    return x.sum(dim=dim)
+
+def _base_batch_bind_impl(x: Tensor, fft_dim: int = 2, bind_dim: int = 1) -> Tensor:
+    """
+    Batch binding implementation for HRR backend using circular
+    convolution.
+
+    Arguments:
+        x : Tensor
+            Input tensor to bind. Shape should be (N, M, D).
+        dim : int
+            Dimension along which to bind.
+
+    Returns:
+        Tensor
+            Bound tensor. Shape should be (N, 1, D).
+    """
+    x = torch.fft.fft(x, dim=fft_dim)
+    x = x.prod(dim=bind_dim, keepdim=True)
+    return torch.fft.ifft(x, dim=fft_dim).real
+
 class HRRBackend(BaseBackend):
     """
     Holographic Reduced Representations (HRR) backend implementation.
@@ -25,44 +78,40 @@ class HRRBackend(BaseBackend):
             torch.tensor(1.0 / float(length_scale), dtype=torch.float32),
             persistent=False)
         
-        # Register empty buffers
+        # Cache other buffers
         self.register_buffer(
-            "env_log_basis_fp32",
-            torch.empty(0, self.vector_dim, dtype=torch.float32, device=self.device),
+            "env_log_basis",
+            torch.empty(0, self.vector_dim, dtype=torch.complex64, device=self.device),
             persistent=False
         )
         self.register_buffer(
             "value_basis_vectors",
-            torch.empty(0, self.vector_dim, dtype=torch.float32, device=self.device),
+            torch.empty(0, self.vector_dim, dtype=torch.complex64, device=self.device),
             persistent=False
         )
         self.register_buffer(
-            "value_log_basis_fp32",
-            torch.empty(0, self.vector_dim, dtype=torch.float16, device=self.device),
+            "value_log_basis",
+            torch.empty(0, self.vector_dim, dtype=torch.complex64, device=self.device),
             persistent=False
         )
 
-        # compile encoding kernel
-        self._encode_impl = torch.compile(
-            self._encode_impl,
+        self._base_batch_encode_impl = torch.compile(
+            _base_batch_encode_impl,
             mode="reduce-overhead",
             fullgraph=False
         )
-        self._bundle_impl = torch.compile(
-            self._bundle_impl,
+        self._base_batch_bundle_impl = torch.compile(
+            _base_batch_bundle_impl,
             mode="reduce-overhead",
             fullgraph=False
         )
-        
-    @staticmethod
-    def _encode_impl(basis_log: Tensor, x_norm: Tensor) -> Tensor:
-        return torch.exp(x_norm.unsqueeze(1) * basis_log)  # (B,D)
+        self._base_batch_bind_impl = torch.compile(
+            _base_batch_bind_impl,
+            mode="reduce-overhead",
+            fullgraph=False
+        )
 
-    @staticmethod
-    def _bundle_impl(x: Tensor, dim: int) -> Tensor:
-        # simple unweighted superposition along `dim`
-        return x.sum(dim=dim)
-
+    @torch.inference_mode()
     def create_random_vector(self, eps: float = 1e-3) -> Tensor:
         """
         Create a random vector of dimension self.vectorD.
@@ -147,12 +196,19 @@ class HRRBackend(BaseBackend):
         # ------------------------------------------------
         # perform fractional power encoding of each value
         # ------------------------------------------------
-        bases_log = self.env_log_basis_fp32.index_select(0, indexes).float()
-        x_norm = (x * self._inv_length_scale).float()
+        bases_log = self.env_log_basis.index_select(0, indexes)
 
-        encoded = self._encode_impl(bases_log, x_norm)
+        assert not torch.isnan(bases_log).any(), "NaN detected"
 
-        encoded = x.unsqueeze(1) ** indexes.unsqueeze(0)
+        x_norm = (x * self._inv_length_scale)
+
+        assert not torch.isnan(x_norm).any(), "NaN detected"
+        encoded = self._base_batch_encode_impl(bases_log, x_norm)
+        assert not torch.isnan(encoded).any(), "NaN detected"
+
+        if encoded.shape != (x.shape[0], self.vector_dim):
+            raise ValueError(f"Encoded output has incorrect shape: {encoded.shape}")
+
         info_dict = {
             "original_values": x,
             "indexes": indexes,
@@ -160,11 +216,33 @@ class HRRBackend(BaseBackend):
 
         return encoded, info_dict
 
-    def bind(self, a: Tensor, b: Tensor) -> Tensor:
+    @torch.inference_mode()
+    def bind(self, a: Tensor) -> Tuple[Tensor, dict]:
         """
-        Binding operation for HRR backend using circular convolution.
+        Binding operation for HRR backend using circular convolution. The function
+        expects 3-dimensional tensors for batch processing. The function also expects
+        the input tensors to have the same shape. The binding is performed along the
+        dimension and we are assuming the vectors are in the complex domain.
+
+        Arguments:
+            a : Tensor
+                Input tensor to bind. Shape should be (N, M, D).
+
+        Returns:
+            Tensor
+                Bound tensor. Shape should be (N, D).
+            dict
+                Information dictionary.
         """
-        return super().bind(a, b)
+
+        if a.ndim != 3 :
+            raise ValueError("Input tensor must be 3-dimensional for binding.")
+        
+        a_hat = self._base_batch_bind_impl(a)
+
+        info_dict = {}
+
+        return a_hat, info_dict
 
     def bundle(self, a: Tensor, dim: int = 1) -> Tensor:
         """
@@ -183,7 +261,12 @@ class HRRBackend(BaseBackend):
         if a.dim() < 3:
             raise ValueError("Input tensor a must have at least 2 dimensions for bundling.")
 
-        bundle = self._bundle_impl(a, dim)
+        bundle = self._base_batch_bundle_impl(a, dim)
+
+        print(f"Bundled tensor shape: {bundle.shape}")
+    
+        if bundle.shape != (a.shape[0], a.shape[2]):
+            raise ValueError(f"Bundled output has incorrect shape: {bundle.shape}")
 
         info_dict = {}
 
@@ -231,22 +314,30 @@ class HRRBackend(BaseBackend):
 
         # Build a fresh basis locally (avoid touching buffers until ready)
         rows = []
+        log_rows = []
         for _ in range(env_dim):
             v = self.create_random_vector()        # (D,)
             v_f = torch.fft.fft(v)                 # HRR often stores basis in freq; if you want time-domain, remove this
-            rows.append(v_f.real)                  # ensure real (HRR base vectors are real in time; freq mag=1)
+            # v_f = torch.clamp(v_f, min=1e-7)  # avoid log(0)
+            rows.append(v_f)                       # ensure real (HRR base vectors are real in time; freq mag=1)
+            log_rows.append(torch.log(v_f))
 
         env = torch.stack(rows).to(self.device)    # (env_dim, D)
         env = env.contiguous()
 
+        log_env = torch.stack(log_rows).to(self.device)    # env_log = torch.clamp(log_env, min=-20.0)  # avoid extreme logs
+        log_env = log_env.contiguous()
+
+        assert not torch.isnan(env).any(), "NaN detected"
+
         # Update buffers IN-PLACE
         self.env_basis_vectors.resize_(env.shape).copy_(env)
 
-        # Precompute log basis for fractional encoding
-        eps = 1e-12
-        log_basis = torch.log(self.env_basis_vectors.clamp_min(eps))  # fp32 compute
+        assert not torch.isnan(self.env_basis_vectors).any(), "NaN detected"
 
-        self.env_log_basis_fp32.resize_(log_basis.shape).copy_(log_basis)
+        self.env_log_basis.resize_(env.shape).copy_(log_env)
+
+        assert not torch.isnan(self.env_log_basis).any(), "NaN detected"
 
     @torch.no_grad()
     def initialize_value_basis_vectors(self, value_dim: int) -> None:
@@ -264,15 +355,15 @@ class HRRBackend(BaseBackend):
 
         # Build locally first
         rows = [self.create_random_vector() for _ in range(value_dim)]  # each (D,)
+        rows = [torch.fft.fft(v) for v in rows] 
         vals = torch.stack(rows).to(self.device).contiguous()           # (value_dim, D)
 
         # Update buffers in-place (no re-register)
         self.value_basis_vectors.resize_(vals.shape).copy_(vals)
 
         # Precompute logs (clamp to keep log finite), store compact
-        eps = 1e-12
-        v_log = torch.log(self.value_basis_vectors.clamp_min(eps))      # fp32 compute
-        self.value_log_basis_fp32.resize_(v_log.shape).copy_(v_log)
+        v_log = torch.log(self.value_basis_vectors)      # fp32 compute
+        self.value_log_basis.resize_(v_log.shape).copy_(v_log)
 
     
     def _nearest_neighbor_regression(self, vectors: Tensor) -> Tensor:
