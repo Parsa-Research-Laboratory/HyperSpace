@@ -336,3 +336,16 @@ def test_not_implemented_initialize_value_basis_vectors():
 
     with pytest.raises(NotImplementedError):
         b.initialize_value_basis_vectors(2)
+
+def test_not_implemented_nearest_neighbor_regression():
+    """
+    ensure the `_nearest_neighbor_regression` method is not implemented
+    """
+    from hyperspace.backends.base import BaseBackend
+    import torch
+
+    b = BaseBackend(128)
+    dt1: torch.Tensor = torch.zeros(0)
+
+    with pytest.raises(NotImplementedError):
+        b._nearest_neighbor_regression(dt1)
