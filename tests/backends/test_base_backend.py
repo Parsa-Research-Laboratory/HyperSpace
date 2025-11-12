@@ -286,3 +286,17 @@ def test_not_implemented_weight():
 
     with pytest.raises(NotImplementedError):
         b.weight(dt1, w)
+
+def test_not_implemented_regression():
+    """
+    ensure the `regression` method is not implemented
+    """
+    from hyperspace.backends.base import BaseBackend
+    import torch
+
+    b = BaseBackend(128)
+    dt1: torch.Tensor = torch.zeros(1)
+    method: str = "nearest_neighbor"
+
+    with pytest.raises(NotImplementedError):
+        b.regression(dt1, method)
