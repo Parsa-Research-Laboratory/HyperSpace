@@ -179,3 +179,14 @@ def test_env_vector_device():
     b = BaseBackend(256, device=d)
     buffer = b.get_buffer(ENV_VECTOR_BUFFER_NAME)
     assert buffer.device == gtd
+
+def test_not_implemented_create_random_vector():
+    """
+    ensure the `create_random_vector` method is not implememted
+    """
+    from hyperspace.backends.base import BaseBackend
+
+    b = BaseBackend(128)
+
+    with pytest.raises(NotImplementedError):
+        b.create_random_vector()
