@@ -153,3 +153,16 @@ def test_env_vector_dtype():
         buffer = b.get_buffer(ENV_VECTOR_BUFFER_NAME)
 
         assert buffer.dtype == t
+
+def test_value_vector_device():
+    """
+    test the device of the value vector buffer
+    """
+    from hyperspace.backends.base import BaseBackend
+    import torch
+
+    d = "cpu"
+    gtd = torch.device(d)
+    b = BaseBackend(256, device=d)
+    buffer = b.get_buffer(VALUE_VECTOR_BUFFER_NAME)
+    assert buffer.device == gtd
