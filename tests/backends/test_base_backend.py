@@ -300,3 +300,17 @@ def test_not_implemented_regression():
 
     with pytest.raises(NotImplementedError):
         b.regression(dt1, method)
+
+def test_not_implemented_cleanup():
+    """
+    ensure the `cleanup` method is not implemented
+    """
+    from hyperspace.backends.base import BaseBackend
+    import torch
+
+    b = BaseBackend(128)
+    dt1: torch.Tensor = torch.zeros(1)
+    method: str = "resonator"
+
+    with pytest.raises(NotImplementedError):
+        b.cleanup(dt1, method)
