@@ -232,3 +232,18 @@ def test_not_implemented_bundle():
 
     with pytest.raises(NotImplementedError):
         b.bundle(dt1, dt2)
+
+def test_not_implemented_similarity():
+    """
+    ensure the `similarity` method is not implemented
+    """
+    from hyperspace.backends.base import BaseBackend
+    import torch
+
+    b = BaseBackend(128)
+    dt1: torch.Tensor = torch.zeros(1)
+    dt2: torch.Tensor = torch.zeros(1)
+
+    with pytest.raises(NotImplementedError):
+        b.similarity(dt1, dt2)
+
