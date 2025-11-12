@@ -241,22 +241,6 @@ class BaseBackend(nn.Module):
             raise ValueError(f"Unknown cleanup method: {method}")
 
         return cleaned_vectors
-
-    def to_device(self, tensor: torch.Tensor) -> torch.Tensor:
-        """
-        Move the tensor to the appropriate device.
-
-        Arguments:
-        ----------
-        tensor : torch.Tensor
-            Tensor to be moved. Shape should be (batch_size, self.vectorD).
-
-        Returns:
-        -------
-        torch.Tensor
-            Tensor on the appropriate device. Shape should be (batch_size, vectorD).
-        """
-        return tensor.to(self.device)
     
     def initialize_env_basis_vectors(self, env_dimensionality: int) -> None:
         """
