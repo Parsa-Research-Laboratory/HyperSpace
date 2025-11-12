@@ -319,7 +319,7 @@ class HRRBackend(BaseBackend):
             v = self.create_random_vector()        # (D,)
             v_f = torch.fft.fft(v)                 # HRR often stores basis in freq; if you want time-domain, remove this
             # v_f = torch.clamp(v_f, min=1e-7)  # avoid log(0)
-            rows.append(v_f)                       # ensure real (HRR base vectors are real in time; freq mag=1)
+            rows.append(v)                       # ensure real (HRR base vectors are real in time; freq mag=1)
             log_rows.append(torch.log(v_f))
 
         env = torch.stack(rows).to(self.device)    # (env_dim, D)
