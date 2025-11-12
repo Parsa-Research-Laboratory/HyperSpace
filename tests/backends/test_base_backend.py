@@ -205,3 +205,16 @@ def test_not_implemented_continuous_encoding():
     with pytest.raises(NotImplementedError):
         b.continuous_encoding(dt1, dt2)
     
+def test_not_implemented_bind():
+    """
+    ensure the `bind` method is not implemented
+    """
+    from hyperspace.backends.base import BaseBackend
+    import torch
+
+    b = BaseBackend(128)
+    dt1: torch.Tensor = torch.zeros(1)
+    dt2: torch.Tensor = torch.zeros(1)
+
+    with pytest.raises(NotImplementedError):
+        b.bind(dt1, dt2)
