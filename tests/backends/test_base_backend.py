@@ -349,3 +349,16 @@ def test_not_implemented_nearest_neighbor_regression():
 
     with pytest.raises(NotImplementedError):
         b._nearest_neighbor_regression(dt1)
+
+def test_not_implemented_neural_network_regression():
+    """
+    ensure the `_neural_network_regression` method is not implemented
+    """
+    from hyperspace.backends.base import BaseBackend
+    import torch
+
+    b = BaseBackend(128)
+    dt1: torch.Tensor = torch.zeros(0)
+
+    with pytest.raises(NotImplementedError):
+        b._neural_network_regression(dt1)
