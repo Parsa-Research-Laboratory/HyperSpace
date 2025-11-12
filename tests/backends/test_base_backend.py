@@ -98,3 +98,20 @@ def test_value_vector_dimensionality():
         assert len(buffer.shape) == 2
         assert buffer.shape[0] == 0
         assert buffer.shape[1] == d
+
+def test_env_vector_dimensionality():
+    """
+    test the dimensionality of the env vector buffer
+    """
+    from hyperspace.backends.base import BaseBackend
+
+    dims: List[int] = [32, 64, 128]
+
+    for d in dims:
+        b = BaseBackend(d)
+
+        buffer = b.get_buffer(ENV_VECTOR_BUFFER_NAME)
+
+        assert len(buffer.shape) == 2
+        assert buffer.shape[0] == 0
+        assert buffer.shape[1] == d
