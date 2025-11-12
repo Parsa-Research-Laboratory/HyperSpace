@@ -41,3 +41,42 @@ def test_device_init():
     b = BaseBackend(vector_dim=256, device="cpu")
 
     assert b.device == gtd
+
+def test_vector_type_init():
+    """
+    test initialization of different vector data types; should
+    have an internal value that matches the desired type
+    """
+    from hyperspace.backends.base import BaseBackend
+    import torch
+
+    types: List[torch.dtype] = [torch.float32, torch.complex64]
+
+    for t in types:
+        b = BaseBackend(
+            vector_dim=128,
+            vector_dtype=t
+        )
+        assert b.vector_dtype == t
+
+def test_exist_value_vector_buffer():
+    """
+    test if the register buffer for the value vectors exists
+    """
+    from hyperspace.backends.base import BaseBackend
+
+    b = BaseBackend(256)
+    buffer_name: str = "value_basis_vectors"
+    
+    assert buffer_name in dict(b.named_buffers())
+
+def test_exist_env_vector_buffer():
+    """
+    test if the register buffer for the env vectors exists
+    """
+    from hyperspace.backends.base import BaseBackend
+
+    b = BaseBackend(256)
+    buffer_name: str = "env_basis_vectors"
+    
+    assert buffer_name in dict(b.named_buffers())

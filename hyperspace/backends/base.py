@@ -7,30 +7,33 @@ class BaseBackend(nn.Module):
     """
     Abstract base class for HyperSpace backends.
     """
-    def __init__(self, vector_dim: int, device: str = "cpu"):
+    def __init__(self, vector_dim: int, vector_dtype: torch.dtype = torch.float32, device: str = "cpu"):
         """
         Initialize the backend with the specified vector dimension and device.
 
         Arguments:
         ----------
-        vectorD : int
+        vector_dim : int
             Dimension of the vectors to be used in the backend.
+        vector_dtype: torch.dtype
+            The type of values stored within the hypervectors.
         device : str
             Device to run computations on (e.g., 'cpu' or 'cuda').
         """
         super().__init__()
         self.vector_dim: int = vector_dim
+        self.vector_dtype: torch.dtype = vector_dtype
         self.device = torch.device(device)
 
         self.register_buffer(
             "env_basis_vectors",
-            torch.empty(0, self.vector_dim, dtype=torch.float32, device=self.device),
+            torch.empty(0, self.vector_dim, dtype=self.vector_dtype, device=self.device),
             persistent=False
         )
 
         self.register_buffer(
             "value_basis_vectors",
-            torch.empty(0, self.vector_dim, dtype=torch.float32, device=self.device),
+            torch.empty(0, self.vector_dim, dtype=self.vector_dtype, device=self.device),
             persistent=False
         )
 
