@@ -4,6 +4,9 @@
 import pytest
 from typing import List
 
+ENV_VECTOR_BUFFER_NAME: str = "env_basis_vectors"
+VALUE_VECTOR_BUFFER_NAME: str = "value_basis_vectors"
+
 def test_no_arg_init():
     """
     test initialization with no argument; should
@@ -66,9 +69,8 @@ def test_exist_value_vector_buffer():
     from hyperspace.backends.base import BaseBackend
 
     b = BaseBackend(256)
-    buffer_name: str = "value_basis_vectors"
     
-    assert buffer_name in dict(b.named_buffers())
+    assert VALUE_VECTOR_BUFFER_NAME in dict(b.named_buffers())
 
 def test_exist_env_vector_buffer():
     """
@@ -77,6 +79,22 @@ def test_exist_env_vector_buffer():
     from hyperspace.backends.base import BaseBackend
 
     b = BaseBackend(256)
-    buffer_name: str = "env_basis_vectors"
     
-    assert buffer_name in dict(b.named_buffers())
+    assert ENV_VECTOR_BUFFER_NAME in dict(b.named_buffers())
+
+def test_value_vector_dimensionality():
+    """
+    test the dimensionality of the value vector buffer
+    """
+    from hyperspace.backends.base import BaseBackend
+
+    dims: List[int] = [32, 64, 128]
+
+    for d in dims:
+        b = BaseBackend(d)
+
+        buffer = b.get_buffer(VALUE_VECTOR_BUFFER_NAME)
+
+        assert len(buffer.shape) == 2
+        assert buffer.shape[0] == 0
+        assert buffer.shape[1] == d
