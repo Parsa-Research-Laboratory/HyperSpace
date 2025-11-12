@@ -247,6 +247,19 @@ def test_not_implemented_similarity():
     with pytest.raises(NotImplementedError):
         b.similarity(dt1, dt2)
 
+def test_not_implemented_normalize():
+    """
+    ensure the `normalize` method is not implemented
+    """
+    from hyperspace.backends.base import BaseBackend
+    import torch
+
+    b = BaseBackend(128)
+    dt1: torch.Tensor = torch.zeros(1)
+
+    with pytest.raises(NotImplementedError):
+        b.normalize(dt1)
+
 def test_not_implemented_invert():
     """
     ensure the `invert` method is not implemented
