@@ -24,6 +24,12 @@ Once the environment is created, you can activate it with the following command:
 conda activate hyperspace_env
 ```
 
+If desired, you can also test the functionality of HyperSpace with the following command:
+
+```bash
+pytest
+```
+
 You are now ready to begin leveraging the HyperSpace framework. If you have any questions or concerns, please reach out the maintainer listed in `setup.py`.
 
 ## Acknowledgements
