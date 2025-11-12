@@ -314,3 +314,25 @@ def test_not_implemented_cleanup():
 
     with pytest.raises(NotImplementedError):
         b.cleanup(dt1, method)
+
+def test_not_implemented_initialize_env_basis_vectors():
+    """
+    ensure the `initialize_env_basis_vectors` method is not implemented
+    """
+    from hyperspace.backends.base import BaseBackend
+
+    b = BaseBackend(128)
+
+    with pytest.raises(NotImplementedError):
+        b.initialize_env_basis_vectors(2)
+
+def test_not_implemented_initialize_value_basis_vectors():
+    """
+    ensure the `initialize_value_basis_vectors` method is not implemented
+    """
+    from hyperspace.backends.base import BaseBackend
+
+    b = BaseBackend(128)
+
+    with pytest.raises(NotImplementedError):
+        b.initialize_value_basis_vectors(2)
