@@ -190,3 +190,18 @@ def test_not_implemented_create_random_vector():
 
     with pytest.raises(NotImplementedError):
         b.create_random_vector()
+
+def test_not_implemented_continuous_encoding():
+    """
+    ensure the `continuous_encoding` method is not implemented
+    """
+    from hyperspace.backends.base import BaseBackend
+    import torch
+
+    b = BaseBackend(128)
+    dt1: torch.Tensor = torch.zeros(1)
+    dt2: torch.Tensor = torch.zeros(1)
+
+    with pytest.raises(NotImplementedError):
+        b.continuous_encoding(dt1, dt2)
+    
