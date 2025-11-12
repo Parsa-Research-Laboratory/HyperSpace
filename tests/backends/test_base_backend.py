@@ -375,3 +375,16 @@ def test_not_implemented_resonator_cleanup():
 
     with pytest.raises(NotImplementedError):
         b._resonator_cleanup(dt1)
+
+def test_not_implemented_hopfield_cleanup():
+    """
+    ensure the `_hopfield_cleanup` method is not implemented
+    """
+    from hyperspace.backends.base import BaseBackend
+    import torch
+
+    b = BaseBackend(128)
+    dt1: torch.Tensor = torch.zeros(0)
+
+    with pytest.raises(NotImplementedError):
+        b._hopfield_cleanup(dt1)
