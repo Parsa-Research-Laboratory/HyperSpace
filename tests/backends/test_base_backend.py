@@ -115,3 +115,22 @@ def test_env_vector_dimensionality():
         assert len(buffer.shape) == 2
         assert buffer.shape[0] == 0
         assert buffer.shape[1] == d
+
+def test_value_vector_dimensionality():
+    """
+    test the dimensionality of the value vector buffer
+    """
+    from hyperspace.backends.base import BaseBackend
+    import torch
+
+    types: List[torch.dtype] = [torch.float32, torch.complex64]
+
+    for t in types:
+        b = BaseBackend(
+            vector_dim=128,
+            vector_dtype=t
+        )
+
+        buffer = b.get_buffer(VALUE_VECTOR_BUFFER_NAME)
+
+        assert buffer.dtype == t
