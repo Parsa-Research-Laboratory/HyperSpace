@@ -242,24 +242,24 @@ class BaseBackend(nn.Module):
 
         return cleaned_vectors
     
-    def initialize_env_basis_vectors(self, env_dimensionality: int) -> None:
+    def initialize_env_basis_vectors(self, env_dim: int) -> None:
         """
         Initialize the environment basis vectors for positional encoding.
 
         Arguments:
         ----------
-        env_dimensionality : int
+        env_dim : int
             Dimensionality of the environment.
         """
         raise NotImplementedError("initialize_env_basis_vectors method must be implemented by subclasses.")
     
-    def initialize_value_basis_vectors(self, value_dimensionality: int) -> None:
+    def initialize_value_basis_vectors(self, value_dim: int) -> None:
         """
         Initialize the value basis vectors for value encoding.
 
         Arguments:
         ----------
-        value_dimensionality : int
+        value_dim : int
             Dimensionality of the values.
         """
         raise NotImplementedError("initialize_value_basis_vectors method must be implemented by subclasses.")
