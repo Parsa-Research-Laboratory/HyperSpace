@@ -19,6 +19,7 @@ setup(
     install_requires=[
         "IPython",
         "ipykernel",
+        "pytest",
         "matplotlib",
         "scipy",
         "torch",
