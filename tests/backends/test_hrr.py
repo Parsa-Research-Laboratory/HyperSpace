@@ -130,6 +130,49 @@ def test_base_single_bind():
 
     assert np.allclose(v_out_numpy, v_bind.numpy(), rtol=1e-5, atol=1e-7)
 
+def test_base_batch_bind_batch():
+    """
+    Test the batched bind function against NumPy FFT implementation.
+    """
+    import numpy as np
+    import torch
+    from torch import Generator
+
+    from hyperspace.backends.hrr import (
+        _base_create_single_vector,
+        _base_batch_bind
+    )
+
+    B: int = 8     # batch size
+    D: int = 256   # vector dimensionality
+
+    gen = Generator().manual_seed(0)
+
+    # Build batched tensors: (B, D)
+    v1_list = [_base_create_single_vector(D, gen) for _ in range(B)]
+    v2_list = [_base_create_single_vector(D, gen) for _ in range(B)]
+
+    v1 = torch.stack(v1_list, dim=0)  # (B, D)
+    v2 = torch.stack(v2_list, dim=0)  # (B, D)
+
+    v_bind_batch = _base_batch_bind(v1, v2)  # (B, D)
+
+    # NumPy reference
+    v1_numpy = v1.numpy()  # (B, D)
+    v2_numpy = v2.numpy()  # (B, D)
+
+    v1_numpy_fft = np.fft.fft(v1_numpy, axis=-1)
+    v2_numpy_fft = np.fft.fft(v2_numpy, axis=-1)
+    v_out_numpy_fft = v1_numpy_fft * v2_numpy_fft
+    v_out_numpy = np.fft.ifft(v_out_numpy_fft, axis=-1).real  # (B, D)
+
+    assert np.allclose(
+        v_out_numpy,
+        v_bind_batch.numpy(),
+        rtol=1e-5,
+        atol=1e-7,
+    )
+
 # def test_base_single_fpe():
 #     """
 #     Test the functionality of the base fractional

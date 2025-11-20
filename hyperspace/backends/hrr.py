@@ -129,6 +129,33 @@ def _base_single_bind(v1: Tensor, v2: Tensor) -> Tensor:
 
     return v_out
 
+def _base_batch_bind(v1: Tensor, v2: Tensor) -> Tensor:
+    """
+    Batched HRR binding via FFT.
+
+    v1: (B, D)
+    v2: (B, D)
+    returns: (B, D)
+    """
+    if not isinstance(v1, Tensor):
+        raise TypeError(f"expected v1 to be a Tensor; got {type(v1)}")
+    if not isinstance(v2, Tensor):
+        raise TypeError(f"expected v2 to be a Tensor; got {type(v2)}")
+
+    if v1.shape != v2.shape:
+        raise ValueError(f"expected v1 and v2 to have the same shape; got {v1.shape} and {v2.shape}")
+    if v1.ndim != 2:
+        raise ValueError(f"expected v1 to be (B, D); got {v1.shape}")
+
+    # FFT along the last dimension (D), broadcast across batch (B)
+    v1_fft = torch.fft.fft(v1, dim=-1)
+    v2_fft = torch.fft.fft(v2, dim=-1)
+
+    v_out_fft = v1_fft * v2_fft
+    v_out = torch.fft.ifft(v_out_fft, dim=-1).real
+
+    return v_out
+
 def _base_batch_encode_impl(basis_log: Tensor, x_norm: Tensor) -> Tensor:
     """
     Fractional power encoding implementation with all bases
