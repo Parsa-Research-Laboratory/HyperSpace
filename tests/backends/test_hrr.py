@@ -42,6 +42,22 @@ def test_base_create_single_vector_non_int_vector_dim():
             gen=Generator(device="cpu")
         )
 
+def test_base_create_single_vector_negative_vector_dim():
+    """
+    test that the create random vector function catches
+    negative dimensionalities
+    """
+    from torch import Generator
+    from hyperspace.backends.hrr import _base_create_single_vector
+
+    vd: int = -1
+
+    with pytest.raises(ValueError):
+        _ = _base_create_single_vector(
+            vector_dim=vd,
+            gen=Generator(device="cpu")
+        )
+
 # def test_base_single_fpe():
 #     """
 #     Test the functionality of the base fractional
