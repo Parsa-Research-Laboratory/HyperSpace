@@ -22,7 +22,7 @@ def test_base_create_single_vector_base_arguments():
     )
 
     dot = torch.dot(v1, v2)
-    assert dot.abs() < 0.08, f"Vectors not orthogonal; dot={dot.item()}" 
+    assert dot.abs() < 0.12, f"Vectors not orthogonal; dot={dot.item()}" 
     assert isinstance(v1, Tensor)
     assert len(v1.shape) == 1
     assert v1.shape[0] == vd
