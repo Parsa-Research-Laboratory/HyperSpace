@@ -87,6 +87,22 @@ def test_base_create_single_vector_invalid_eps_type():
         )
 
 
+def test_base_create_single_vector_negative_eps():
+    """
+    test that the create_single_vector function catches
+    when eps is negative
+    """
+    from torch import Generator
+    from hyperspace.backends.hrr import _base_create_single_vector
+
+    with pytest.raises(ValueError):
+        _ = _base_create_single_vector(
+            vector_dim=128,
+            gen=Generator(),
+            eps=-1.0
+        )
+
+
 # def test_base_single_fpe():
 #     """
 #     Test the functionality of the base fractional
