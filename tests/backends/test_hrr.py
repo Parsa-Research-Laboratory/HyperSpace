@@ -99,7 +99,7 @@ def test_base_create_single_vector_negative_eps():
         _ = _base_create_single_vector(
             vector_dim=128,
             gen=Generator(),
-            eps=-1.0
+            eps=0.0
         )
 
 
