@@ -58,6 +58,19 @@ def test_base_create_single_vector_negative_vector_dim():
             gen=Generator(device="cpu")
         )
 
+def test_base_create_single_vector_invalid_generator():
+    """
+    test that the create random vector functon catches objects
+    that are not true torch generators
+    """
+    from hyperspace.backends.hrr import _base_create_single_vector
+
+    with pytest.raises(TypeError):
+        _ = _base_create_single_vector(
+            vector_dim=20,
+            gen=int(5)
+        )
+
 # def test_base_single_fpe():
 #     """
 #     Test the functionality of the base fractional
