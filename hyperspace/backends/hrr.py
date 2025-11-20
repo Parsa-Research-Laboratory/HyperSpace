@@ -1,12 +1,84 @@
 
 import numpy as np
 import torch
-from torch import Tensor
-import torch.nn as nn
+from torch import device, Generator, Tensor
 from typing import Tuple
 
 from .base import BaseBackend
 
+def _base_create_single_vector(
+        vector_dim: int,
+        gen: Generator,
+        eps: float = 1e-3,
+        dev: device = torch.device("cpu")
+    ) -> Tensor:
+    """
+    Generate a randomly initialized HRR
+
+    Arguments:
+    ----------
+        vector_dim: int
+            The size of the vector to generate
+        rng:
+    """
+    if not isinstance(vector_dim, int):
+        raise TypeError(f"vector_dim should be an integer; got {type(vector_dim)}")
+
+    if vector_dim <= 0:
+        raise ValueError(f"vector_dim should be > 0; got {vector_dim}")
+    
+    if not isinstance(gen, Generator):
+        raise TypeError(f"gen should be a torch.Generator; got {type(gen)}")
+    
+    if not isinstance(eps, float):
+        raise TypeError(f"eps should be a float; got {type(eps)}")
+
+    if eps <= 0:
+        raise ValueError(f"eps should be > 0; got {eps}")
+    
+    if not isinstance(dev, device):
+        raise TypeError(f"dev should be a valid torch.device; got {type(dev)}")
+    
+    if dev != gen.device:
+        raise AttributeError(f"the generator should be on the same device; got {gen.device} and {dev}")
+    
+    a = torch.rand((vector_dim - 1) // 2, generator=gen)
+    sign = np.random.choice((-1, +1), len(a))
+    
+    sign = torch.from_numpy(sign).to(dev)
+    a = a.to(dev)
+
+    phi = sign * torch.pi * (eps + a * (1 - 2 * eps))
+
+    if not torch.all(torch.abs(phi) >= torch.pi * eps):
+        raise ValueError("Generated phi values are out of bounds (lower).")
+    if not torch.all(torch.abs(phi) <= torch.pi * (1 - eps)):
+        raise ValueError("Generated phi values are out of bounds (upper).")
+
+    fv = torch.zeros(vector_dim, dtype=torch.complex64, device=dev)
+    fv[0] = 1
+    fv[1:(vector_dim + 1) // 2] = torch.cos(phi) + 1j * torch.sin(phi)
+    fv[(vector_dim // 2) + 1:] = torch.flip(
+        torch.conj(fv[1:(vector_dim + 1) // 2]), dims=[0]
+    )
+
+    if vector_dim % 2 == 0:
+        fv[vector_dim // 2] = 1
+
+    if not torch.allclose(torch.abs(fv), torch.ones(fv.shape, device=dev)):
+        raise ValueError("Generated frequency vector is not unit magnitude.")
+
+    v = torch.fft.ifft(fv)
+    v = v.real
+    v = v.to(dev)
+
+    if not torch.allclose(torch.fft.fft(v), fv):
+        raise ValueError("Inverse FFT did not produce the expected frequency vector.")
+
+    if not torch.allclose(torch.linalg.norm(v), torch.ones(v.shape, device=dev)):
+        raise ValueError("Inverse FFT did not produce the expected norm.")
+    
+    return v
 
 def _base_batch_encode_impl(basis_log: Tensor, x_norm: Tensor) -> Tensor:
     """
@@ -95,29 +167,13 @@ class HRRBackend(BaseBackend):
             persistent=False
         )
 
-        self._base_batch_encode_impl = torch.compile(
-            _base_batch_encode_impl,
-            mode="reduce-overhead",
-            fullgraph=False
-        )
-        self._base_batch_bundle_impl = torch.compile(
-            _base_batch_bundle_impl,
-            mode="reduce-overhead",
-            fullgraph=False
-        )
-        self._base_batch_bind_impl = torch.compile(
-            _base_batch_bind_impl,
-            mode="reduce-overhead",
-            fullgraph=False
-        )
-
     @torch.inference_mode()
     def create_random_vector(self, eps: float = 1e-3) -> Tensor:
         """
         Create a random vector of dimension self.vectorD.
 
         Arguments:
-            eps : float
+            eps : float 
                 Small value to avoid extreme angles in frequency domain.
 
         Returns:
@@ -125,39 +181,12 @@ class HRRBackend(BaseBackend):
                 A random vector of dimension self.vectorD.
         """
 
-        a = torch.rand((self.vector_dim - 1) // 2)
-        sign = np.random.choice((-1, +1), len(a))
-        
-        sign = torch.from_numpy(sign).to(self.device)
-        a = a.to(self.device)
-
-        phi = sign * torch.pi * (eps + a * (1 - 2 * eps))
-
-        if not torch.all(torch.abs(phi) >= torch.pi * eps):
-            raise ValueError("Generated phi values are out of bounds (lower).")
-        if not torch.all(torch.abs(phi) <= torch.pi * (1 - eps)):
-            raise ValueError("Generated phi values are out of bounds (upper).")
-
-        fv = torch.zeros(self.vector_dim, dtype=torch.complex64, device=self.device)
-        fv[0] = 1
-        fv[1:(self.vector_dim + 1) // 2] = torch.cos(phi) + 1j * torch.sin(phi)
-        fv[(self.vector_dim // 2) + 1:] = torch.flip(torch.conj(fv[1:(self.vector_dim + 1) // 2]), dims=[0])
-
-        if self.vector_dim % 2 == 0:
-            fv[self.vector_dim // 2] = 1
-
-        if not torch.allclose(torch.abs(fv), torch.ones(fv.shape, device=self.device)):
-            raise ValueError("Generated frequency vector is not unit magnitude.")
-
-        v = torch.fft.ifft(fv)
-        v = v.real
-        v = v.to(self.device)
-
-        if not torch.allclose(torch.fft.fft(v), fv):
-            raise ValueError("Inverse FFT did not produce the expected frequency vector.")
-
-        if not torch.allclose(torch.linalg.norm(v), torch.ones(v.shape, device=self.device)):
-            raise ValueError("Inverse FFT did not produce the expected norm.")
+        v = _base_create_single_vector(
+            vector_dim=self.vector_dim,
+            gen=self.generator,
+            eps=eps,
+            dev=self.device
+        )
 
         return v
     
