@@ -173,23 +173,73 @@ def test_base_batch_bind_batch():
         atol=1e-7,
     )
 
-# def test_base_single_fpe():
-#     """
-#     Test the functionality of the base fractional
-#     binding implementation
-#     """
-#     raise NotImplementedError
+def test_base_single_bundle():
+    """
+    test the _base_single_bundle function
+    """
+    import numpy as np
+    from torch import Generator
 
-# def test_base_single_bundle():
-#     """
-#     Test the functionality of the base fractional
-#     binding implementation
-#     """
-#     raise NotImplementedError
+    from hyperspace.backends.hrr import (
+        _base_create_single_vector,
+        _base_single_bundle,
+    )
 
-# def test_base_single_bind():
-#     """
-#     Test the functionality of the base fractional
-#     binding implementation
-#     """
-#     raise NotImplementedError
+    vd: int = 256
+    gen = Generator().manual_seed(0)
+
+    v1 = _base_create_single_vector(vd, gen)
+    v2 = _base_create_single_vector(vd, gen)
+
+    v_bundle = _base_single_bundle(v1, v2)
+
+    v1_numpy = v1.numpy()
+    v2_numpy = v2.numpy()
+
+    v_out_numpy = v1_numpy + v2_numpy
+
+    assert np.allclose(
+        v_out_numpy,
+        v_bundle.numpy(),
+        rtol=1e-5,
+        atol=1e-7,
+    )
+
+def test_base_batch_bundle():
+    """
+    test the _base_batch_bundle function
+    """
+    import numpy as np
+    import torch
+    from torch import Generator
+
+    from hyperspace.backends.hrr import (
+        _base_create_single_vector,
+        _base_batch_bundle,
+    )
+
+    B: int = 8
+    D: int = 256
+
+    gen = Generator().manual_seed(0)
+
+    # Build batched tensors (B, D)
+    v1_list = [_base_create_single_vector(D, gen) for _ in range(B)]
+    v2_list = [_base_create_single_vector(D, gen) for _ in range(B)]
+
+    v1 = torch.stack(v1_list, dim=0)
+    v2 = torch.stack(v2_list, dim=0)
+
+    v_bundle_batch = _base_batch_bundle(v1, v2)  # (B, D)
+
+    v1_numpy = v1.numpy()
+    v2_numpy = v2.numpy()
+
+    v_out_numpy = v1_numpy + v2_numpy  # (B, D)
+
+    assert np.allclose(
+        v_out_numpy,
+        v_bundle_batch.numpy(),
+        rtol=1e-5,
+        atol=1e-7,
+    )

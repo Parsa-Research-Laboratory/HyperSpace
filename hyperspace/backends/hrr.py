@@ -156,57 +156,59 @@ def _base_batch_bind(v1: Tensor, v2: Tensor) -> Tensor:
 
     return v_out
 
-def _base_batch_encode_impl(basis_log: Tensor, x_norm: Tensor) -> Tensor:
+def _base_single_bundle(v1: Tensor, v2: Tensor) -> Tensor:
     """
-    Fractional power encoding implementation with all bases
-    already in complex log form.
+    Bundle (superpose) two HRR vectors together via elementwise addition.
 
     Arguments:
-        basis_log : Tensor
-            Logarithm of basis vectors. Shape should be (B,D).
-        x_norm : Tensor
-            Normalized input values. Shape should be (B,).
+    ----------
+    1) v1: Tensor
+        The first vector to bundle
+    2) v2: Tensor
+        The second vector to bundle
 
     Returns:
-        Tensor
-            Encoded representations in real domain. Shape
-            should be (B,D).
+    --------
+    1) v_out: Tensor
+        The bundled vector
     """
-    y = torch.exp(x_norm.unsqueeze(1) * basis_log)
-    y = torch.fft.ifft(y, dim=-1)
-    return y.real
+    if not isinstance(v1, Tensor):
+        raise TypeError(f"expected v1 to be a Tensor; got {type(v1)}")
+    
+    if not isinstance(v2, Tensor):
+        raise TypeError(f"expected v2 to be a Tensor; got {type(v2)}")
+    
+    if v1.shape != v2.shape:
+        raise ValueError(f"expected v1 and v2 to have the same shape; got {v1.shape} and {v2.shape}")
+    
+    if v1.ndim != 1:
+        raise ValueError(f"expected v1 to be a 1d vector; got {v1.shape}")
 
-def _base_batch_bundle_impl(x: Tensor, dim: int) -> Tensor:
+    v_out = v1 + v2
+    return v_out
+
+def _base_batch_bundle(v1: Tensor, v2: Tensor) -> Tensor:
     """
-    Batch bundling implementation for HRR backend.
+    Batched HRR bundling via elementwise addition.
 
-    Arguments:
-        x : Tensor
-            Input tensor to bundle. Shape should be (N, M, D).
-        dim : int
-            Dimension along which to bundle.
+    v1: (B, D)
+    v2: (B, D)
+    returns: (B, D)
     """
-    # simple unweighted superposition along `dim`
-    return x.sum(dim=dim)
+    if not isinstance(v1, Tensor):
+        raise TypeError(f"expected v1 to be a Tensor; got {type(v1)}")
+    if not isinstance(v2, Tensor):
+        raise TypeError(f"expected v2 to be a Tensor; got {type(v2)}")
 
-def _base_batch_bind_impl(x: Tensor, fft_dim: int = 2, bind_dim: int = 1) -> Tensor:
-    """
-    Batch binding implementation for HRR backend using circular
-    convolution.
+    if v1.shape != v2.shape:
+        raise ValueError(f"expected v1 and v2 to have the same shape; got {v1.shape} and {v2.shape}")
+    
+    if v1.ndim != 2:
+        raise ValueError(f"expected v1 to be (B, D); got {v1.shape}")
 
-    Arguments:
-        x : Tensor
-            Input tensor to bind. Shape should be (N, M, D).
-        dim : int
-            Dimension along which to bind.
+    v_out = v1 + v2
+    return v_out
 
-    Returns:
-        Tensor
-            Bound tensor. Shape should be (N, 1, D).
-    """
-    x = torch.fft.fft(x, dim=fft_dim)
-    x = x.prod(dim=bind_dim, keepdim=True)
-    return torch.fft.ifft(x, dim=fft_dim).real
 
 class HRRBackend(BaseBackend):
     """
