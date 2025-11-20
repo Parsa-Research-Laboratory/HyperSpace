@@ -1,5 +1,5 @@
 import torch
-from torch import Tensor
+from torch import Generator, Tensor
 import torch.nn as nn
 from typing import List, Tuple
 
@@ -7,7 +7,12 @@ class BaseBackend(nn.Module):
     """
     Abstract base class for HyperSpace backends.
     """
-    def __init__(self, vector_dim: int, vector_dtype: torch.dtype = torch.float32, device: str = "cpu"):
+    def __init__(self,
+                 vector_dim: int,
+                 vector_dtype: torch.dtype = torch.float32,
+                 device: str = "cpu",
+                 seed: int = 42
+        ):
         """
         Initialize the backend with the specified vector dimension and device.
 
@@ -19,11 +24,15 @@ class BaseBackend(nn.Module):
             The type of values stored within the hypervectors.
         device : str
             Device to run computations on (e.g., 'cpu' or 'cuda').
+        seed: int 
         """
         super().__init__()
         self.vector_dim: int = vector_dim
         self.vector_dtype: torch.dtype = vector_dtype
         self.device = torch.device(device)
+        self.generator = torch.Generator(
+            device=self.device,
+        ).manual_seed(seed)
 
         self.register_buffer(
             "env_basis_vectors",

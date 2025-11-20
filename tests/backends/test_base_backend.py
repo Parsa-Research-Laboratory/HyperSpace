@@ -45,6 +45,23 @@ def test_device_init():
 
     assert b.device == gtd
 
+def test_generator_init():
+    """
+    test that the global generator gets initialized with the
+    global seed and device
+    """
+
+    from hyperspace.backends.base import BaseBackend
+
+    seed: int = 1234
+
+    b = BaseBackend(
+        vector_dim=128,
+        seed=seed
+    )
+
+    assert b.generator.initial_seed() == seed
+
 def test_vector_type_init():
     """
     test initialization of different vector data types; should
