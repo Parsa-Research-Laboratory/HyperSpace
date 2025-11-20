@@ -86,7 +86,6 @@ def test_base_create_single_vector_invalid_eps_type():
             eps=int(5)
         )
 
-
 def test_base_create_single_vector_negative_eps():
     """
     test that the create_single_vector function catches
@@ -102,6 +101,34 @@ def test_base_create_single_vector_negative_eps():
             eps=0.0
         )
 
+def test_base_single_bind():
+    """
+    test the _base_single_bind function
+    """
+    import numpy as np
+    from torch import Generator
+    from hyperspace.backends.hrr import (
+        _base_create_single_vector,
+        _base_single_bind
+    )
+
+    vd: int = 256
+    gen = Generator()
+
+    v1 = _base_create_single_vector(vd, gen)
+    v2 = _base_create_single_vector(vd, gen)
+
+    v_bind = _base_single_bind(v1, v2)
+
+    v1_numpy = v1.numpy()
+    v2_numpy = v2.numpy()
+
+    v1_numpy_fft = np.fft.fft(v1_numpy)
+    v2_numpy_fft = np.fft.fft(v2_numpy)
+    v_out_numpy_fft = v1_numpy_fft * v2_numpy_fft
+    v_out_numpy = np.fft.ifft(v_out_numpy_fft)
+
+    assert np.allclose(v_out_numpy, v_bind.numpy(), rtol=1e-5, atol=1e-7)
 
 # def test_base_single_fpe():
 #     """
