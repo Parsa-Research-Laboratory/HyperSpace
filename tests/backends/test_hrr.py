@@ -71,6 +71,22 @@ def test_base_create_single_vector_invalid_generator():
             gen=int(5)
         )
 
+def test_base_create_single_vector_invalid_eps_type():
+    """
+    test that the create random vector function catches
+    when the eps argument is the wrong type
+    """
+    from torch import Generator
+    from hyperspace.backends.hrr import _base_create_single_vector
+
+    with pytest.raises(TypeError):
+        _ = _base_create_single_vector(
+            vector_dim=128,
+            gen=Generator(),
+            eps=int(5)
+        )
+
+
 # def test_base_single_fpe():
 #     """
 #     Test the functionality of the base fractional
