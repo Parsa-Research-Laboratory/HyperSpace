@@ -19,7 +19,20 @@ def _base_create_single_vector(
     ----------
         vector_dim: int
             The size of the vector to generate
-        rng:
+        gen: torch.Generator
+            A PyTorch generator to control the stochasticity of
+            the random process
+        eps: float
+            A threshold for the upper and lower bounds of the
+            fourier coefficients
+        dev: torch.Device
+            The device to generate the vector on
+
+    Returns:
+    --------
+        v: torch.Tensor
+            The randomly generated vector with shape (vector_dim). It
+            should be noted this vector is returned the time domain.
     """
     if not isinstance(vector_dim, int):
         raise TypeError(f"vector_dim should be an integer; got {type(vector_dim)}")
