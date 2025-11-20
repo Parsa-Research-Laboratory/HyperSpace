@@ -5,18 +5,27 @@ def test_base_create_single_vector_base_arguments():
     """
     test the ability to generate random HRR vectors
     """
+    import torch
     from torch import Generator, Tensor
     from hyperspace.backends.hrr import _base_create_single_vector
 
     vd: int = 128
-    v = _base_create_single_vector(
+    gen = Generator(device="cpu")
+    v1 = _base_create_single_vector(
         vector_dim=vd,
-        gen=Generator(device="cpu")
+        gen=gen
     )
 
-    assert isinstance(v, Tensor)
-    assert len(v.shape) == 1
-    assert v.shape[0] == vd
+    v2 = _base_create_single_vector(
+        vector_dim=vd,
+        gen=gen
+    )
+
+    dot = torch.dot(v1, v2)
+    assert dot.abs() < 0.08, f"Vectors not orthogonal; dot={dot.item()}" 
+    assert isinstance(v1, Tensor)
+    assert len(v1.shape) == 1
+    assert v1.shape[0] == vd
 
 def test_base_create_single_vector_non_int_vector_dim():
     """
