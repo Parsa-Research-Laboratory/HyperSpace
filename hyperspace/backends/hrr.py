@@ -209,6 +209,43 @@ def _base_batch_bundle(v1: Tensor, v2: Tensor) -> Tensor:
     v_out = v1 + v2
     return v_out
 
+def _base_single_fpe(basis: Tensor, power: float, length_scale: float) -> Tensor:
+    """
+    Single HRR fractional power encoding
+
+    Arguments:
+        basis: Tensor
+            the random vector representing the basis of encoding; shape = (D)
+        power: float
+            The value to exponentiate the basis
+        length_scale: float
+            Adjust the kernel with between locations
+    
+    Returns:
+        v_out: Tensor
+            The fractional power encoded vector
+    """
+
+    if not isinstance(basis, Tensor):
+        raise TypeError(f"expected basis to ba a Tensor; got {type(basis)}")
+    
+    power = float(power)
+    length_scale = float(length_scale)
+    
+    if not isinstance(power, float):
+        raise TypeError(f"expected power to be a float; got {type(power)}")
+    
+    if not isinstance(length_scale, float):
+        raise TypeError(f"expected length_scale to be a float; got {type(length_scale)}")
+    
+    if basis.ndim != 1:
+        raise ValueError(f"expected basis to be (D); got {basis.shape}")
+    
+    v_out: Tensor = torch.fft.fft(basis)
+    v_out = v_out ** (power / length_scale)
+    v_out = torch.fft.ifft(v_out).real
+
+    return v_out
 
 class HRRBackend(BaseBackend):
     """
