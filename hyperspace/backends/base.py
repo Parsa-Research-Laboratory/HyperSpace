@@ -8,7 +8,8 @@ class BaseBackend(nn.Module):
     Abstract base class for HyperSpace backends.
     """
     def __init__(self,
-                 vector_dim: int,
+                 name: str = "Base",
+                 vector_dim: int = 128,
                  vector_dtype: torch.dtype = torch.float32,
                  device: str = "cpu",
                  seed: int = 42
@@ -18,6 +19,8 @@ class BaseBackend(nn.Module):
 
         Arguments:
         ----------
+        name: str
+            A unique identifier for the backend
         vector_dim : int
             Dimension of the vectors to be used in the backend.
         vector_dtype: torch.dtype

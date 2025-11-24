@@ -14,8 +14,7 @@ def test_no_arg_init():
     """
     from hyperspace.backends.base import BaseBackend
 
-    with pytest.raises(TypeError):
-        _ = BaseBackend()
+    _ = BaseBackend()
 
 def test_vector_dim_init():
     """
@@ -27,7 +26,7 @@ def test_vector_dim_init():
     vector_dims: List[int] = [32, 64, 128]
 
     for d in vector_dims:
-        b = BaseBackend(d)
+        b = BaseBackend(vector_dim=d)
         assert b.vector_dim == d
 
 def test_device_init():
@@ -74,7 +73,6 @@ def test_vector_type_init():
 
     for t in types:
         b = BaseBackend(
-            vector_dim=128,
             vector_dtype=t
         )
         assert b.vector_dtype == t
@@ -85,7 +83,7 @@ def test_exist_value_vector_buffer():
     """
     from hyperspace.backends.base import BaseBackend
 
-    b = BaseBackend(256)
+    b = BaseBackend()
     
     assert VALUE_VECTOR_BUFFER_NAME in dict(b.named_buffers())
 
@@ -95,7 +93,7 @@ def test_exist_env_vector_buffer():
     """
     from hyperspace.backends.base import BaseBackend
 
-    b = BaseBackend(256)
+    b = BaseBackend()
     
     assert ENV_VECTOR_BUFFER_NAME in dict(b.named_buffers())
 
@@ -108,7 +106,7 @@ def test_value_vector_dimensionality():
     dims: List[int] = [32, 64, 128]
 
     for d in dims:
-        b = BaseBackend(d)
+        b = BaseBackend(vector_dim=d)
 
         buffer = b.get_buffer(VALUE_VECTOR_BUFFER_NAME)
 
@@ -125,7 +123,7 @@ def test_env_vector_dimensionality():
     dims: List[int] = [32, 64, 128]
 
     for d in dims:
-        b = BaseBackend(d)
+        b = BaseBackend(vector_dim=d)
 
         buffer = b.get_buffer(ENV_VECTOR_BUFFER_NAME)
 
@@ -180,7 +178,7 @@ def test_value_vector_device():
 
     d = "cpu"
     gtd = torch.device(d)
-    b = BaseBackend(256, device=d)
+    b = BaseBackend(device=d)
     buffer = b.get_buffer(VALUE_VECTOR_BUFFER_NAME)
     assert buffer.device == gtd
 
@@ -193,7 +191,7 @@ def test_env_vector_device():
 
     d = "cpu"
     gtd = torch.device(d)
-    b = BaseBackend(256, device=d)
+    b = BaseBackend(device=d)
     buffer = b.get_buffer(ENV_VECTOR_BUFFER_NAME)
     assert buffer.device == gtd
 
@@ -203,7 +201,7 @@ def test_not_implemented_create_random_vector():
     """
     from hyperspace.backends.base import BaseBackend
 
-    b = BaseBackend(128)
+    b = BaseBackend()
 
     with pytest.raises(NotImplementedError):
         b.create_random_vector()
@@ -215,7 +213,7 @@ def test_not_implemented_continuous_encoding():
     from hyperspace.backends.base import BaseBackend
     import torch
 
-    b = BaseBackend(128)
+    b = BaseBackend()
     dt1: torch.Tensor = torch.zeros(1)
     dt2: torch.Tensor = torch.zeros(1)
 
@@ -229,7 +227,7 @@ def test_not_implemented_bind():
     from hyperspace.backends.base import BaseBackend
     import torch
 
-    b = BaseBackend(128)
+    b = BaseBackend()
     dt1: torch.Tensor = torch.zeros(1)
     dt2: torch.Tensor = torch.zeros(1)
 
@@ -243,7 +241,7 @@ def test_not_implemented_bundle():
     from hyperspace.backends.base import BaseBackend
     import torch
 
-    b = BaseBackend(128)
+    b = BaseBackend()
     dt1: torch.Tensor = torch.zeros(1)
     dt2: torch.Tensor = torch.zeros(1)
 
@@ -257,7 +255,7 @@ def test_not_implemented_similarity():
     from hyperspace.backends.base import BaseBackend
     import torch
 
-    b = BaseBackend(128)
+    b = BaseBackend()
     dt1: torch.Tensor = torch.zeros(1)
     dt2: torch.Tensor = torch.zeros(1)
 
@@ -271,7 +269,7 @@ def test_not_implemented_normalize():
     from hyperspace.backends.base import BaseBackend
     import torch
 
-    b = BaseBackend(128)
+    b = BaseBackend()
     dt1: torch.Tensor = torch.zeros(1)
 
     with pytest.raises(NotImplementedError):
@@ -284,7 +282,7 @@ def test_not_implemented_invert():
     from hyperspace.backends.base import BaseBackend
     import torch
 
-    b = BaseBackend(128)
+    b = BaseBackend()
     dt1: torch.Tensor = torch.zeros(1)
 
     with pytest.raises(NotImplementedError):
@@ -297,7 +295,7 @@ def test_not_implemented_weight():
     from hyperspace.backends.base import BaseBackend
     import torch
 
-    b = BaseBackend(128)
+    b = BaseBackend()
     dt1: torch.Tensor = torch.zeros(1)
     w: float = 2.0
 
@@ -311,7 +309,7 @@ def test_not_implemented_regression():
     from hyperspace.backends.base import BaseBackend
     import torch
 
-    b = BaseBackend(128)
+    b = BaseBackend()
     dt1: torch.Tensor = torch.zeros(1)
     method: str = "nearest_neighbor"
 
@@ -325,7 +323,7 @@ def test_not_implemented_cleanup():
     from hyperspace.backends.base import BaseBackend
     import torch
 
-    b = BaseBackend(128)
+    b = BaseBackend()
     dt1: torch.Tensor = torch.zeros(1)
     method: str = "resonator"
 
@@ -338,7 +336,7 @@ def test_not_implemented_initialize_env_basis_vectors():
     """
     from hyperspace.backends.base import BaseBackend
 
-    b = BaseBackend(128)
+    b = BaseBackend()
 
     with pytest.raises(NotImplementedError):
         b.initialize_env_basis_vectors(2)
@@ -349,7 +347,7 @@ def test_not_implemented_initialize_value_basis_vectors():
     """
     from hyperspace.backends.base import BaseBackend
 
-    b = BaseBackend(128)
+    b = BaseBackend()
 
     with pytest.raises(NotImplementedError):
         b.initialize_value_basis_vectors(2)
@@ -361,7 +359,7 @@ def test_not_implemented_nearest_neighbor_regression():
     from hyperspace.backends.base import BaseBackend
     import torch
 
-    b = BaseBackend(128)
+    b = BaseBackend()
     dt1: torch.Tensor = torch.zeros(0)
 
     with pytest.raises(NotImplementedError):
@@ -374,7 +372,7 @@ def test_not_implemented_neural_network_regression():
     from hyperspace.backends.base import BaseBackend
     import torch
 
-    b = BaseBackend(128)
+    b = BaseBackend()
     dt1: torch.Tensor = torch.zeros(0)
 
     with pytest.raises(NotImplementedError):
@@ -387,7 +385,7 @@ def test_not_implemented_resonator_cleanup():
     from hyperspace.backends.base import BaseBackend
     import torch
 
-    b = BaseBackend(128)
+    b = BaseBackend()
     dt1: torch.Tensor = torch.zeros(0)
 
     with pytest.raises(NotImplementedError):
@@ -400,7 +398,7 @@ def test_not_implemented_hopfield_cleanup():
     from hyperspace.backends.base import BaseBackend
     import torch
 
-    b = BaseBackend(128)
+    b = BaseBackend()
     dt1: torch.Tensor = torch.zeros(0)
 
     with pytest.raises(NotImplementedError):
