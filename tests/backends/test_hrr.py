@@ -243,3 +243,37 @@ def test_base_batch_bundle():
         rtol=1e-5,
         atol=1e-7,
     )
+
+def test_base_single_fpe():
+    """
+    test the _base_single_fpe function
+    """
+    import numpy as np
+    from torch import Generator
+
+    from hyperspace.backends.hrr import (
+        _base_create_single_vector,
+        _base_single_fpe,
+    )
+
+    D: int = 256
+
+    gen = Generator().manual_seed(0)
+
+    basis = _base_create_single_vector(D, gen)
+    basis_numpy = basis.numpy()
+    pow = np.random.random()
+    length_scale = np.random.random()
+
+    fpe_vector_torch = _base_single_fpe(basis, pow, length_scale)
+
+    basis_fft = np.fft.fft(basis_numpy)
+    basis_fft = basis_fft ** (pow / length_scale)
+    fpe_numpy = np.fft.ifft(basis_fft).real
+
+    assert np.allclose(
+        fpe_vector_torch.numpy(),
+        fpe_numpy,
+        rtol=1e-5,
+        atol=1e-7,
+    )
