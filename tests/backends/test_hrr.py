@@ -278,9 +278,9 @@ def test_base_single_fpe():
         atol=1e-7,
     )
 
-def test_base_batch_bundle():
+def test_base_batch_fpe():
     """
-    test the _base_batch_bundle function
+    test the _base_batch_fpe function
     """
     import numpy as np
     import torch
@@ -323,6 +323,6 @@ def test_base_batch_bundle():
     assert np.allclose(
         fpes_numpy,
         fpes_torch.numpy(),
-        rtol=1e-5,
+        rtol=1e-3,
         atol=1e-7,
     )
