@@ -247,6 +247,49 @@ def _base_single_fpe(basis: Tensor, power: float, length_scale: float) -> Tensor
 
     return v_out
 
+def _base_batch_fpe(basis: Tensor, powers: Tensor, length_scale: float) -> Tensor:
+    """
+    Single HRR fractional power encoding
+
+    Arguments:
+        basis: Tensor
+            the random vector representing the basis of encoding; shape = (B, D)
+        powers: Tensor
+            The values to exponentiate the basis; shape = (B)
+        length_scale: float
+            Adjust the kernel with between locations
+    
+    Returns:
+        v_out: Tensor
+            The fractional power encoded vectors; shape = (B, D)
+    """
+
+    if not isinstance(basis, Tensor):
+        raise TypeError(f"expected basis to ba a Tensor; got {type(basis)}")
+    
+    length_scale = float(length_scale)
+    
+    if not isinstance(powers, Tensor):
+        raise TypeError(f"expected powers to be a Tensor; got {type(powers)}")
+    
+    if not isinstance(length_scale, float):
+        raise TypeError(f"expected length_scale to be a float; got {type(length_scale)}")
+    
+    if basis.ndim != 2:
+        raise ValueError(f"expected basis to be (B, D); got {basis.shape}")
+    
+    if powers.ndim != 1:
+        raise ValueError(f"expected powers to be (B); got {powers.shape}")
+    
+    if basis.shape[0] != powers.shape[0]:
+        raise ValueError(f"expected batch size of bases and power to match; got {basis.shape[0]} and {powers.shape[0]}")
+
+    v_out: Tensor = torch.fft.fft(basis, dim=-1)
+    v_out = v_out ** (powers / length_scale).unsqueeze(-1)
+    v_out = torch.fft.ifft(v_out, dim=-1).real
+
+    return v_out
+
 class HRRBackend(BaseBackend):
     """
     Holographic Reduced Representations (HRR) backend implementation.
