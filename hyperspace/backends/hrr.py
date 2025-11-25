@@ -326,7 +326,7 @@ class HRRBackend(BaseBackend):
     @torch.inference_mode()
     def create_random_vector(self, eps: float = 1e-3) -> Tensor:
         """
-        Create a random vector of dimension self.vectorD.
+        Create a random vector of dimension D.
 
         Arguments:
             eps : float 
@@ -334,17 +334,15 @@ class HRRBackend(BaseBackend):
 
         Returns:
             Tensor
-                A random vector of dimension self.vectorD.
+                A random vector of dimension D.
         """
-
-        v = _base_create_single_vector(
+        return _base_create_single_vector(
             vector_dim=self.vector_dim,
             gen=self.generator,
             eps=eps,
             dev=self.device
         )
 
-        return v
     
     @torch.inference_mode()
     def continuous_encoding(self, x: Tensor, indexes: Tensor) -> Tuple[Tensor, dict]:
