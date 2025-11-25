@@ -369,3 +369,13 @@ def test_invalid_length_scale_init():
             vector_dim=vd,
             length_scale=ls
         )
+
+def test_method_exists_compiled_create_single_vector():
+    """
+    test that the compiled create single vector method exists
+    """
+    from hyperspace.backends.hrr import HRRBackend
+
+    b = HRRBackend(vector_dim=128)
+
+    assert hasattr(b, "_comp_create_single_vector")
