@@ -521,3 +521,49 @@ def test_backend_method_create_random_vector_orthogonality():
     assert isinstance(v1, Tensor)
     assert len(v1.shape) == 1
     assert v1.shape[0] == vd
+
+def test_backend_method_single_bind():
+    """
+    test if the continuous encoding function works for single encoding
+    """
+    import numpy as np
+    import torch
+    from torch import Tensor
+    from hyperspace.backends.hrr import HRRBackend
+
+    vector_dim: int = 2048
+
+    backend = HRRBackend(
+        vector_dim=vector_dim
+    )
+
+    v1: Tensor = backend.create_random_vector()
+    v2: Tensor = backend.create_random_vector()
+
+    # --------------------------
+    # HyperSpace Implementation
+    # --------------------------
+    v_out_torch, _ = backend.bind(v1, v2)
+
+    # --------------------------
+    # NumPy Implementation
+    # --------------------------
+    v1_numpy: np.ndarray = v1.numpy()
+    v2_numpy: np.ndarray = v2.numpy()
+
+    v1_numpy_fft = np.fft.fft(v1_numpy)
+    v2_numpy_fft = np.fft.fft(v2_numpy)
+
+    v_out_numpy_fft = v1_numpy_fft * v2_numpy_fft
+
+    v_out_numpy = np.fft.ifft(v_out_numpy_fft).real
+
+    # -----------------
+    # Similarity Check
+    # -----------------
+    assert np.allclose(
+        v_out_numpy,
+        v_out_torch.numpy(),
+        rtol=1e-5,
+        atol=1e-7
+    )
