@@ -400,7 +400,7 @@ class HRRBackend(BaseBackend):
         return encoded, info_dict
 
     @torch.inference_mode()
-    def bind(self, a: Tensor) -> Tuple[Tensor, dict]:
+    def bind(self, a: Tensor, b: Tensor) -> Tuple[Tensor, dict]:
         """
         Binding operation for HRR backend using circular convolution. The function
         expects 3-dimensional tensors for batch processing. The function also expects
@@ -418,14 +418,19 @@ class HRRBackend(BaseBackend):
                 Information dictionary.
         """
 
-        if a.ndim != 3 :
-            raise ValueError("Input tensor must be 3-dimensional for binding.")
+        if a.shape != b.shape:
+            raise ValueError(f"Expected a and b to have the same shape; got {a.shape} and {b.shape}")
         
-        a_hat = self._base_batch_bind_impl(a)
+        if a.ndim == 1: # Single Bind
+            out = self._comp_single_bind(a, b)
+        elif a.ndim == 2: # Batch Bind
+            out = self._comp_batch_bind(a, b)
+        else:
+            raise ValueError(f"Expected tensors to be single or two dimensional; got {a.ndim}")
 
         info_dict = {}
 
-        return a_hat, info_dict
+        return out, info_dict
 
     def bundle(self, a: Tensor, dim: int = 1) -> Tensor:
         """
