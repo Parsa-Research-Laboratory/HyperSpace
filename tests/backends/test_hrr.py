@@ -399,3 +399,13 @@ def test_method_exists_compiled_single_bundle():
     b = HRRBackend(vector_dim=128)
 
     assert hasattr(b, "_comp_single_bundle")
+
+def test_method_exists_compiled_single_fpe():
+    """
+    test that the compiled single fpe function exists
+    """
+    from hyperspace.backends.hrr import HRRBackend
+
+    b = HRRBackend(vector_dim=128)
+
+    assert hasattr(b, "_comp_single_fpe")
