@@ -439,3 +439,13 @@ def test_method_exists_compiled_batch_fpe():
     b = HRRBackend(vector_dim=128)
 
     assert hasattr(b, "_comp_batch_fpe")
+
+def test_backend_method_create_random_vector_base():
+    """
+    test that the create_random_vector function calls
+    """
+    from hyperspace.backends.hrr import HRRBackend
+
+    b = HRRBackend(vector_dim=128)
+
+    _ = b.create_random_vector()
