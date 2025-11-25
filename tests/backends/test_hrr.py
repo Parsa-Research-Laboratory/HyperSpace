@@ -483,3 +483,19 @@ def test_backend_method_create_random_vector_data_type():
     v = b.create_random_vector()
 
     assert v.dtype == b.vector_dtype
+
+def test_backend_method_create_random_vector_shape():
+    """
+    test the shape of the vectors returned from create random vector
+    """
+    from hyperspace.backends.hrr import HRRBackend
+    from typing import List
+
+    v_dims: List[int] = [128, 256, 512]
+
+    for d in v_dims:
+        b = HRRBackend(vector_dim=d)
+        v = b.create_random_vector()
+
+        assert v.ndim == 1
+        assert v.shape[0] == d
