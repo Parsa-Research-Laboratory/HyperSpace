@@ -1,7 +1,7 @@
 import torch
-from torch import Generator, Tensor
+from torch import Tensor
 import torch.nn as nn
-from typing import List, Tuple
+from typing import Tuple
 
 class BaseBackend(nn.Module):
     """
