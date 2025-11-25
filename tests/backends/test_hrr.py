@@ -409,3 +409,13 @@ def test_method_exists_compiled_single_fpe():
     b = HRRBackend(vector_dim=128)
 
     assert hasattr(b, "_comp_single_fpe")
+
+def test_method_exists_compiled_batch_bind():
+    """
+    test that the compiled batch bind function exists
+    """
+    from hyperspace.backends.hrr import HRRBackend
+
+    b = HRRBackend(vector_dim=128)
+
+    assert hasattr(b, "_comp_batch_bind")
