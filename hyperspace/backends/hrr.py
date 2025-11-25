@@ -298,32 +298,24 @@ class HRRBackend(BaseBackend):
     as defined in the HyperSpace paper using HRR principles.
     """
     def __init__(self, vector_dim: int, length_scale: float = 1.0, device: str = "cpu"):
-        super().__init__(vector_dim, device)
-        self.name = "HRR"
+        super().__init__(
+            name="HRR",
+            vector_dim=vector_dim,
+            vector_dtype=torch.float32,
+            device=device
+        )
         self.length_scale: float = length_scale
 
-        # Cache inverse length scale (replace division with mul)
-        self.register_buffer(
-            "_inv_length_scale",
-            torch.tensor(1.0 / float(length_scale), dtype=torch.float32),
-            persistent=False)
-        
-        # Cache other buffers
-        self.register_buffer(
-            "env_log_basis",
-            torch.empty(0, self.vector_dim, dtype=torch.complex64, device=self.device),
-            persistent=False
-        )
-        self.register_buffer(
-            "value_basis_vectors",
-            torch.empty(0, self.vector_dim, dtype=torch.complex64, device=self.device),
-            persistent=False
-        )
-        self.register_buffer(
-            "value_log_basis",
-            torch.empty(0, self.vector_dim, dtype=torch.complex64, device=self.device),
-            persistent=False
-        )
+        # -----------------------------
+        # Compile HRR Specific Intakes
+        # -----------------------------
+        self._comp_create_single_vector = torch.compile(_base_create_single_vector)
+        self._comp_single_bind = torch.compile(_base_single_bind)
+        self._comp_single_bundle = torch.compile(_base_single_bundle)
+        self._comp_single_fpe = torch.compile(_base_single_fpe)
+        self._comp_batch_bind = torch.compile(_base_batch_bind)
+        self._comp_batch_bundle = torch.compile(_base_batch_bundle)
+        self._comp_batch_fpe = torch.compile(_base_batch_fpe)
 
     @torch.inference_mode()
     def create_random_vector(self, eps: float = 1e-3) -> Tensor:

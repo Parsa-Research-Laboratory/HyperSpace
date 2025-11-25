@@ -326,3 +326,15 @@ def test_base_batch_fpe():
         rtol=1e-3,
         atol=1e-7,
     )
+
+def test_backend_base_init():
+    """
+    Test the initialize HrrBackend
+    """
+    from hyperspace.backends.hrr import HRRBackend
+
+    vdim: int = 128
+
+    b = HRRBackend(
+        vector_dim=vdim
+    )
