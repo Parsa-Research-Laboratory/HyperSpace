@@ -470,5 +470,16 @@ def test_backend_method_create_random_vector_device():
 
     b = HRRBackend(vector_dim=128)
     v = b.create_random_vector()
-    
+
     assert b.device == v.device
+
+def test_backend_method_create_random_vector_data_type():
+    """
+    test the type of the vector returned from create_random_vector
+    """
+    from hyperspace.backends.hrr import HRRBackend
+
+    b = HRRBackend(vector_dim=128)
+    v = b.create_random_vector()
+
+    assert v.dtype == b.vector_dtype
