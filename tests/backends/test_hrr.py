@@ -461,3 +461,14 @@ def test_backend_method_create_random_vector_object_type():
 
     v = b.create_random_vector()
     assert isinstance(v, Tensor)
+
+def test_backend_method_create_random_vector_device():
+    """
+    test the device of the vector returned from create_random_vector
+    """
+    from hyperspace.backends.hrr import HRRBackend
+
+    b = HRRBackend(vector_dim=128)
+    v = b.create_random_vector()
+    
+    assert b.device == v.device
