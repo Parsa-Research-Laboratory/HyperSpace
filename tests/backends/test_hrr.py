@@ -524,10 +524,9 @@ def test_backend_method_create_random_vector_orthogonality():
 
 def test_backend_method_single_bind():
     """
-    test if the continuous encoding function works for single encoding
+    test if the backend's binding function supports single binding
     """
     import numpy as np
-    import torch
     from torch import Tensor
     from hyperspace.backends.hrr import HRRBackend
 
@@ -566,4 +565,42 @@ def test_backend_method_single_bind():
         v_out_torch.numpy(),
         rtol=1e-5,
         atol=1e-7
+    )
+
+def test_backend_method_batch_bind():
+    """
+    test if the backend's binding function supports batch binding
+    """
+    import numpy as np
+    import torch
+    from hyperspace.backends.hrr import HRRBackend
+
+    B: int = 8     # batch size
+    D: int = 256   # vector dimensionality
+
+    backend = HRRBackend(vector_dim=D)
+
+    # Build batched tensors: (B, D)
+    v1_list = [backend.create_random_vector() for _ in range(B)]
+    v2_list = [backend.create_random_vector() for _ in range(B)]
+
+    v1 = torch.stack(v1_list, dim=0)  # (B, D)
+    v2 = torch.stack(v2_list, dim=0)  # (B, D)
+
+    v_bind_batch, _ = backend.bind(v1, v2)  # (B, D)
+
+    # NumPy reference
+    v1_numpy = v1.numpy()  # (B, D)
+    v2_numpy = v2.numpy()  # (B, D)
+
+    v1_numpy_fft = np.fft.fft(v1_numpy, axis=-1)
+    v2_numpy_fft = np.fft.fft(v2_numpy, axis=-1)
+    v_out_numpy_fft = v1_numpy_fft * v2_numpy_fft
+    v_out_numpy = np.fft.ifft(v_out_numpy_fft, axis=-1).real  # (B, D)
+
+    assert np.allclose(
+        v_out_numpy,
+        v_bind_batch.numpy(),
+        rtol=1e-5,
+        atol=1e-7,
     )
