@@ -499,3 +499,25 @@ def test_backend_method_create_random_vector_shape():
 
         assert v.ndim == 1
         assert v.shape[0] == d
+
+def test_backend_method_create_random_vector_orthogonality():
+    """
+    test the orthogonality of the vectors returned from the
+    create random vector function
+    """
+    import torch
+    from torch import Tensor
+    from hyperspace.backends.hrr import HRRBackend
+
+    vd: int = 256
+
+    b = HRRBackend(vector_dim=vd)
+
+    v1 = b.create_random_vector()
+    v2 = b.create_random_vector()
+
+    dot = torch.dot(v1, v2)
+    assert dot.abs() < 0.12, f"Vectors not orthogonal; dot={dot.item()}" 
+    assert isinstance(v1, Tensor)
+    assert len(v1.shape) == 1
+    assert v1.shape[0] == vd
