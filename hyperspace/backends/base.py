@@ -30,6 +30,7 @@ class BaseBackend(nn.Module):
         seed: int 
         """
         super().__init__()
+        self.name: str = name
         self.vector_dim: int = vector_dim
         self.vector_dtype: torch.dtype = vector_dtype
         self.device = torch.device(device)

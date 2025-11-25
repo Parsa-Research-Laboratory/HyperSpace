@@ -44,6 +44,17 @@ def test_device_init():
 
     assert b.device == gtd
 
+def test_name_init():
+    """
+    test the initialization with different backend names
+    """
+    from hyperspace.backends.base import BaseBackend
+
+    name: str = "testing"
+    b = BaseBackend(name=name)
+    
+    assert b.name == name
+
 def test_generator_init():
     """
     test that the global generator gets initialized with the
