@@ -382,10 +382,20 @@ def test_method_exists_compiled_create_single_vector():
 
 def test_method_exists_compiled_single_bind():
     """
-    test that the compiled single bind function
+    test that the compiled single bind function exists
     """
     from hyperspace.backends.hrr import HRRBackend
 
     b = HRRBackend(vector_dim=128)
 
     assert hasattr(b, "_comp_single_bind")
+
+def test_method_exists_compiled_single_bundle():
+    """
+    test that the compiled single bundle function exists
+    """
+    from hyperspace.backends.hrr import HRRBackend
+
+    b = HRRBackend(vector_dim=128)
+
+    assert hasattr(b, "_comp_single_bundle")
