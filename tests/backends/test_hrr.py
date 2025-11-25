@@ -449,3 +449,15 @@ def test_backend_method_create_random_vector_base():
     b = HRRBackend(vector_dim=128)
 
     _ = b.create_random_vector()
+
+def test_backend_method_create_random_vector_object_type():
+    """
+    test that the create_random_vector function returns a Tensor
+    """
+    from hyperspace.backends.hrr import HRRBackend
+    from torch import Tensor
+
+    b = HRRBackend(vector_dim=128)
+
+    v = b.create_random_vector()
+    assert isinstance(v, Tensor)
