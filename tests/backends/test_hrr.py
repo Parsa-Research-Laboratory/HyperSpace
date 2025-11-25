@@ -419,3 +419,13 @@ def test_method_exists_compiled_batch_bind():
     b = HRRBackend(vector_dim=128)
 
     assert hasattr(b, "_comp_batch_bind")
+
+def test_method_exists_compiled_batch_bundle():
+    """
+    test that the compiled batch bundle function exists
+    """
+    from hyperspace.backends.hrr import HRRBackend
+
+    b = HRRBackend(vector_dim=128)
+
+    assert hasattr(b, "_comp_batch_bundle")
