@@ -9,7 +9,7 @@ def test_base_create_single_vector_base_arguments():
     from torch import Generator, Tensor
     from hyperspace.backends.hrr import _base_create_single_vector
 
-    vd: int = 128
+    vd: int = 256
     gen = Generator(device="cpu")
     v1 = _base_create_single_vector(
         vector_dim=vd,
@@ -354,3 +354,18 @@ def test_length_scale_init():
             length_scale=ls
         )
         assert b.length_scale == float(ls)
+
+def test_invalid_length_scale_init():
+    """
+    Test a zero-length scale initialization
+    """
+    from hyperspace.backends.hrr import HRRBackend
+
+    vd: int = 128
+    ls: float = 0.0
+
+    with pytest.raises(ValueError):
+        _ = HRRBackend(
+            vector_dim=vd,
+            length_scale=ls
+        )
