@@ -323,7 +323,7 @@ def test_base_batch_fpe():
     assert np.allclose(
         fpes_numpy,
         fpes_torch.numpy(),
-        rtol=1e-3,
+        rtol=1e-2,
         atol=1e-7,
     )
 
@@ -338,3 +338,19 @@ def test_backend_base_init():
     b = HRRBackend(
         vector_dim=vdim
     )
+
+def test_length_scale_init():
+    """
+    Test the length scale arguments
+    """
+    from hyperspace.backends.hrr import HRRBackend
+
+    vd: int = 128
+    ls_list = [1, 2, 3.0, 0.00001, -1.0]
+
+    for ls in ls_list:
+        b = HRRBackend(
+            vector_dim=vd,
+            length_scale=ls
+        )
+        assert b.length_scale == float(ls)

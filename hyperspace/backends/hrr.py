@@ -304,7 +304,13 @@ class HRRBackend(BaseBackend):
             vector_dtype=torch.float32,
             device=device
         )
-        self.length_scale: float = length_scale
+
+        self.length_scale: float = float(length_scale)
+        if self.length_scale == 0.0:
+            raise ValueError(f"length scale should be non-zero; received {self.length_scale}")
+        
+        if self.length_scale < 0:
+            print(f"WARNING: received negative length scale value of {self.length_scale}")
 
         # -----------------------------
         # Compile HRR Specific Intakes
