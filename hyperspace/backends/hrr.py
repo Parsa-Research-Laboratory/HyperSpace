@@ -473,8 +473,29 @@ class HRRBackend(BaseBackend):
 
     def similarity(self, a: Tensor, b: Tensor) -> Tensor:
         """
-        Similarity operation for HRR backend using cosine similarity.
+        Compute cosine similarity between two HRR vectors.
+
+        Calculates the cosine similarity metric between two tensors, measuring
+        the cosine of the angle between them. This operation supports both single
+        vector and batched operations. The similarity values range from -1 (completely
+        dissimilar) to 1 (identical).
+
+        Arguments:
+            a : Tensor
+                First input tensor. Shape should be either (D,) for single vectors
+                or (B, D) for batch operations, where B is batch size and D is the
+                vector dimension.
+            b : Tensor
+                Second input tensor. Must have the same shape as `a`.
+
+        Returns:
+            Tensor
+                Cosine similarity scores. Shape is scalar for single vectors or
+                (B,) for batch operations.
+            dict
+                Information dictionary (currently empty).
         """
+
         if a.shape != b.shape:
             raise ValueError(f"Expected a and b to have the same shape; got {a.shape} and {b.shape}")
         
