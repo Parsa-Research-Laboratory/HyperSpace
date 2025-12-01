@@ -634,3 +634,38 @@ def test_backend_method_single_bundle():
         rtol=1e-5,
         atol=1e-7,
     )
+
+def test_backend_method_batch_bundle():
+    """
+    test the implementation of the backend's batch bundle method
+    """
+
+    import numpy as np
+    import torch
+    from hyperspace.backends.hrr import HRRBackend
+
+    B: int = 8
+    D: int = 256
+
+    backend = HRRBackend(vector_dim=D)
+
+    # Build batched tensors (B, D)
+    v1_list = [backend.create_random_vector() for _ in range(B)]
+    v2_list = [backend.create_random_vector() for _ in range(B)]
+
+    v1 = torch.stack(v1_list, dim=0)
+    v2 = torch.stack(v2_list, dim=0)
+
+    v_bundle_batch, _ = backend.bundle(v1, v2)  # (B, D)
+
+    v1_numpy = v1.numpy()
+    v2_numpy = v2.numpy()
+
+    v_out_numpy = v1_numpy + v2_numpy  # (B, D)
+
+    assert np.allclose(
+        v_out_numpy,
+        v_bundle_batch.numpy(),
+        rtol=1e-5,
+        atol=1e-7,
+    )
