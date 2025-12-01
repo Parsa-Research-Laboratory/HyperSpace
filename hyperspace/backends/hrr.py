@@ -2,6 +2,7 @@
 import numpy as np
 import torch
 from torch import device, Generator, Tensor
+import torch.nn.functional as F
 from typing import Tuple
 
 from .base import BaseBackend
@@ -474,7 +475,19 @@ class HRRBackend(BaseBackend):
         """
         Similarity operation for HRR backend using cosine similarity.
         """
-        return super().similarity(a, b)
+        if a.shape != b.shape:
+            raise ValueError(f"Expected a and b to have the same shape; got {a.shape} and {b.shape}")
+        
+        if a.ndim == 1: # Single Bind
+            out = F.cosine_similarity(a, b, dim=0)
+        elif a.ndim == 2: # Batch Bind
+            out = F.cosine_similarity(a, b, dim=1)
+        else:
+            raise ValueError(f"Expected tensors to be single or two dimensional; got {a.ndim}")
+
+        info_dict = {}
+
+        return out, info_dict
     
     def normalize(self, tensor: Tensor) -> Tensor:
         """
