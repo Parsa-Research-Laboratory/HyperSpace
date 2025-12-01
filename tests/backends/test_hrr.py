@@ -751,3 +751,33 @@ def test_backend_method_single_similarity_non_normalized_orthogonal():
     sim, _ = backend.similarity(v1, v2 / 2.0)
 
     assert np.isclose(sim.numpy(), 0.0, rtol=0.01, atol=0.01)
+
+def test_backend_method_batch_similarity_normalized_same():
+    """
+    test the functionality of the backend similarity metric with
+    identical vectors that are normalized
+    """
+
+    import numpy as np
+    import torch
+    from hyperspace.backends.hrr import HRRBackend
+
+    B: int = 8
+    D: int = 10000
+
+    backend = HRRBackend(vector_dim=D)
+
+    # Build batched tensors (B, D)
+    v1_list = [backend.create_random_vector() for _ in range(B)]
+    gt = torch.ones(B)
+
+    v1 = torch.stack(v1_list, dim=0)
+
+    sims, _ = backend.similarity(v1, v1)
+
+    assert np.allclose(
+        sims.numpy(),
+        gt.numpy(),
+        rtol=1e-5,
+        atol=1e-7,
+    )
