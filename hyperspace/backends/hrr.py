@@ -435,7 +435,25 @@ class HRRBackend(BaseBackend):
     @torch.inference_mode()
     def bundle(self, a: Tensor, b: Tensor) -> Tensor:
         """
-        Bundling operation for HRR backend using vector addition.
+        Bundling operation for HRR backend using vector addition (superposition).
+
+        Bundling creates a superposition of two vectors through elementwise addition,
+        allowing multiple vectors to be combined into a single representation. This
+        operation supports both single vector and batched operations.
+
+        Arguments:
+            a : Tensor
+                First input tensor to bundle. Shape should be either (D,) for single
+                vectors or (B, D) for batch operations, where B is batch size and D
+                is the vector dimension.
+            b : Tensor
+                Second input tensor to bundle. Must have the same shape as `a`.
+
+        Returns:
+            Tensor
+                Bundled tensor with the same shape as inputs.
+            dict
+                Information dictionary (currently empty).
         """
 
         if a.shape != b.shape:
