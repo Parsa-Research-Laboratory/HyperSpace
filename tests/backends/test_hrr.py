@@ -709,3 +709,24 @@ def test_backend_method_single_similarity_non_normalized_same():
     sim, _ = backend.similarity(v1, v1 / 2)
 
     assert np.isclose(sim.numpy(), 1.0)
+
+def test_backend_method_single_similarity_pre_normalized_orthogonal():
+    """
+    test the implementation of the backend's single similarity function
+    with normalized vectors
+    """
+
+    import numpy as np
+    from hyperspace.backends.hrr import HRRBackend
+
+    D: int = 2560
+
+    backend = HRRBackend(vector_dim=D)
+
+    # build the tensors
+    v1 = backend.create_random_vector()
+    v2 = backend.create_random_vector()
+
+    sim, _ = backend.similarity(v1, v2)
+
+    assert np.isclose(sim.numpy(), 0.0, rtol=0.01, atol=0.01)
