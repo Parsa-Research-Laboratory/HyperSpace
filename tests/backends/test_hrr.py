@@ -604,3 +604,33 @@ def test_backend_method_batch_bind():
         rtol=1e-5,
         atol=1e-7,
     )
+
+def test_backend_method_single_bundle():
+    """
+    test if the backend's bundling function supports single bundling
+    """
+    import numpy as np
+    from torch import Generator
+
+    from hyperspace.backends.hrr import HRRBackend
+
+    D: int = 256
+
+    backend = HRRBackend(vector_dim=D)
+
+    v1 = backend.create_random_vector()
+    v2 = backend.create_random_vector()
+
+    v_bundle, _ = backend.bundle(v1, v2)
+
+    v1_numpy = v1.numpy()
+    v2_numpy = v2.numpy()
+
+    v_out_numpy = v1_numpy + v2_numpy
+
+    assert np.allclose(
+        v_out_numpy,
+        v_bundle.numpy(),
+        rtol=1e-5,
+        atol=1e-7,
+    )

@@ -432,33 +432,25 @@ class HRRBackend(BaseBackend):
 
         return out, info_dict
 
-    def bundle(self, a: Tensor, dim: int = 1) -> Tensor:
+    @torch.inference_mode()
+    def bundle(self, a: Tensor, b: Tensor) -> Tensor:
         """
         Bundling operation for HRR backend using vector addition.
         """
 
-        if a.ndim != 3:
-            raise ValueError("Input tensor a must be 3-dimensional for bundling.")
+        if a.shape != b.shape:
+            raise ValueError(f"Expected a and b to have the same shape; got {a.shape} and {b.shape}")
         
-        if a.shape[dim] < 1:
-            raise ValueError(f"Cannot bundle along dimension dim={dim} with size less than 1.")
-        
-        if dim != 1:
-            raise ValueError("Currently, only bundling along dimension 1 is supported.")
-
-        if a.dim() < 3:
-            raise ValueError("Input tensor a must have at least 2 dimensions for bundling.")
-
-        bundle = self._base_batch_bundle_impl(a, dim)
-
-        print(f"Bundled tensor shape: {bundle.shape}")
-    
-        if bundle.shape != (a.shape[0], a.shape[2]):
-            raise ValueError(f"Bundled output has incorrect shape: {bundle.shape}")
+        if a.ndim == 1: # Single Bind
+            out = self._comp_single_bundle(a, b)
+        elif a.ndim == 2: # Batch Bind
+            out = self._comp_batch_bundle(a, b)
+        else:
+            raise ValueError(f"Expected tensors to be single or two dimensional; got {a.ndim}")
 
         info_dict = {}
 
-        return bundle, info_dict
+        return out, info_dict
 
     def similarity(self, a: Tensor, b: Tensor) -> Tensor:
         """
