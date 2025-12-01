@@ -434,7 +434,7 @@ class HRRBackend(BaseBackend):
         return out, info_dict
 
     @torch.inference_mode()
-    def bundle(self, a: Tensor, b: Tensor) -> Tensor:
+    def bundle(self, a: Tensor, b: Tensor) -> Tuple[Tensor, dict]:
         """
         Bundling operation for HRR backend using vector addition (superposition).
 
@@ -471,7 +471,7 @@ class HRRBackend(BaseBackend):
 
         return out, info_dict
 
-    def similarity(self, a: Tensor, b: Tensor) -> Tensor:
+    def similarity(self, a: Tensor, b: Tensor) -> Tuple[Tensor, dict]:
         """
         Compute cosine similarity between two HRR vectors.
 
