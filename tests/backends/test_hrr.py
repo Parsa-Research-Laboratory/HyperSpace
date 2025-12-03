@@ -908,7 +908,6 @@ def test_backend_env_basis_similarity():
     """
     test that the env basis vectors are approximately orthogonal
     """
-    import numpy as np
     import torch
     from torch import Tensor
     from hyperspace.backends.hrr import HRRBackend
@@ -919,6 +918,28 @@ def test_backend_env_basis_similarity():
 
     v1: torch.Tensor = b.env_basis_vectors[0]
     v2: torch.Tensor = b.env_basis_vectors[1]
+
+    dot = torch.dot(v1, v2)
+    assert dot.abs() < 0.12, f"Vectors not orthogonal; dot={dot.item()}" 
+    assert isinstance(v1, Tensor)
+    assert len(v1.shape) == 1
+    assert v1.shape[0] == D
+
+def test_backend_value_basis_similarity():
+    """
+    test that the value value vectors are approximately orthogonal
+    """
+
+    import torch
+    from torch import Tensor
+    from hyperspace.backends.hrr import HRRBackend
+
+    D: int = 10000
+
+    b = HRRBackend(vector_dim=D, value_dim=2)
+
+    v1: Tensor = b.value_basis_vectors[0]
+    v2: Tensor = b.value_basis_vectors[1]
 
     dot = torch.dot(v1, v2)
     assert dot.abs() < 0.12, f"Vectors not orthogonal; dot={dot.item()}" 
