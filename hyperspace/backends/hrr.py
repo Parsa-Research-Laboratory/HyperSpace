@@ -369,7 +369,7 @@ class HRRBackend(BaseBackend):
         Arguments:
         ----------
         x : torch.Tensor
-            Continuous value to be encoded. Shape should be (batch_size, env_dim).
+            Continuous position to be encoded. Shape should be (batch_size, env_dim).
 
         Returns:
         -------
@@ -389,26 +389,40 @@ class HRRBackend(BaseBackend):
         if x.shape[1] != self.env_dim:
             raise ValueError(f"Input x should have shape (batch_size, {self.env_dim}; got {x.shape}")
         
-        # ------------------------------------------------
-        # perform fractional power encoding of each value
-        # ------------------------------------------------
-        bases_log = self.env_log_basis.index_select(0, indexes)
+        raise NotImplementedError()
 
-        assert not torch.isnan(bases_log).any(), "NaN detected"
+        return encoded, info_dict
+    
+    @torch.inference_mode()
+    def value_encoding(self, x: Tensor) -> Tuple[Tensor, dict]:
+        """
+        Abstract definition of the value encoding method (\\mathcal{V})
+        from the HyperSpace paper.
 
-        x_norm = (x * self._inv_length_scale)
+        Arguments:
+        ----------
+        x : torch.Tensor
+            Continuous value to be encoded. Shape should be (batch_size, value_dim).
 
-        assert not torch.isnan(x_norm).any(), "NaN detected"
-        encoded = self._base_batch_encode_impl(bases_log, x_norm)
-        assert not torch.isnan(encoded).any(), "NaN detected"
+        Returns:
+        -------
+        torch.Tensor
+            Encoded representation of the input value. Shape should be (batch_size, vectorD).
+        dict
+            Information dictionary containing any relevant metadata.
+        """
 
-        if encoded.shape != (x.shape[0], self.vector_dim):
-            raise ValueError(f"Encoded output has incorrect shape: {encoded.shape}")
-
-        info_dict = {
-            "original_values": x,
-            "indexes": indexes,
-        }
+        # --------------------------------
+        # validate input shapes
+        # --------------------------------
+        if not isinstance(x, Tensor):
+            raise TypeError(f"Input x should be a Tensor, got {type(x)}")
+        if x.dim() != 2:
+            raise ValueError("Input x must be a 2D tensor of shape (batch_size, value_dim).")
+        if x.shape[1] != self.value_dim:
+            raise ValueError(f"Input x should have shape (batch_size, {self.value_dim}; got {x.shape}")
+        
+        raise NotImplementedError()
 
         return encoded, info_dict
 

@@ -1053,3 +1053,61 @@ def test_backend_continuous_encoding_x_invalid_env_shape():
     with pytest.raises(ValueError):
         b.positional_encoding(x_big)
 
+def test_backend_value_encoding_x_not_tensor():
+    """
+    test that the backend throws an error with the x argument isn't a tensor
+    """
+    import numpy as np
+    from hyperspace.backends.hrr import HRRBackend
+
+    b = HRRBackend(vector_dim=128)
+
+    with pytest.raises(TypeError):
+        b.value_encoding(np.zeros(2))
+
+def test_backend_value_encoding_x_invalid_shape():
+    """
+    test that the backend throws an error when the x argument doesn't
+    have the right dimensionality
+    """
+    import torch
+    from hyperspace.backends.hrr import HRRBackend
+
+    env_dim: int = 3
+    b = HRRBackend(vector_dim=128)
+
+    # low dimensionality
+    with pytest.raises(ValueError):
+        inp = torch.zeros((env_dim))
+        b.value_encoding(inp)
+
+    # high dimensionality
+    with pytest.raises(ValueError):
+        inp = torch.zeros((env_dim, env_dim, env_dim))
+        b.value_encoding(inp)
+
+def test_backend_value_encoding_x_invalid_env_shape():
+    """
+    test that the backend throws an error with the x argument
+    isn't the correct value_dim
+    """
+    import torch
+    from hyperspace.backends.hrr import HRRBackend
+
+    value_dim: int = 3
+    batch_size: int = 128
+
+    b = HRRBackend(
+        vector_dim=128,
+        value_dim=value_dim
+    )
+
+    x_small = torch.ones((batch_size, value_dim - 1))
+    x_big = torch.ones((batch_size, value_dim + 1))
+
+    with pytest.raises(ValueError):
+        b.value_encoding(x_small)
+
+    with pytest.raises(ValueError):
+        b.value_encoding(x_big)
+
