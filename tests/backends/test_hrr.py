@@ -958,3 +958,15 @@ def test_backend_env_dim_zero():
             vector_dim=128,
             env_dim=0
         )
+
+def test_backend_env_dim_negative():
+    """
+    test that the backend throws an error with env_dim is negative
+    """
+    from hyperspace.backends.hrr import HRRBackend
+
+    with pytest.raises(ValueError):
+        HRRBackend(
+            vector_dim=128,
+            env_dim=-1
+        )
