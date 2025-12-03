@@ -298,7 +298,8 @@ class HRRBackend(BaseBackend):
     Implements the continuous encoding, binding, and bundling operations
     as defined in the HyperSpace paper using HRR principles.
     """
-    def __init__(self, vector_dim: int, length_scale: float = 1.0, device: str = "cpu"):
+    def __init__(self, vector_dim: int, length_scale: float = 1.0, device: str = "cpu",
+                 env_dim: int = 1, value_dim: int = 1):
         super().__init__(
             name="HRR",
             vector_dim=vector_dim,
@@ -313,8 +314,16 @@ class HRRBackend(BaseBackend):
         if self.length_scale < 0:
             print(f"WARNING: received negative length scale value of {self.length_scale}")
 
+        self.env_dim: int = int(env_dim)
+        if self.env_dim <= 0:
+            raise ValueError(f"env dim should be > 1; received {self.env_dim}")
+
+        self.value_dim: int = int(value_dim)
+        if self.value_dim <= 0:
+            raise ValueError(f"value dim should be > 0; received {self.value_dim}")
+
         # -----------------------------
-        # Compile HRR Specific Intakes
+        # Compile HRR Specific Methods
         # -----------------------------
         self._comp_create_single_vector = torch.compile(_base_create_single_vector)
         self._comp_single_bind = torch.compile(_base_single_bind)
@@ -323,6 +332,12 @@ class HRRBackend(BaseBackend):
         self._comp_batch_bind = torch.compile(_base_batch_bind)
         self._comp_batch_bundle = torch.compile(_base_batch_bundle)
         self._comp_batch_fpe = torch.compile(_base_batch_fpe)
+
+        # ----------------------------------------
+        # Initialize all internal data structures
+        # ----------------------------------------
+        self.initialize_env_basis_vectors(self.env_dim)
+        self.initialize_value_basis_vectors(self.value_dim)
 
     @torch.inference_mode()
     def create_random_vector(self, eps: float = 1e-3) -> Tensor:
@@ -545,31 +560,12 @@ class HRRBackend(BaseBackend):
             env_dim = env_dim_new
 
         # Build a fresh basis locally (avoid touching buffers until ready)
-        rows = []
-        log_rows = []
-        for _ in range(env_dim):
-            v = self.create_random_vector()        # (D,)
-            v_f = torch.fft.fft(v)                 # HRR often stores basis in freq; if you want time-domain, remove this
-            # v_f = torch.clamp(v_f, min=1e-7)  # avoid log(0)
-            rows.append(v)                       # ensure real (HRR base vectors are real in time; freq mag=1)
-            log_rows.append(torch.log(v_f))
-
+        rows = [self.create_random_vector() for _ in range(env_dim)]
         env = torch.stack(rows).to(self.device)    # (env_dim, D)
         env = env.contiguous()
 
-        log_env = torch.stack(log_rows).to(self.device)    # env_log = torch.clamp(log_env, min=-20.0)  # avoid extreme logs
-        log_env = log_env.contiguous()
-
-        assert not torch.isnan(env).any(), "NaN detected"
-
         # Update buffers IN-PLACE
         self.env_basis_vectors.resize_(env.shape).copy_(env)
-
-        assert not torch.isnan(self.env_basis_vectors).any(), "NaN detected"
-
-        self.env_log_basis.resize_(env.shape).copy_(log_env)
-
-        assert not torch.isnan(self.env_log_basis).any(), "NaN detected"
 
     @torch.no_grad()
     def initialize_value_basis_vectors(self, value_dim: int) -> None:
@@ -587,16 +583,10 @@ class HRRBackend(BaseBackend):
 
         # Build locally first
         rows = [self.create_random_vector() for _ in range(value_dim)]  # each (D,)
-        rows = [torch.fft.fft(v) for v in rows] 
         vals = torch.stack(rows).to(self.device).contiguous()           # (value_dim, D)
 
         # Update buffers in-place (no re-register)
         self.value_basis_vectors.resize_(vals.shape).copy_(vals)
-
-        # Precompute logs (clamp to keep log finite), store compact
-        v_log = torch.log(self.value_basis_vectors)      # fp32 compute
-        self.value_log_basis.resize_(v_log.shape).copy_(v_log)
-
     
     def _nearest_neighbor_regression(self, vectors: Tensor) -> Tensor:
         """
