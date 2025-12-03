@@ -1006,3 +1006,29 @@ def test_backend_continuous_encoding_x_not_tensor():
 
     with pytest.raises(TypeError):
         b.continuous_encoding(np.zeros(2))
+
+def test_backend_continuous_encoding_x_invalid_env_shape():
+    """
+    test that the backend throws an error with the x argument
+    isn't the correct env_dim
+    """
+    import torch
+    from hyperspace.backends.hrr import HRRBackend
+
+    env_dim: int = 3
+    batch_size: int = 128
+
+    b = HRRBackend(
+        vector_dim=128,
+        env_dim=env_dim
+    )
+
+    x_small = torch.ones((batch_size, env_dim - 1))
+    x_big = torch.ones((batch_size, env_dim + 1))
+
+    with pytest.raises(ValueError):
+        b.continuous_encoding(x_small)
+
+    with pytest.raises(ValueError):
+        b.continuous_encoding(x_big)
+
