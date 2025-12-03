@@ -361,7 +361,7 @@ class HRRBackend(BaseBackend):
 
     
     @torch.inference_mode()
-    def continuous_encoding(self, x: Tensor, indexes: Tensor) -> Tuple[Tensor, dict]:
+    def continuous_encoding(self, x: Tensor) -> Tuple[Tensor, dict]:
         """
         Abstract definition of the continuous encoding method (\\mathcal{E})
         from the HyperSpace paper.
@@ -369,10 +369,7 @@ class HRRBackend(BaseBackend):
         Arguments:
         ----------
         x : torch.Tensor
-            Continuous value to be encoded. Shape should be (batch_size, ).
-    
-        indexes : torch.Tensor
-            Indexes of the basis vectors to use for encoding. Shape should be (batch_size, ).
+            Continuous value to be encoded. Shape should be (batch_size, env_dim).
 
         Returns:
         -------
@@ -385,12 +382,12 @@ class HRRBackend(BaseBackend):
         # --------------------------------
         # validate input shapes
         # --------------------------------
-        if x.dim() != 1:
-            raise ValueError("Input x must be a 1D tensor of shape (batch_size, ).")
-        if indexes.dim() != 1:
-            raise ValueError("Input indexes must be a 1D tensor of shape (batch_size, ).")
-        if x.shape[0] != indexes.shape[0]:
-            raise ValueError("Input x and indexes must have the same batch size.")
+        if not isinstance(x, Tensor):
+            raise TypeError(f"Input x should be a Tensor, got {type(x)}")
+        if x.dim() != 2:
+            raise ValueError("Input x must be a 2D tensor of shape (batch_size, env_dim).")
+        if x.shape[1] != self.env_dim:
+            raise ValueError(f"Input x should have shape (batch_size, {self.env_dim}; got {x.shape}")
         
         # ------------------------------------------------
         # perform fractional power encoding of each value

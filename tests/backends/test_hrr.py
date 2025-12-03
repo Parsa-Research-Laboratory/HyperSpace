@@ -994,3 +994,15 @@ def test_backend_value_dim_negative():
             vector_dim=128,
             value_dim=-1
         )
+
+def test_backend_continuous_encoding_x_not_tensor():
+    """
+    test that the backend throws an error with the x argument isn't a tensor
+    """
+    import numpy as np
+    from hyperspace.backends.hrr import HRRBackend
+
+    b = HRRBackend(vector_dim=128)
+
+    with pytest.raises(TypeError):
+        b.continuous_encoding(np.zeros(2))
