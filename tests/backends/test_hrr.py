@@ -927,7 +927,7 @@ def test_backend_env_basis_similarity():
 
 def test_backend_value_basis_similarity():
     """
-    test that the value value vectors are approximately orthogonal
+    test that the value vectors are approximately orthogonal
     """
 
     import torch
@@ -946,3 +946,15 @@ def test_backend_value_basis_similarity():
     assert isinstance(v1, Tensor)
     assert len(v1.shape) == 1
     assert v1.shape[0] == D
+
+def test_backend_env_dim_zero():
+    """
+    test that the backend throws an error with env_dim is zero
+    """
+    from hyperspace.backends.hrr import HRRBackend
+
+    with pytest.raises(ValueError):
+        HRRBackend(
+            vector_dim=128,
+            env_dim=0
+        )
