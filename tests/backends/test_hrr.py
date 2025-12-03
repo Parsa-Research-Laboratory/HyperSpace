@@ -509,7 +509,7 @@ def test_backend_method_create_random_vector_orthogonality():
     from torch import Tensor
     from hyperspace.backends.hrr import HRRBackend
 
-    vd: int = 256
+    vd: int = 25600
 
     b = HRRBackend(vector_dim=vd)
 
@@ -1005,7 +1005,28 @@ def test_backend_continuous_encoding_x_not_tensor():
     b = HRRBackend(vector_dim=128)
 
     with pytest.raises(TypeError):
-        b.continuous_encoding(np.zeros(2))
+        b.positional_encoding(np.zeros(2))
+
+def test_backend_continuous_encoding_x_invalid_shape():
+    """
+    test that the backend throws an error when the x argument doesn't
+    have the right dimensionality
+    """
+    import torch
+    from hyperspace.backends.hrr import HRRBackend
+
+    env_dim: int = 3
+    b = HRRBackend(vector_dim=128)
+
+    # low dimensionality
+    with pytest.raises(ValueError):
+        inp = torch.zeros((env_dim))
+        b.positional_encoding(inp)
+
+    # high dimensionality
+    with pytest.raises(ValueError):
+        inp = torch.zeros((env_dim, env_dim, env_dim))
+        b.positional_encoding(inp)
 
 def test_backend_continuous_encoding_x_invalid_env_shape():
     """
@@ -1027,8 +1048,8 @@ def test_backend_continuous_encoding_x_invalid_env_shape():
     x_big = torch.ones((batch_size, env_dim + 1))
 
     with pytest.raises(ValueError):
-        b.continuous_encoding(x_small)
+        b.positional_encoding(x_small)
 
     with pytest.raises(ValueError):
-        b.continuous_encoding(x_big)
+        b.positional_encoding(x_big)
 

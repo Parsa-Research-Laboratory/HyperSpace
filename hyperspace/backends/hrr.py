@@ -361,7 +361,7 @@ class HRRBackend(BaseBackend):
 
     
     @torch.inference_mode()
-    def continuous_encoding(self, x: Tensor) -> Tuple[Tensor, dict]:
+    def positional_encoding(self, x: Tensor) -> Tuple[Tensor, dict]:
         """
         Abstract definition of the continuous encoding method (\\mathcal{E})
         from the HyperSpace paper.
