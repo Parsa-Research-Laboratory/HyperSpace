@@ -903,3 +903,25 @@ def test_backend_value_dim_basis_size():
     for d in value_dim_list:
         b = HRRBackend(vector_dim=D, value_dim=d)
         assert b.value_basis_vectors.shape == (d, D)
+
+def test_backend_env_basis_similarity():
+    """
+    test that the env basis vectors are approximately orthogonal
+    """
+    import numpy as np
+    import torch
+    from torch import Tensor
+    from hyperspace.backends.hrr import HRRBackend
+
+    D: int = 10000
+
+    b = HRRBackend(vector_dim=D, env_dim=2)
+
+    v1: torch.Tensor = b.env_basis_vectors[0]
+    v2: torch.Tensor = b.env_basis_vectors[1]
+
+    dot = torch.dot(v1, v2)
+    assert dot.abs() < 0.12, f"Vectors not orthogonal; dot={dot.item()}" 
+    assert isinstance(v1, Tensor)
+    assert len(v1.shape) == 1
+    assert v1.shape[0] == D
