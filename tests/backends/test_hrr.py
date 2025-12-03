@@ -875,3 +875,23 @@ def test_backend_method_batch_similarity_non_normalized_orthogonal():
         rtol=0.1,
         atol=0.1,
     )
+
+def test_backend_env_dim_basis_size():
+    """
+    test that the size of the env basis matrix matches the arguments
+    """
+    from hyperspace.backends.hrr import HRRBackend
+
+    D: int = 10000
+
+    env_dim_list =[1, 3, 5]
+
+    for d in env_dim_list:
+
+        backend = HRRBackend(
+            vector_dim=D,
+            env_dim=d
+        )
+
+        assert backend.env_basis_vectors.shape == (d, D)
+
