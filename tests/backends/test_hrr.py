@@ -1248,7 +1248,7 @@ def test_base_single_value_encoding_valid_input_1d():
         powers=value,
         length_scale=length_scale
     )
-    v_gt = torch.sum(v_gt, dim=0).numpy()
+    v_gt = torch.prod(v_gt, dim=0).numpy()
 
     assert v_pred.shape == (vector_dim,)
     assert v_gt.shape == (vector_dim,)
@@ -1301,7 +1301,7 @@ def test_base_single_value_encoding_valid_input_2d():
         powers=value,
         length_scale=length_scale
     )
-    v_gt = torch.sum(v_gt, dim=0).numpy()
+    v_gt = torch.prod(v_gt, dim=0).numpy()
 
     assert v_pred.shape == (vector_dim,)
     assert v_gt.shape == (vector_dim,)
@@ -1347,7 +1347,7 @@ def test_base_single_value_encoding_valid_input_6d():
         powers=value,
         length_scale=length_scale
     )
-    v_gt = torch.sum(v_gt, dim=0).numpy()
+    v_gt = torch.prod(v_gt, dim=0).numpy()
 
     assert v_pred.shape == (vector_dim,)
     assert v_gt.shape == (vector_dim,)
@@ -1355,6 +1355,334 @@ def test_base_single_value_encoding_valid_input_6d():
     assert np.allclose(
         v_pred,
         v_gt,
+        rtol=1e-5,
+        atol=1e-7,
+    )
+
+def test_base_batch_value_encoding_invalid_x_type():
+    """
+    Test that _base_batch_value_encoding throws error when x is not a Tensor
+    """
+    import numpy as np
+    import torch
+    from hyperspace.backends.hrr import _base_batch_value_encoding
+
+    value_dim: int = 10
+    vector_dim: int = 256
+    batch_size: int = 8
+
+    x = np.zeros((batch_size, value_dim))
+    basis = torch.ones((value_dim, vector_dim))
+    ls: float = 1.0
+
+    with pytest.raises(TypeError):
+        _base_batch_value_encoding(x, basis, ls)
+
+
+def test_base_batch_value_encoding_invalid_basis_type():
+    """
+    Test that _base_batch_value_encoding throws error when basis is not a Tensor
+    """
+    import numpy as np
+    import torch
+    from hyperspace.backends.hrr import _base_batch_value_encoding
+
+    value_dim: int = 10
+    vector_dim: int = 256
+    batch_size: int = 8
+
+    x = torch.zeros((batch_size, value_dim))
+    basis = np.ones((value_dim, vector_dim))
+    ls: float = 1.0
+
+    with pytest.raises(TypeError):
+        _base_batch_value_encoding(x, basis, ls)
+
+
+def test_base_batch_value_encoding_invalid_x_dim():
+    """
+    Test that _base_batch_value_encoding throws error when x isn't 2D
+    """
+    import torch
+    from hyperspace.backends.hrr import _base_batch_value_encoding
+
+    value_dim: int = 10
+    vector_dim: int = 256
+
+    basis = torch.ones((value_dim, vector_dim))
+    ls: float = 1.0
+
+    # 1D input (should be 2D)
+    x_1d = torch.zeros(value_dim)
+    with pytest.raises(ValueError):
+        _base_batch_value_encoding(x_1d, basis, ls)
+    
+    # 3D input (should be 2D)
+    x_3d = torch.zeros((8, value_dim, value_dim))
+    with pytest.raises(ValueError):
+        _base_batch_value_encoding(x_3d, basis, ls)
+
+
+def test_base_batch_value_encoding_invalid_basis_dim():
+    """
+    Test that _base_batch_value_encoding throws error when basis isn't 2D
+    """
+    import torch
+    from hyperspace.backends.hrr import _base_batch_value_encoding
+
+    value_dim: int = 10
+    vector_dim: int = 256
+    batch_size: int = 8
+
+    x = torch.zeros((batch_size, value_dim))
+    basis_1d = torch.ones((vector_dim,))
+    basis_3d = torch.ones((value_dim, vector_dim, value_dim))
+    ls: float = 1.0
+    
+    with pytest.raises(ValueError):
+        _base_batch_value_encoding(x, basis_1d, ls)
+
+    with pytest.raises(ValueError):
+        _base_batch_value_encoding(x, basis_3d, ls)
+
+
+def test_base_batch_value_encoding_value_dim_mismatch():
+    """
+    Test that _base_batch_value_encoding throws error when x and basis 
+    have mismatched value dimensions
+    """
+    import torch
+    from hyperspace.backends.hrr import _base_batch_value_encoding
+
+    value_dim: int = 10
+    vector_dim: int = 256
+    batch_size: int = 8
+
+    x_small = torch.zeros((batch_size, value_dim - 1))
+    x_large = torch.zeros((batch_size, value_dim + 1))
+    basis = torch.ones((value_dim, vector_dim))
+    ls: float = 1.0
+
+    with pytest.raises(ValueError):
+        _base_batch_value_encoding(x_small, basis, ls)
+
+    with pytest.raises(ValueError):
+        _base_batch_value_encoding(x_large, basis, ls)
+
+
+def test_base_batch_value_encoding_valid_input_1d():
+    """
+    Test _base_batch_value_encoding with 1D values (single dimension per sample)
+    """
+    import numpy as np
+    import torch
+    from hyperspace.backends.hrr import (
+        _base_create_single_vector,
+        _base_batch_fpe,
+        _base_batch_value_encoding
+    )
+
+    vector_dim = 1024
+    batch_size = 16
+    gen = torch.Generator()
+    
+    # Create batched 1D values
+    values = torch.randn((batch_size, 1)) * 5  # Random values
+    length_scale = 1.0
+
+    v1 = _base_create_single_vector(
+        vector_dim=vector_dim,
+        gen=gen
+    )
+    v1 = v1.unsqueeze(0)  # (1, vector_dim)
+
+    v_pred = _base_batch_value_encoding(
+        x=values,
+        basis=v1,
+        length_scale=length_scale
+    ).numpy()
+
+    # Compute ground truth: each batch item separately
+    v_gt = []
+    for i in range(batch_size):
+        v_fpe = _base_batch_fpe(
+            basis=v1,
+            powers=values[i],
+            length_scale=length_scale
+        )
+        v_gt.append(torch.prod(v_fpe, dim=0))
+    v_gt = torch.stack(v_gt, dim=0).numpy()
+
+    assert v_pred.shape == (batch_size, vector_dim)
+    assert v_gt.shape == (batch_size, vector_dim)
+
+    assert np.allclose(
+        v_pred,
+        v_gt,
+        rtol=1e-5,
+        atol=1e-7,
+    )
+
+
+def test_base_batch_value_encoding_valid_input_2d():
+    """
+    Test _base_batch_value_encoding with 2D values
+    """
+    import numpy as np
+    import torch
+    from hyperspace.backends.hrr import (
+        _base_create_single_vector,
+        _base_batch_fpe,
+        _base_batch_value_encoding
+    )
+
+    vector_dim = 1024
+    batch_size = 16
+    gen = torch.Generator()
+    
+    # Create batched 2D values
+    values = torch.randn((batch_size, 2)) * 5
+    length_scale = 1.0
+
+    v1 = _base_create_single_vector(
+        vector_dim=vector_dim,
+        gen=gen
+    )
+    v2 = _base_create_single_vector(
+        vector_dim=vector_dim,
+        gen=gen
+    )
+    v_stack = torch.stack([v1, v2], dim=0)
+
+    assert v_stack.shape == (2, vector_dim)
+
+    v_pred = _base_batch_value_encoding(
+        x=values,
+        basis=v_stack,
+        length_scale=length_scale
+    ).numpy()
+
+    # Compute ground truth
+    v_gt = []
+    for i in range(batch_size):
+        v_fpe = _base_batch_fpe(
+            basis=v_stack,
+            powers=values[i],
+            length_scale=length_scale
+        )
+        v_gt.append(torch.prod(v_fpe, dim=0))
+    v_gt = torch.stack(v_gt, dim=0).numpy()
+
+    assert v_pred.shape == (batch_size, vector_dim)
+    assert v_gt.shape == (batch_size, vector_dim)
+
+    assert np.allclose(
+        v_pred,
+        v_gt,
+        rtol=1e-5,
+        atol=1e-7,
+    )
+
+
+def test_base_batch_value_encoding_valid_input_6d():
+    """
+    Test _base_batch_value_encoding with 6D values
+    """
+    import numpy as np
+    import torch
+    from hyperspace.backends.hrr import (
+        _base_create_single_vector,
+        _base_batch_fpe,
+        _base_batch_value_encoding
+    )
+
+    vector_dim = 1024
+    batch_size = 16
+    gen = torch.Generator()
+    
+    # Create batched 6D values
+    values = torch.randn((batch_size, 6)) * 5
+    length_scale = 1.0
+
+    v_list = [_base_create_single_vector(vector_dim, gen) for _ in range(6)]
+    v_stack = torch.stack(v_list, dim=0)
+
+    assert v_stack.shape == (6, vector_dim)
+
+    v_pred = _base_batch_value_encoding(
+        x=values,
+        basis=v_stack,
+        length_scale=length_scale
+    ).numpy()
+
+    # Compute ground truth
+    v_gt = []
+    for i in range(batch_size):
+        v_fpe = _base_batch_fpe(
+            basis=v_stack,
+            powers=values[i],
+            length_scale=length_scale
+        )
+        v_gt.append(torch.prod(v_fpe, dim=0))
+    v_gt = torch.stack(v_gt, dim=0).numpy()
+
+    assert v_pred.shape == (batch_size, vector_dim)
+    assert v_gt.shape == (batch_size, vector_dim)
+
+    assert np.allclose(
+        v_pred,
+        v_gt,
+        rtol=1e-5,
+        atol=1e-7,
+    )
+
+
+def test_base_batch_value_encoding_consistency_with_single():
+    """
+    Test that batched version produces same results as single version
+    when batch_size=1
+    """
+    import numpy as np
+    import torch
+    from hyperspace.backends.hrr import (
+        _base_create_single_vector,
+        _base_single_value_encoding,
+        _base_batch_value_encoding
+    )
+
+    vector_dim = 512
+    gen = torch.Generator().manual_seed(42)
+    
+    # Create test data
+    value_dim = 4
+    value_single = torch.tensor([1.5, 2.3, -0.7, 3.1])
+    value_batch = value_single.unsqueeze(0)  # (1, 4)
+    length_scale = 1.0
+
+    v_list = [_base_create_single_vector(vector_dim, gen) for _ in range(value_dim)]
+    v_stack = torch.stack(v_list, dim=0)
+
+    # Single version
+    v_single = _base_single_value_encoding(
+        x=value_single,
+        basis=v_stack,
+        length_scale=length_scale
+    ).numpy()
+
+    # Batch version with batch_size=1
+    v_batch = _base_batch_value_encoding(
+        x=value_batch,
+        basis=v_stack,
+        length_scale=length_scale
+    ).numpy()
+
+    assert v_single.shape == (vector_dim,)
+    assert v_batch.shape == (1, vector_dim)
+
+    # Should produce identical results
+    assert np.allclose(
+        v_single,
+        v_batch[0],
         rtol=1e-5,
         atol=1e-7,
     )

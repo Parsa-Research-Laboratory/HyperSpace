@@ -333,7 +333,7 @@ def _base_single_value_encoding(x: Tensor, basis: Tensor, length_scale: float) -
     basis_fft = torch.fft.fft(basis, dim=-1)
     v_out = basis_fft ** (x / length_scale).unsqueeze(-1)
     v_out = torch.fft.ifft(v_out).real
-    v_out = torch.sum(v_out, dim=0)
+    v_out = torch.prod(v_out, dim=0)
 
     return v_out
 
@@ -406,7 +406,7 @@ def _base_batch_value_encoding(x: Tensor, basis: Tensor, length_scale: float) ->
     
     # Step 4: Bundle dimensions via summation for each batch
     # Sum along dim=1 (value_dim): (batch_size, value_dim, vector_dim) -> (batch_size, vector_dim)
-    v_out = torch.sum(encoded, dim=1)
+    v_out = torch.prod(encoded, dim=1)
     
     return v_out
 
