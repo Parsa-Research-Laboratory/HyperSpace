@@ -330,9 +330,10 @@ def _base_single_value_encoding(x: Tensor, basis: Tensor, length_scale: float) -
     if x.shape[0] != basis.shape[0]:
         raise ValueError(f"Expected the ")
     
-    import torch
-
-    v_out = torch.zeros(basis.shape[1])
+    basis_fft = torch.fft.fft(basis, dim=-1)
+    v_out = basis_fft ** (x / length_scale).unsqueeze(-1)
+    v_out = torch.fft.ifft(v_out).real
+    v_out = torch.sum(v_out, dim=0)
 
     return v_out
 
