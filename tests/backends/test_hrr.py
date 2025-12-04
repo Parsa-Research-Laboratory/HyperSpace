@@ -1154,7 +1154,19 @@ def test_base_single_value_encoding_invalid_x_dim():
     test that the base_single_value_encoding method throws
     an error when x isn't the correct shape
     """
-    raise NotImplementedError
+    import torch
+    from hyperspace.backends.hrr import _base_single_value_encoding
+
+    value_dim: int = 10
+    vector_dim: int = 256
+
+    basis = torch.ones((value_dim, vector_dim))
+    ls: float = 1.0
+
+    # too large dim
+    x = torch.zeros(value_dim, value_dim)
+    with pytest.raises(ValueError):
+        _base_single_value_encoding(x, basis, ls)
 
 def test_base_single_value_encoding_invalid_basis_dim():
     """
