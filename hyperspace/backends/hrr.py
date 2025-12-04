@@ -359,7 +359,6 @@ class HRRBackend(BaseBackend):
             dev=self.device
         )
 
-    
     @torch.inference_mode()
     def positional_encoding(self, x: Tensor) -> Tuple[Tensor, dict]:
         """
