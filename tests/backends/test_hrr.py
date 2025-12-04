@@ -1111,3 +1111,45 @@ def test_backend_value_encoding_x_invalid_env_shape():
     with pytest.raises(ValueError):
         b.value_encoding(x_big)
 
+def test_base_single_value_encoding_invalid_x_type():
+    """
+    test that the base_single_value_encoding method throws
+    an error when x is not a Tensor
+    """
+    raise NotImplementedError
+
+def test_base_single_value_encoding_invalid_basis_type():
+    """
+    test that the base_single_value_encoding method throws
+    an error when basis is not a Tensor
+    """
+    raise NotImplementedError
+
+def test_base_single_value_encoding_invalid_x_dim():
+    """
+    test that the base_single_value_encoding method throws
+    an error when x isn't the correct shape
+    """
+    raise NotImplementedError
+
+def test_base_single_value_encoding_invalid_basis_dim():
+    """
+    test that the base_single_value_encoding method throws
+    an error when basis isn't the correct shape
+    """
+    raise NotImplementedError
+
+def test_base_single_value_encoding_value_dim_missmatch():
+    """
+    test that the base_single_value_encoding method throws
+    an error when x and basis assume different value
+    dimensionalities
+    """
+    raise NotImplementedError
+
+def test_base_single_value_encoding_valid_input():
+    """
+    test that the base_single_value_encoding method
+    create the correct value vector
+    """
+    raise NotImplementedError

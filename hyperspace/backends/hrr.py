@@ -291,6 +291,52 @@ def _base_batch_fpe(basis: Tensor, powers: Tensor, length_scale: float) -> Tenso
 
     return v_out
 
+def _base_single_value_encoding(x: Tensor, basis: Tensor, length_scale: float) -> Tensor:
+    """
+    Single HRR value encoding with multiple dimensions
+
+    Arguments:
+        x: Tensor
+            The n-dimensional position to be encoded in a single hypervector;
+            Shape = (value_dim)
+        basis: Tensor
+            The axis vectors for each dimension of x;
+            Shape = (value_dim, vector_dim)
+        length_scale: float
+            The width of the kernel induced upon similarity
+
+    Returns:
+        v_out: Tensor
+            The n-dimensional positon encoded as a vector
+    """
+
+    if not isinstance(x, Tensor):
+        raise TypeError(f"expected x to be a Tensor; got {type(x)}")
+
+    if not isinstance(basis, Tensor):
+        raise TypeError(f"expected basis to ba a Tensor; got {type(basis)}")
+    
+    length_scale = float(length_scale)
+    
+    if not isinstance(length_scale, float):
+        raise TypeError(f"expected length_scale to be a float; got {type(length_scale)}")
+    
+    if x.ndim != 1:
+        raise ValueError(f"expected x to be (value_dim); got {x.shape}")
+
+    if basis.ndim != 2:
+        raise ValueError(f"expected basis to be (value_dim, vector_dim); got {basis.shape}")
+    
+    if x.shape[0] != basis.shape[0]:
+        raise ValueError(f"Expected the ")
+    
+    import torch
+
+    v_out = torch.zeros(basis.shape[1])
+
+    return v_out
+
+
 class HRRBackend(BaseBackend):
     """
     Holographic Reduced Representations (HRR) backend implementation.
@@ -387,6 +433,8 @@ class HRRBackend(BaseBackend):
             raise ValueError("Input x must be a 2D tensor of shape (batch_size, env_dim).")
         if x.shape[1] != self.env_dim:
             raise ValueError(f"Input x should have shape (batch_size, {self.env_dim}; got {x.shape}")
+        
+        
         
         raise NotImplementedError()
 
