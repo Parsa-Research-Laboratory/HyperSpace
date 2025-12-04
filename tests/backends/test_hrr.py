@@ -1173,7 +1173,22 @@ def test_base_single_value_encoding_invalid_basis_dim():
     test that the base_single_value_encoding method throws
     an error when basis isn't the correct shape
     """
-    raise NotImplementedError
+    import torch
+    from hyperspace.backends.hrr import _base_single_value_encoding
+
+    value_dim: int = 10
+    vector_dim: int = 256
+
+    x = torch.zeros(value_dim, value_dim)
+    basis_small = torch.ones((vector_dim))
+    basis_large = torch.ones((value_dim, vector_dim, value_dim))
+    ls: float = 1.0
+    
+    with pytest.raises(ValueError):
+        _base_single_value_encoding(x, basis_small, ls)
+
+    with pytest.raises(ValueError):
+        _base_single_value_encoding(x, basis_large, ls)
 
 def test_base_single_value_encoding_value_dim_missmatch():
     """
