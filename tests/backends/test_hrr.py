@@ -1116,7 +1116,19 @@ def test_base_single_value_encoding_invalid_x_type():
     test that the base_single_value_encoding method throws
     an error when x is not a Tensor
     """
-    raise NotImplementedError
+    import numpy as np
+    import torch
+    from hyperspace.backends.hrr import _base_single_value_encoding
+
+    value_dim: int = 10
+    vector_dim: int = 256
+
+    x = np.zeros(value_dim)
+    basis = torch.ones((value_dim, vector_dim))
+    ls: float = 1.0
+
+    with pytest.raises(TypeError):
+        _base_single_value_encoding(x, basis, ls)
 
 def test_base_single_value_encoding_invalid_basis_type():
     """
