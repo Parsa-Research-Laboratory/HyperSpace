@@ -337,6 +337,79 @@ def _base_single_value_encoding(x: Tensor, basis: Tensor, length_scale: float) -
 
     return v_out
 
+def _base_batch_value_encoding(x: Tensor, basis: Tensor, length_scale: float) -> Tensor:
+    """
+    Batched HRR value encoding with multiple dimensions using bundling.
+    
+    Efficiently encodes multiple n-dimensional values into hypervectors by
+    applying fractional power encoding (FPE) to each dimension's basis vector,
+    then bundling them together via vector addition. All batches are processed
+    in parallel.
+
+    Arguments:
+        x: Tensor
+            Batched n-dimensional values to encode.
+            Shape: (batch_size, value_dim)
+        basis: Tensor
+            The basis vectors for each dimension.
+            Shape: (value_dim, vector_dim)
+        length_scale: float
+            Kernel width parameter controlling similarity decay.
+
+    Returns:
+        v_out: Tensor
+            The encoded hypervectors.
+            Shape: (batch_size, vector_dim)
+    
+    Example:
+        >>> x_batch = torch.randn(32, 3)  # 32 samples of 3D values
+        >>> basis = torch.randn(3, 256)   # 3 basis vectors of dim 256
+        >>> encoded = _base_batch_value_encoding(x_batch, basis, length_scale=1.0)
+        >>> encoded.shape
+        torch.Size([32, 256])
+    """
+    # Type checking
+    if not isinstance(x, Tensor):
+        raise TypeError(f"expected x to be a Tensor; got {type(x)}")
+    if not isinstance(basis, Tensor):
+        raise TypeError(f"expected basis to be a Tensor; got {type(basis)}")
+    
+    length_scale = float(length_scale)
+    if not isinstance(length_scale, float):
+        raise TypeError(f"expected length_scale to be a float; got {type(length_scale)}")
+    
+    # Shape validation - ONLY accept 2D input
+    if x.ndim != 2:
+        raise ValueError(f"expected x to be (batch_size, value_dim); got {x.shape}")
+    if basis.ndim != 2:
+        raise ValueError(f"expected basis to be (value_dim, vector_dim); got {basis.shape}")
+    
+    # Validate value_dim matches
+    if x.shape[1] != basis.shape[0]:
+        raise ValueError(
+            f"Expected x.shape[1] ({x.shape[1]}) to match basis.shape[0] ({basis.shape[0]})"
+        )
+    
+    # Efficient batched computation in frequency domain
+    # Step 1: Transform basis to frequency domain once for all batches
+    # Shape: (value_dim, vector_dim)
+    basis_fft = torch.fft.fft(basis, dim=-1)
+    
+    # Step 2: Apply FPE for all dimensions and batches
+    # Broadcasting: (1, value_dim, vector_dim) ** (batch_size, value_dim, 1)
+    # Result: (batch_size, value_dim, vector_dim)
+    encoded_fft = basis_fft.unsqueeze(0) ** (x / length_scale).unsqueeze(-1)
+    
+    # Step 3: Transform back to time domain for all batches
+    # Shape: (batch_size, value_dim, vector_dim)
+    encoded = torch.fft.ifft(encoded_fft, dim=-1).real
+    
+    # Step 4: Bundle dimensions via summation for each batch
+    # Sum along dim=1 (value_dim): (batch_size, value_dim, vector_dim) -> (batch_size, vector_dim)
+    v_out = torch.sum(encoded, dim=1)
+    
+    return v_out
+
 
 class HRRBackend(BaseBackend):
     """
