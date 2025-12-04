@@ -1259,3 +1259,56 @@ def test_base_single_value_encoding_valid_input_1d():
         rtol=1e-5,
         atol=1e-7,
     )
+
+def test_base_single_value_encoding_valid_input_2d():
+    """
+    test that the base_single_value_encoding method
+    create the correct value vector
+    """
+    import numpy as np
+    import torch
+    from hyperspace.backends.hrr import (
+        _base_create_single_vector,
+        _base_batch_fpe,
+        _base_single_value_encoding
+    )
+
+    vector_dim = 1024
+    gen = torch.Generator()
+    value = torch.tensor([2, 4])
+    length_scale = 1.0
+
+    v1 = _base_create_single_vector(
+        vector_dim=vector_dim,
+        gen=gen
+    )
+    v2 = _base_create_single_vector(
+        vector_dim=vector_dim,
+        gen=gen
+    )
+    v_stack = torch.stack([v1, v2], dim=0)
+
+    assert v_stack.shape == (2, vector_dim)
+
+    v_pred = _base_single_value_encoding(
+        x=value,
+        basis=v_stack,
+        length_scale=length_scale
+    ).numpy()
+
+    v_gt = _base_batch_fpe(
+        basis=v_stack,
+        powers=value,
+        length_scale=length_scale
+    )
+    v_gt = torch.sum(v_gt, dim=0).numpy()
+
+    assert v_pred.shape == (vector_dim,)
+    assert v_gt.shape == (vector_dim,)
+
+    assert np.allclose(
+        v_pred,
+        v_gt,
+        rtol=1e-5,
+        atol=1e-7,
+    )
