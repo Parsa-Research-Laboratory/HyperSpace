@@ -1196,7 +1196,22 @@ def test_base_single_value_encoding_value_dim_missmatch():
     an error when x and basis assume different value
     dimensionalities
     """
-    raise NotImplementedError
+    import torch
+    from hyperspace.backends.hrr import _base_single_value_encoding
+
+    value_dim: int = 10
+    vector_dim: int = 256
+
+    x_small = torch.zeros(value_dim - 1)
+    x_large = torch.zeros(value_dim + 1)
+    basis = torch.ones((value_dim, vector_dim))
+    ls: float = 1.0
+
+    with pytest.raises(ValueError):
+        _base_single_value_encoding(x_small, basis, ls)
+
+    with pytest.raises(ValueError):
+        _base_single_value_encoding(x_large, basis, ls)
 
 def test_base_single_value_encoding_valid_input():
     """
