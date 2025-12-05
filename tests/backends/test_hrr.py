@@ -1757,3 +1757,38 @@ def test_positional_encoding_invalid_x_env_dim():
 
     with pytest.raises(ValueError):
         b.positional_encoding(x_batch_high)
+
+def test_positional_encoding_single_x():
+    """
+    test that the positional encoding module works when given
+    a single x value
+    """
+    raise NotImplementedError()
+
+def test_positional_encoding_batched_x():
+    """
+    test that the positional encoding module works when given
+    a batched x value
+    """
+    raise NotImplementedError()
+
+def test_value_encoding_invalid_x_type():
+    """
+    test that the value encoding module throws an error when
+    x is the incorrect type
+    """
+    raise NotImplementedError()
+
+def test_value_encoding_invalid_x_dim():
+    """
+    Test that the backend's value encoding method
+    throws an error when x isn't single or batched
+    """
+    raise NotImplementedError()
+
+def test_value_encoding_invalid_x_val_dim():
+    """
+    Test that the backend's value encoding method throws
+    an error when x isn't the correct value dimensionality
+    """
+    raise NotImplementedError()
