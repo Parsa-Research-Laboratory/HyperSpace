@@ -1792,3 +1792,17 @@ def test_value_encoding_invalid_x_val_dim():
     an error when x isn't the correct value dimensionality
     """
     raise NotImplementedError()
+
+def test_value_encoding_single_x():
+    """
+    test that the value encoding module works when given
+    a single x value
+    """
+    raise NotImplementedError()
+
+def test_value_encoding_batched_x():
+    """
+    test that the value encoding module works when given
+    a batched x value
+    """
+    raise NotImplementedError()
