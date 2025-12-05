@@ -1243,12 +1243,11 @@ def test_base_single_value_encoding_valid_input_1d():
         length_scale=length_scale
     ).numpy()
 
-    v_gt = _base_batch_fpe(
-        basis=v1,
-        powers=value,
-        length_scale=length_scale
-    )
-    v_gt = torch.prod(v_gt, dim=0).numpy()
+    # numpy baseline
+    v1_fft = np.fft.fft(v1[0])
+    v1_fft = v1_fft ** (value[0].item() / length_scale)
+    v_gt = np.fft.ifft(v1_fft).real
+    # v_gt = np.expand_dims(v_gt, axis=0)
 
     assert v_pred.shape == (vector_dim,)
     assert v_gt.shape == (vector_dim,)
@@ -1269,7 +1268,6 @@ def test_base_single_value_encoding_valid_input_2d():
     import torch
     from hyperspace.backends.hrr import (
         _base_create_single_vector,
-        _base_batch_fpe,
         _base_single_value_encoding
     )
 
@@ -1296,12 +1294,12 @@ def test_base_single_value_encoding_valid_input_2d():
         length_scale=length_scale
     ).numpy()
 
-    v_gt = _base_batch_fpe(
-        basis=v_stack,
-        powers=value,
-        length_scale=length_scale
-    )
-    v_gt = torch.prod(v_gt, dim=0).numpy()
+    v1_fft = torch.fft.fft(v1)
+    v2_fft = torch.fft.fft(v2)
+    v1_fft = v1_fft ** (value[0] / length_scale)
+    v2_fft = v2_fft ** (value[1] / length_scale)
+    v_gt = v1_fft * v2_fft
+    v_gt = torch.fft.ifft(v_gt).real
 
     assert v_pred.shape == (vector_dim,)
     assert v_gt.shape == (vector_dim,)
@@ -1313,7 +1311,7 @@ def test_base_single_value_encoding_valid_input_2d():
         atol=1e-7,
     )
 
-def test_base_single_value_encoding_valid_input_6d():
+def test_base_single_value_encoding_valid_input_3d():
     """
     test that the base_single_value_encoding method
     create the correct value vector
@@ -1322,19 +1320,18 @@ def test_base_single_value_encoding_valid_input_6d():
     import torch
     from hyperspace.backends.hrr import (
         _base_create_single_vector,
-        _base_batch_fpe,
         _base_single_value_encoding
     )
 
     vector_dim = 1024
     gen = torch.Generator()
-    value = torch.tensor([2, 4, 6, 8, 10, 12])
+    value = torch.tensor([2, 4, 6])
     length_scale = 1.0
 
-    v_list = [_base_create_single_vector(vector_dim, gen) for _ in range(6)]
+    v_list = [_base_create_single_vector(vector_dim, gen) for _ in range(3)]
     v_stack = torch.stack(v_list, dim=0)
 
-    assert v_stack.shape == (6, vector_dim)
+    assert v_stack.shape == (3, vector_dim)
 
     v_pred = _base_single_value_encoding(
         x=value,
@@ -1342,12 +1339,14 @@ def test_base_single_value_encoding_valid_input_6d():
         length_scale=length_scale
     ).numpy()
 
-    v_gt = _base_batch_fpe(
-        basis=v_stack,
-        powers=value,
-        length_scale=length_scale
-    )
-    v_gt = torch.prod(v_gt, dim=0).numpy()
+    v1_fft = torch.fft.fft(v_list[0])
+    v2_fft = torch.fft.fft(v_list[1])
+    v3_fft = torch.fft.fft(v_list[2])
+    v1_fft = v1_fft ** (value[0] / length_scale)
+    v2_fft = v2_fft ** (value[1] / length_scale)
+    v3_fft = v3_fft ** (value[2] / length_scale)
+    v_gt = v1_fft * v2_fft * v3_fft
+    v_gt = torch.fft.ifft(v_gt).real
 
     assert v_pred.shape == (vector_dim,)
     assert v_gt.shape == (vector_dim,)
@@ -1532,7 +1531,6 @@ def test_base_batch_value_encoding_valid_input_2d():
     import torch
     from hyperspace.backends.hrr import (
         _base_create_single_vector,
-        _base_batch_fpe,
         _base_batch_value_encoding
     )
 
@@ -1565,12 +1563,13 @@ def test_base_batch_value_encoding_valid_input_2d():
     # Compute ground truth
     v_gt = []
     for i in range(batch_size):
-        v_fpe = _base_batch_fpe(
-            basis=v_stack,
-            powers=values[i],
-            length_scale=length_scale
-        )
-        v_gt.append(torch.prod(v_fpe, dim=0))
+        v1_fft = torch.fft.fft(v1)
+        v2_fft = torch.fft.fft(v2)
+        v1_fft = v1_fft ** (values[i][0] / length_scale)
+        v2_fft = v2_fft ** (values[i][1] / length_scale)
+        v_out = v1_fft * v2_fft
+        v_out = torch.fft.ifft(v_out).real
+        v_gt.append(v_out)
     v_gt = torch.stack(v_gt, dim=0).numpy()
 
     assert v_pred.shape == (batch_size, vector_dim)
@@ -1584,7 +1583,7 @@ def test_base_batch_value_encoding_valid_input_2d():
     )
 
 
-def test_base_batch_value_encoding_valid_input_6d():
+def test_base_batch_value_encoding_valid_input_3d():
     """
     Test _base_batch_value_encoding with 6D values
     """
@@ -1592,7 +1591,6 @@ def test_base_batch_value_encoding_valid_input_6d():
     import torch
     from hyperspace.backends.hrr import (
         _base_create_single_vector,
-        _base_batch_fpe,
         _base_batch_value_encoding
     )
 
@@ -1601,13 +1599,13 @@ def test_base_batch_value_encoding_valid_input_6d():
     gen = torch.Generator()
     
     # Create batched 6D values
-    values = torch.randn((batch_size, 6)) * 5
+    values = torch.randn((batch_size, 3)) * 5
     length_scale = 1.0
 
-    v_list = [_base_create_single_vector(vector_dim, gen) for _ in range(6)]
+    v_list = [_base_create_single_vector(vector_dim, gen) for _ in range(3)]
     v_stack = torch.stack(v_list, dim=0)
 
-    assert v_stack.shape == (6, vector_dim)
+    assert v_stack.shape == (3, vector_dim)
 
     v_pred = _base_batch_value_encoding(
         x=values,
@@ -1618,12 +1616,15 @@ def test_base_batch_value_encoding_valid_input_6d():
     # Compute ground truth
     v_gt = []
     for i in range(batch_size):
-        v_fpe = _base_batch_fpe(
-            basis=v_stack,
-            powers=values[i],
-            length_scale=length_scale
-        )
-        v_gt.append(torch.prod(v_fpe, dim=0))
+        v1_fft = torch.fft.fft(v_list[0])
+        v2_fft = torch.fft.fft(v_list[1])
+        v3_fft = torch.fft.fft(v_list[2])
+        v1_fft = v1_fft ** (values[i][0] / length_scale)
+        v2_fft = v2_fft ** (values[i][1] / length_scale)
+        v3_fft = v3_fft ** (values[i][2] / length_scale)
+        v_out = v1_fft * v2_fft * v3_fft
+        v_out = torch.fft.ifft(v_out).real
+        v_gt.append(v_out)
     v_gt = torch.stack(v_gt, dim=0).numpy()
 
     assert v_pred.shape == (batch_size, vector_dim)
