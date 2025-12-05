@@ -503,12 +503,10 @@ class HRRBackend(BaseBackend):
         # --------------------------------
         if not isinstance(x, Tensor):
             raise TypeError(f"Input x should be a Tensor, got {type(x)}")
-        if x.dim() != 2:
-            raise ValueError("Input x must be a 2D tensor of shape (batch_size, env_dim).")
-        if x.shape[1] != self.env_dim:
-            raise ValueError(f"Input x should have shape (batch_size, {self.env_dim}; got {x.shape}")
-        
-        
+        if x.dim() != 2 or x.dim() != 1:
+            raise ValueError("Input x must be a 1D or 2D tensor of shape (env_dim) or (batch_size, env_dim).")
+        if x.shape[-1] != self.env_dim:
+            raise ValueError(f"Input x's last dimension should have shape {self.env_dim}; got {x.shape[-1]}")
         
         raise NotImplementedError()
 
@@ -538,10 +536,10 @@ class HRRBackend(BaseBackend):
         # --------------------------------
         if not isinstance(x, Tensor):
             raise TypeError(f"Input x should be a Tensor, got {type(x)}")
-        if x.dim() != 2:
-            raise ValueError("Input x must be a 2D tensor of shape (batch_size, value_dim).")
-        if x.shape[1] != self.value_dim:
-            raise ValueError(f"Input x should have shape (batch_size, {self.value_dim}; got {x.shape}")
+        if x.dim() != 2 or x.dim() != 1:
+            raise ValueError("Input x must be a 1D or 2D tensor of shape (value_dim) or (batch_size, value_dim).")
+        if x.shape[-1] != self.value_dim:
+            raise ValueError(f"Input x's last dimensional should have shape {self.value_dim}; got {x.shape[-1]}")
         
         raise NotImplementedError()
 
