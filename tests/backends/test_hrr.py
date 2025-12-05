@@ -1687,3 +1687,28 @@ def test_base_batch_value_encoding_consistency_with_single():
         rtol=1e-5,
         atol=1e-7,
     )
+
+def test_positional_encoding_invalid_x_type():
+    """
+    Test that the backend's positional encoding method
+    throws an error when x isn't a Tensor
+    """
+    import numpy as np
+    from hyperspace.backends.hrr import HRRBackend
+
+    B: int = 16
+    E: int = 3
+
+    b = HRRBackend(
+        vector_dim=128,
+        env_dim=E
+    )
+
+    x_single = np.zeros((E))
+    x_batch = np.zeros((B, E))
+
+    with pytest.raises(TypeError):
+        b.positional_encoding(x_single)
+
+    with pytest.raises(TypeError):
+        b.positional_encoding(x_batch)
