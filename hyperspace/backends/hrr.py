@@ -449,9 +449,11 @@ class HRRBackend(BaseBackend):
         self._comp_single_bind = torch.compile(_base_single_bind)
         self._comp_single_bundle = torch.compile(_base_single_bundle)
         self._comp_single_fpe = torch.compile(_base_single_fpe)
+        self._comp_single_ve = torch.compile(_base_single_value_encoding)
         self._comp_batch_bind = torch.compile(_base_batch_bind)
         self._comp_batch_bundle = torch.compile(_base_batch_bundle)
         self._comp_batch_fpe = torch.compile(_base_batch_fpe)
+        self._comp_batch_ve = torch.compile(_base_batch_value_encoding)
 
         # ----------------------------------------
         # Initialize all internal data structures
@@ -503,14 +505,29 @@ class HRRBackend(BaseBackend):
         # --------------------------------
         if not isinstance(x, Tensor):
             raise TypeError(f"Input x should be a Tensor, got {type(x)}")
-        if x.dim() != 2 or x.dim() != 1:
-            raise ValueError("Input x must be a 1D or 2D tensor of shape (env_dim) or (batch_size, env_dim).")
+        if x.dim() != 2 and x.dim() != 1:
+            raise ValueError(f"Input x must be a 1D or 2D tensor of shape (env_dim) or (batch_size, env_dim); got {x.dim()}")
         if x.shape[-1] != self.env_dim:
             raise ValueError(f"Input x's last dimension should have shape {self.env_dim}; got {x.shape[-1]}")
-        
-        raise NotImplementedError()
 
-        return encoded, info_dict
+        if x.dim() == 1:
+            out = self._comp_single_ve(
+                x=x,
+                basis=self.env_basis_vectors,
+                length_scale=self.length_scale
+            )
+        elif x.dim() == 2:
+            out = self._comp_batch_ve(
+                x=x,
+                basis=self.env_basis_vectors,
+                length_scale=self.length_scale
+            )
+        else:
+            raise ValueError(f"Expected tensors to be single or two dimensional; got {a.ndim}")
+
+        info_dict = {}
+
+        return out, info_dict
     
     @torch.inference_mode()
     def value_encoding(self, x: Tensor) -> Tuple[Tensor, dict]:

@@ -1763,7 +1763,47 @@ def test_positional_encoding_single_x():
     test that the positional encoding module works when given
     a single x value
     """
-    raise NotImplementedError()
+    import numpy as np
+    import torch
+    from hyperspace.backends.hrr import HRRBackend
+
+    env_dim: int = 3
+    vector_dim: int = 1280
+    position = torch.from_numpy(np.array([2, 3, 4]))
+    length_scale: float = 1.5
+
+    b = HRRBackend(
+        vector_dim=vector_dim,
+        env_dim=env_dim,
+        length_scale=length_scale
+    )
+
+    assert b.env_basis_vectors.shape == (env_dim, vector_dim)
+
+    # Calculate baseline results
+    base = b.env_basis_vectors
+    base = torch.fft.fft(base, dim=-1)
+
+    for ed in range(env_dim):
+        v = base[ed]
+        v = v ** (position[ed] / length_scale)
+        base[ed] = v
+
+    base = torch.prod(base, axis=0)
+    base = torch.fft.ifft(base, dim=-1).real
+
+    pred, _ = b.positional_encoding(position)
+
+    assert base.shape == (vector_dim,)
+    assert pred.shape == (vector_dim,)
+
+    # Should produce identical results
+    assert torch.allclose(
+        base,
+        pred,
+        rtol=1e-5,
+        atol=1e-7,
+    )
 
 def test_positional_encoding_batched_x():
     """
