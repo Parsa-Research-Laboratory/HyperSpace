@@ -39,47 +39,18 @@ class PositionalEncoderModule(BaseModule):
                 Encoded tensor of shape (num_samples, vectorD) and info dictionary.
         """
 
+        # --------------------------------
+        # validate input shapes
+        # --------------------------------
         if not isinstance(x, Tensor):
-            raise TypeError("Input x must be a torch.Tensor.")
+            raise TypeError(f"Input x should be a Tensor, got {type(x)}")
+        if x.dim() != 2 and x.dim() != 1:
+            raise ValueError(f"Input x must be a 1D or 2D tensor of shape (env_dim) or (batch_size, env_dim); got {x.dim()}")
+        if x.shape[-1] != self.env_dim:
+            raise ValueError(f"Input x's last dimension should have shape {self.env_dim}; got {x.shape[-1]}")
+
+        # TODO: Add batched processing for embedded / smaller devices
         
-        if x.dim() != 2:
-            raise ValueError("Input x must be a 2D tensor of shape (num_samples, env_dim).")
-        
-        if x.shape[1] != self.env_dim:
-            raise ValueError(f"Input x must have shape (num_samples, {self.env_dim}).")
-        
-        # ----------------------------------------------------------
-        # Start Shape: (num_samples, env_dim)
-        # End Shape: (num_samples * env_dim,)
-        # 
-        # Also create a basis vector index tensor to map each value
-        # to its corresponding basis vector. Then, encode each
-        # value using the corresponding basis vector.
-        # ----------------------------------------------------------
-        x_flat = x.view(-1) # Shape: (num_samples * env_dim,)
-        x_indexes = torch.arange(self.env_dim, device=x.device).repeat(x.shape[0]) # Shape: (num_samples * env_dim,)
+        out, info = backend.positional_encoding(x)
 
-        # ----------------------------------------------------------
-        # Encode the flattened input using the backend's
-        # continuous encoding
-        # ----------------------------------------------------------
-        # Shape: (num_samples * env_dim, vectorD)
-        phi_x_flat, bind_info_dict = self.backend.continuous_encoding(x_flat, x_indexes)
-        # print(f"Positional Encodings shape: {phi_x_flat.shape}")
-        # print(f"Encoded {x_flat.shape[0]} positions into positional encodings.")
-        # print(f"Data Type: {phi_x_flat.dtype}, Device: {phi_x_flat.device}")
-
-        assert not torch.isnan(phi_x_flat).any(), "NaN detected"
-
-        # ----------------------------------------------------------
-        # Combine the individual axis encodings into a single
-        # positional encoding for each sample by binding the
-        # encodings together
-        # ----------------------------------------------------------
-        phi_x_flat = phi_x_flat.view(x.shape[0], self.env_dim, -1) # Shape: (num_samples, env_dim, vectorD)
-        # print(f"Reshaped Positional Encodings for binding: {phi_x_flat.shape}")
-        phi_x, bind_info_dict = self.backend.bind(phi_x_flat) # Shape: (num_samples, vectorD)
-        # assert not torch.isnan(phi_x).any(), "NaN detected"
-
-        total_dict = {**bind_info_dict, **bind_info_dict}
-        return phi_x, total_dict
+        return out, info
