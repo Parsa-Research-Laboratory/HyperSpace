@@ -25,44 +25,31 @@ class ValueEncoderModule(BaseModule):
         if not isinstance(backend, BaseBackend):
             raise TypeError(f"Expected the argued backend to extend the BaseBackend class; got {type(self.backend)}")
 
-    def __call__(self, values: Tensor) -> Tensor:
+    def __call__(self, x: Tensor) -> Tensor:
         """
-        Apply the specified value encoding method to the input tensor.
+        Apply the specified positional encoding method to the input tensor.
+
+        Arguments:
+            x : Tensor
+                Input tensor of shape (num_samples, value_dim).
+
+        Returns:
+            Tuple[Tensor, dict]
+                Encoded tensor of shape (num_samples, vectorD) and info dictionary.
         """
-        if not isinstance(values, Tensor):
-            raise TypeError("Input x must be a torch.Tensor.")
-        
-        if values.dim() != 2:
-            raise ValueError("Input values must be a 2D tensor of shape (num_samples, value_dim).")
-        
-        if values.shape[1] != self.value_dim:
-            raise ValueError(f"Input x must have shape (num_samples, {self.value_dim}).")
-        
-        # ----------------------------------------------------------
-        # Start Shape: (num_samples, env_dim)
-        # End Shape: (num_samples * env_dim,)
-        # 
-        # Also create a basis vector index tensor to map each value
-        # to its corresponding basis vector. Then, encode each
-        # value using the corresponding basis vector.
-        # ----------------------------------------------------------
-        x_flat = values.view(-1) # Shape: (num_samples * env_dim,)
-        x_indexes = torch.arange(self.value_dim, device=values.device).repeat(values.shape[0]) # Shape: (num_samples * env_dim,)
 
-        # ----------------------------------------------------------
-        # Encode the flattened input using the backend's
-        # continuous encoding
-        # ----------------------------------------------------------
-        # Shape: (num_samples * env_dim, vectorD)
-        phi_x_flat, bind_info_dict = self.backend.continuous_encoding(x_flat, x_indexes)
+        # --------------------------------
+        # validate input shapes
+        # --------------------------------
+        if not isinstance(x, Tensor):
+            raise TypeError(f"Input x should be a Tensor, got {type(x)}")
+        if x.dim() != 2 and x.dim() != 1:
+            raise ValueError(f"Input x must be a 1D or 2D tensor of shape (env_dim) or (batch_size, env_dim); got {x.dim()}")
+        if x.shape[-1] != self.env_dim:
+            raise ValueError(f"Input x's last dimension should have shape {self.env_dim}; got {x.shape[-1]}")
 
-        # ----------------------------------------------------------
-        # Combine the individual axis encodings into a single
-        # positional encoding for each sample by binding the
-        # encodings together
-        # ----------------------------------------------------------
-        phi_x_flat = phi_x_flat.view(values.shape[0], self.value_dim, -1) # Shape: (num_samples, env_dim, vectorD)
-        phi_x, bind_info_dict = self.backend.bind(phi_x_flat) # Shape: (num_samples, vectorD)
+        # TODO: Add batched processing for embedded / smaller devices
+        
+        out, info = backend.value_encoding(x)
 
-        total_dict = {**bind_info_dict, **bind_info_dict}
-        return phi_x, total_dict
+        return out, info
