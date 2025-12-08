@@ -267,6 +267,39 @@ def test_msm_single_storage_no_prev():
         atol=1e-7,
     )
 
+def test_msm_single_storage_with_prev():
+    """
+    test the memory storage module when storing a single point
+    and value into the previous memory
+    """
+    import torch
+    from hyperspace.backends.hrr import HRRBackend
+    from hyperspace.core.memory_storage import MemoryStorageModule
+
+    D: int = 128
+
+    b = HRRBackend(vector_dim=D)
+    msm = MemoryStorageModule(b)
+
+    v_vector = b.create_random_vector()
+    p_vector = b.create_random_vector()
+    prev_memory = b.create_random_vector()
+
+    pred, _ = msm(
+        p_vectors=p_vector,
+        v_vectors=v_vector,
+        prev_memory=prev_memory
+    )
+    gt, _ = b.bind(v_vector, p_vector)
+    gt, _ = b.bundle(gt, prev_memory)
+
+    assert torch.allclose(
+        gt,
+        pred,
+        rtol=1e-5,
+        atol=1e-7,
+    )
+
 @pytest.mark.skip(reason="Not Implemented")
 def test_msm_batched_storage():
     """
