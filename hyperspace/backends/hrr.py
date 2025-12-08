@@ -553,7 +553,7 @@ class HRRBackend(BaseBackend):
         # --------------------------------
         if not isinstance(x, Tensor):
             raise TypeError(f"Input x should be a Tensor, got {type(x)}")
-        if x.dim() != 2 or x.dim() != 1:
+        if x.dim() != 2 and x.dim() != 1:
             raise ValueError("Input x must be a 1D or 2D tensor of shape (value_dim) or (batch_size, value_dim).")
         if x.shape[-1] != self.value_dim:
             raise ValueError(f"Input x's last dimensional should have shape {self.value_dim}; got {x.shape[-1]}")
@@ -575,7 +575,7 @@ class HRRBackend(BaseBackend):
 
         info_dict = {}
 
-        return encoded, info_dict
+        return out, info_dict
 
     @torch.inference_mode()
     def bind(self, a: Tensor, b: Tensor) -> Tuple[Tensor, dict]:
