@@ -337,10 +337,40 @@ def test_msm_batched_storage_no_prev():
         atol=1e-7,
     )
 
-@pytest.mark.skip(reason="Not Implemented")
 def test_msm_batched_storage_with_prev():
     """
     test the memory storage module when storing a batch of points
     and values into the memory
     """
-    pass
+    import torch
+    from hyperspace.backends.hrr import HRRBackend
+    from hyperspace.core.memory_storage import MemoryStorageModule
+
+    B: int = 2
+    D: int = 128
+
+    b = HRRBackend(vector_dim=D)
+    msm = MemoryStorageModule(b)
+
+    v_vectors = [b.create_random_vector() for _ in range(B)]
+    p_vectors = [b.create_random_vector() for _ in range(B)]
+    prev_memory = b.create_random_vector()
+
+    v_stack = torch.stack(v_vectors, dim=0)
+    p_stack = torch.stack(p_vectors, dim=0)
+
+    pred, _ = msm(
+        p_vectors=p_stack,
+        v_vectors=v_stack,
+        prev_memory=prev_memory
+    )
+    gt, _ = b.bind(v_stack, p_stack)
+    gt, _ = b.bundle(gt)
+    gt, _ = b.bundle(gt, prev_memory)
+
+    assert torch.allclose(
+        gt,
+        pred,
+        rtol=1e-5,
+        atol=1e-7,
+    )
