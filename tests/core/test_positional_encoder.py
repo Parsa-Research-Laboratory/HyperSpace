@@ -18,3 +18,13 @@ def test_pe_true_backend():
 
     b = HRRBackend(vector_dim=128)
     _ = PositionalEncoderModule(b)
+
+def test_pe_invalid_backend():
+    """
+    Test that the pe module throws and error when an invalid
+    backend is passed
+    """
+    from hyperspace.core.positional_encoder import PositionalEncoderModule
+
+    with pytest.raises(TypeError):
+        _ = PositionalEncoderModule(5)

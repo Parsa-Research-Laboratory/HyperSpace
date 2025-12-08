@@ -23,6 +23,9 @@ class PositionalEncoderModule(BaseModule):
         super().__init__()
         self.backend: BaseBackend = backend
 
+        if not isinstance(backend, BaseBackend):
+            raise TypeError(f"Expected the argued backend to extend the BaseBackend class; got {type(self.backend)}")
+
     def __call__(self, x: Tensor) -> Tuple[Tensor, dict]:
         """
         Apply the specified positional encoding method to the input tensor.
