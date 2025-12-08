@@ -189,22 +189,51 @@ def test_msm_p_h_shape_mismatch():
     with pytest.raises(ValueError):
         msm(p_vec, v_vec, prev_memory)
 
-@pytest.mark.skip(reason="Not Implemented")
-def test_msm_p_h_dim_mismatch():
-    """
-    test that the memory storage module throws an error when the
-    dimensionality of the position and value vectors doesn't match
-    """
-    pass
-
-@pytest.mark.skip(reason="Not Implemented")
 def test_msm_p_prev_mismatch():
     """
     test that the memory storage module throws an error when the
     dimensionality of the position vectors and previous memory
     do not match
     """
-    pass
+    import numpy as np
+    import torch
+    from hyperspace.backends.hrr import HRRBackend
+    from hyperspace.core.memory_storage import MemoryStorageModule
+
+    D: int = 128
+
+    b = HRRBackend(vector_dim=D)
+    msm = MemoryStorageModule(b)
+
+    p_vec = torch.zeros((D, D))
+    v_vec = torch.zeros((D, D))
+    prev_memory_large = torch.zeros((D + 1))
+    prev_memory_small = torch.zeros((D - 1))
+
+    with pytest.raises(ValueError):
+        msm(p_vec, v_vec, prev_memory_large)
+
+    with pytest.raises(ValueError):
+        msm(p_vec, v_vec, prev_memory_small)
+
+def test_msm_initialize_memory():
+    """
+    test the ability of the memory storage module to initialize an
+    empty memory to store future information
+    """
+    import torch
+    from hyperspace.backends.hrr import HRRBackend
+    from hyperspace.core.memory_storage import MemoryStorageModule
+
+    D: int = 128
+
+    b = HRRBackend(vector_dim=D)
+    msm = MemoryStorageModule(b)
+
+    memory = msm.initialize_memory()
+
+    assert isinstance(memory, torch.Tensor)
+    assert memory.shape == (D,)
 
 @pytest.mark.skip(reason="Not Implemented")
 def test_msm_single_storage():
@@ -222,11 +251,3 @@ def test_msm_batched_storage():
     """
     pass
 
-@pytest.mark.skip(reason="Not Implemented")
-def test_msm_initialize_memory():
-    """
-    test the ability of the memory storage module to initialize an
-    empty memory to store future information
-    """
-    pass
-    

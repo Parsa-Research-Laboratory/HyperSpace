@@ -55,32 +55,16 @@ class MemoryStorageModule(BaseModule):
         # check that p_vectors and v_vectors have the same shape
         if p_vectors.shape != v_vectors.shape:
             raise ValueError(f"Expected p_vectors and v_vectors to have the same shape; got {p_vectors} and {v_vectors.shape}")
-            
-        # ----------------------------------------------------------------
-        # Each position vector is bound to its corresponding value vector
-        # ----------------------------------------------------------------
-        pv_batch = torch.concatenate([p_vectors,v_vectors], dim=1)  # Shape: (num_samples, 2, vectorD)
-        print(f"Binding {pv_batch.shape} position-value vector pairs into bound vectors...")
-        bound_vectors, bind_info = self.backend.bind(pv_batch)
 
-        if bound_vectors.shape != (p_vectors.shape[0], 1, self.backend.vector_dim):
-            raise ValueError(f"Bound vectors have incorrect shape: {bound_vectors.shape}")
+        # check that the dimensionalities of the vectors match
+        if p_vectors.shape[-1] != prev_memory.shape[-1]:
+            raise ValueError(f"Expected all vectors to have the same dimensionality; got {p_vectors.shape[-1]} and {prev_memory.shape[-1]}")
 
-        # ----------------------------------------------------------------
-        # Bundle all bound vectors into a single memory vector
-        # ----------------------------------------------------------------
-        if prev_memory is not None:
-            bound_vectors = torch.vstack([bound_vectors, prev_memory.unsqueeze(0)])
+        return prev_memory, {}
 
-        print(f"Bundling {bound_vectors.shape} bound vectors into memory...")
-
-        memory, bundle_info = self.backend.bundle(bound_vectors)
-        info_dict = {
-            "memory_storage": {
-                **bind_info,
-                **bundle_info
-            }
-        }
-        return memory, info_dict
-
+    def initialize_memory(self) -> Tensor:
+        """
+        Initialize and return the initial memory vector
+        """
+        return self.backend.create_empty_vector()
         
