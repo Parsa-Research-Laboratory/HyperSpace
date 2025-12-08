@@ -53,13 +53,29 @@ def test_msm_invalid_p_vector_type():
             prev_memory=prev_memory
         )
 
-@pytest.mark.skip(reason="Not Implemented")
 def test_msm_invalid_v_vector_type():
     """
     Test that the memory storage module throws an error when the type
     of the value vectors is incorrect
     """
-    pass
+    import numpy as np
+    import torch
+    from hyperspace.backends.hrr import HRRBackend
+    from hyperspace.core.memory_storage import MemoryStorageModule
+    
+    b = HRRBackend(vector_dim=128)
+    msm = MemoryStorageModule(b)
+
+    p_vector = torch.zeros(10)
+    v_vector = np.zeros(10)
+    prev_memory = torch.zeros(128)
+
+    with pytest.raises(TypeError):
+        msm(
+            p_vectors=p_vector,
+            v_vectors=v_vector,
+            prev_memory=prev_memory
+        )
 
 @pytest.mark.skip(reason="Not Implemented")
 def test_msm_invalid_prev_memory_type():
