@@ -11,19 +11,19 @@ class ValueEncoderModule(BaseModule):
     This module provides value encoding operations for vectors using various methods
     such as scalar and one-hot encodings.
     """
-    def __init__(self, backend: BaseBackend, value_dim: int = 1):
-        super().__init__()
-        
-        self.backend: BaseBackend = backend
-        self.value_dim: int = value_dim
+    def __init__(self, backend: BaseBackend):
+        """
+        Initialize the ValueModule.
 
-        if self.value_dim < 1:
-            raise ValueError("value_dim must be at least 1.")
-        
-        if self.value_dim > 1:
-            raise ValueError("Currently only scalar (1D) value encoding is supported.")
-        
-        self.backend.initialize_value_basis_vectors(self.value_dim)
+        Arguments:
+            backend : BaseBackend
+                The backend to use for encoding operations.
+        """
+        super().__init__()
+        self.backend: BaseBackend = backend
+
+        if not isinstance(backend, BaseBackend):
+            raise TypeError(f"Expected the argued backend to extend the BaseBackend class; got {type(self.backend)}")
 
     def __call__(self, values: Tensor) -> Tensor:
         """
