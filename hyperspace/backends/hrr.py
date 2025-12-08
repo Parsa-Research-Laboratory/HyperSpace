@@ -558,7 +558,22 @@ class HRRBackend(BaseBackend):
         if x.shape[-1] != self.value_dim:
             raise ValueError(f"Input x's last dimensional should have shape {self.value_dim}; got {x.shape[-1]}")
         
-        raise NotImplementedError()
+        if x.dim() == 1:
+            out = self._comp_single_ve(
+                x=x,
+                basis=self.value_basis_vectors,
+                length_scale=self.length_scale
+            )
+        elif x.dim() == 2:
+            out = self._comp_batch_ve(
+                x=x,
+                basis=self.value_basis_vectors,
+                length_scale=self.length_scale
+            )
+        else:
+            raise ValueError(f"Expected tensors to be single or two dimensional; got {a.ndim}")
+
+        info_dict = {}
 
         return encoded, info_dict
 
