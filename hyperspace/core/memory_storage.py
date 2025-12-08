@@ -52,23 +52,9 @@ class MemoryStorageModule(BaseModule):
         if prev_memory.dim() != 1:
             raise ValueError(f"Expected prev_memory to be single (vector_dim); got {prev_memory.shape}")
         
-        if p_vectors.dim() != 3 or v_vectors.dim() != 3:
-            raise ValueError("Input p_vectors and v_vectors must be 3D tensors of shape (num_samples, 1, vectorD).")
-        
-        if p_vectors.shape[1] != 1 or v_vectors.shape[1] != 1:
-            raise ValueError("Input p_vectors and v_vectors must have shape (num_samples, 1, vectorD).")
-        
-        if p_vectors.shape[0] != v_vectors.shape[0]:
-            raise ValueError("Input p_vectors and v_vectors must have the same number of samples.")
-        
-        if p_vectors.shape[2] != self.backend.vector_dim or v_vectors.shape[2] != self.backend.vector_dim:
-            raise ValueError(f"Input vectors must have shape (num_samples, {self.backend.vector_dim}).")
-        
-        if prev_memory is not None:
-            if not isinstance(prev_memory, Tensor):
-                raise TypeError("Input prev_memory must be a torch.Tensor.")
-            if prev_memory.dim() != 1 or prev_memory.shape[0] != self.backend.vector_dim:
-                raise ValueError(f"Input prev_memory must be a 1D tensor of shape ({self.backend.vector_dim},).")
+        # check that p_vectors and v_vectors have the same shape
+        if p_vectors.shape != v_vectors.shape:
+            raise ValueError(f"Expected p_vectors and v_vectors to have the same shape; got {p_vectors} and {v_vectors.shape}")
             
         # ----------------------------------------------------------------
         # Each position vector is bound to its corresponding value vector
