@@ -2048,12 +2048,18 @@ def test_create_empty_vector_type():
 
     assert isinstance(v, torch.Tensor)
     
-
 def test_create_empty_vector_shape():
     """
     test the shape of the vector from create_empty_vector
     """
-    pass
+    import torch
+    from hyperspace.backends.hrr import HRRBackend
+
+    D: int = 128
+    b = HRRBackend(vector_dim=D)
+    v = b.create_empty_vector()
+
+    assert v.shape == (D,)
 
 def test_create_empty_vector_values():
     """
