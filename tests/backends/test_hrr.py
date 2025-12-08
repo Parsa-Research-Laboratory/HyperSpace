@@ -1867,7 +1867,25 @@ def test_value_encoding_invalid_x_type():
     test that the value encoding module throws an error when
     x is the incorrect type
     """
-    raise NotImplementedError()
+    import numpy as np
+    from hyperspace.backends.hrr import HRRBackend
+
+    B: int = 16
+    E: int = 3
+
+    b = HRRBackend(
+        vector_dim=128,
+        env_dim=E
+    )
+
+    x_single = np.zeros((E))
+    x_batch = np.zeros((B, E))
+
+    with pytest.raises(TypeError):
+        b.value_encoding(x_single)
+
+    with pytest.raises(TypeError):
+        b.value_encoding(x_batch)
 
 def test_value_encoding_invalid_x_dim():
     """
