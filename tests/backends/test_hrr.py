@@ -2065,4 +2065,13 @@ def test_create_empty_vector_values():
     """
     test the values within the empty vector from create_empty_vector
     """
-    pass
+    import numpy as np
+    import torch
+    from hyperspace.backends.hrr import HRRBackend
+
+    D: int = 128
+    b = HRRBackend(vector_dim=D)
+    v = b.create_empty_vector().cpu().numpy()
+    gt = np.zeros((D))
+
+    assert np.array_equal(v, gt)
