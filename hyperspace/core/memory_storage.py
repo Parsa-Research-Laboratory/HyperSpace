@@ -60,7 +60,14 @@ class MemoryStorageModule(BaseModule):
         if p_vectors.shape[-1] != prev_memory.shape[-1]:
             raise ValueError(f"Expected all vectors to have the same dimensionality; got {p_vectors.shape[-1]} and {prev_memory.shape[-1]}")
 
-        return prev_memory, {}
+        new_memory, _ = self.backend.bind(p_vectors, v_vectors)
+
+        if new_memory.ndim > 1:
+            new_memory, _ = self.backend.bundle(new_memory)
+
+        new_memory, _ = self.backend.bundle(new_memory, prev_memory)
+
+        return new_memory, {}
 
     def initialize_memory(self) -> Tensor:
         """
