@@ -39,6 +39,10 @@ class MemoryStorageModule(BaseModule):
 
         if not isinstance(prev_memory, Tensor):
             raise TypeError(f"Expected prev_memory to be a torch.Tensor; got {type(prev_memory)}")
+
+        # check that the p_vectors is single or batched
+        if p_vectors.dim() != 1 and p_vectors.dim() != 2:
+            raise ValueError(f"Expected p_vectors to be single (vector_dim) or batched (num_points, vector_dim); got {p_vectors.shape}")
         
         if p_vectors.dim() != 3 or v_vectors.dim() != 3:
             raise ValueError("Input p_vectors and v_vectors must be 3D tensors of shape (num_samples, 1, vectorD).")

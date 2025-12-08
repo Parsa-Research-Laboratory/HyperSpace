@@ -101,13 +101,27 @@ def test_msm_invalid_prev_memory_type():
             prev_memory=prev_memory
         )
 
-@pytest.mark.skip(reason="Not Implemented")
 def test_msm_invalid_p_vector_shape():
     """
     Test that the memory storage modules throws an error when the
     shape of the positional vectors isn't single or batched
     """
-    pass
+    import numpy as np
+    import torch
+    from hyperspace.backends.hrr import HRRBackend
+    from hyperspace.core.memory_storage import MemoryStorageModule
+
+    D: int = 128
+
+    b = HRRBackend(vector_dim=D)
+    msm = MemoryStorageModule(b)
+
+    p_vec_invalid = torch.zeros((D, D, D))
+    v_vec = torch.zeros((D))
+    prev_memory = torch.zeros((D))
+
+    with pytest.raises(ValueError):
+        msm(p_vec_invalid, v_vec, prev_memory)
 
 @pytest.mark.skip(reason="Not Implemented")
 def test_msm_invalid_v_vector_shape():
