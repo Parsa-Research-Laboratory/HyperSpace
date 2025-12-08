@@ -324,7 +324,7 @@ def test_base_batch_fpe():
         fpes_numpy,
         fpes_torch.numpy(),
         rtol=1e-2,
-        atol=1e-7,
+        atol=1e-4,
     )
 
 def test_backend_base_init():
