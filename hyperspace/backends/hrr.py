@@ -749,6 +749,14 @@ class HRRBackend(BaseBackend):
 
         # Update buffers in-place (no re-register)
         self.value_basis_vectors.resize_(vals.shape).copy_(vals)
+
+    def create_empty_vector(self) -> Tensor:
+        """
+        Create and return an empty HRR vector.
+        """
+        v = torch.zeros((self.vector_dim))
+        v = v.to(self.device)
+        return v
     
     def _nearest_neighbor_regression(self, vectors: Tensor) -> Tensor:
         """

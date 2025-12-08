@@ -2035,3 +2035,28 @@ def test_value_encoding_batched_x():
         rtol=1e-5,
         atol=1e-7,
     )
+
+def test_create_empty_vector_type():
+    """
+    test that the create_empty_vector method returns a Tensor
+    """
+    import torch
+    from hyperspace.backends.hrr import HRRBackend
+
+    b = HRRBackend(vector_dim=128)
+    v = b.create_empty_vector()
+
+    assert isinstance(v, torch.Tensor)
+    
+
+def test_create_empty_vector_shape():
+    """
+    test the shape of the vector from create_empty_vector
+    """
+    pass
+
+def test_create_empty_vector_values():
+    """
+    test the values within the empty vector from create_empty_vector
+    """
+    pass
