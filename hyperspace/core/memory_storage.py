@@ -2,6 +2,7 @@ import torch
 from torch import Tensor
 from typing import Tuple
 
+from ..backends.base import BaseBackend
 from .base_module import BaseModule
 
 class MemoryStorageModule(BaseModule):
@@ -11,9 +12,19 @@ class MemoryStorageModule(BaseModule):
     This module provides memory storage operations for vectors using various methods
     such as key-value storage and associative memory.
     """
-    def __init__(self, backend):
+    def __init__(self, backend: BaseBackend):
+        """
+        Initialize the MemoryStorageModule.
+
+        Arguments:
+            backend : BaseBackend
+                The backend to use for encoding operations.
+        """
         super().__init__()
-        self.backend = backend
+        self.backend: BaseBackend = backend
+
+        if not isinstance(backend, BaseBackend):
+            raise TypeError(f"Expected the argued backend to extend the BaseBackend class; got {type(self.backend)}")
 
     def __call__(self, p_vectors: Tensor, v_vectors: Tensor, prev_memory: Tensor = None) -> Tuple[Tensor, dict]:
         """
