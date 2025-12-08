@@ -1907,7 +1907,30 @@ def test_value_encoding_invalid_x_val_dim():
     Test that the backend's value encoding method throws
     an error when x isn't the correct value dimensionality
     """
-    raise NotImplementedError()
+    import torch
+    from hyperspace.backends.hrr import HRRBackend
+
+    b = HRRBackend(vector_dim=128)
+
+    B: int = 8
+    E: int = 3
+
+    x_single_low = torch.zeros((E - 1))
+    x_single_high = torch.zeros((E + 1))
+    x_batch_low = torch.zeros((B, E - 1))
+    x_batch_high = torch.zeros((B, E + 1))
+
+    with pytest.raises(ValueError):
+        b.value_encoding(x_single_low)
+
+    with pytest.raises(ValueError):
+        b.value_encoding(x_single_high)
+
+    with pytest.raises(ValueError):
+        b.value_encoding(x_batch_low)
+
+    with pytest.raises(ValueError):
+        b.value_encoding(x_batch_high)
 
 def test_value_encoding_single_x():
     """
