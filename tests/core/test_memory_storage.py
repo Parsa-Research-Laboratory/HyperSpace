@@ -145,13 +145,27 @@ def test_msm_invalid_v_vector_shape():
     with pytest.raises(ValueError):
         msm(p_vec, v_vec_invalid, prev_memory)
 
-@pytest.mark.skip(reason="Not Implemented")
 def test_msm_invalid_prev_memory_shape():
     """
     Test that the memory storage module throws an error when the
     previous memory vector isn't the correct shape
     """
-    pass
+    import numpy as np
+    import torch
+    from hyperspace.backends.hrr import HRRBackend
+    from hyperspace.core.memory_storage import MemoryStorageModule
+
+    D: int = 128
+
+    b = HRRBackend(vector_dim=D)
+    msm = MemoryStorageModule(b)
+
+    p_vec = torch.zeros((D, D))
+    v_vec = torch.zeros((D, D))
+    prev_memory_invalid = torch.zeros((D, D))
+
+    with pytest.raises(ValueError):
+        msm(p_vec, v_vec, prev_memory_invalid)
 
 @pytest.mark.skip(reason="Not Implemented")
 def test_msm_p_h_shape_mismatch():

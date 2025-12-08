@@ -47,6 +47,10 @@ class MemoryStorageModule(BaseModule):
         # check that the v_vectors is single or batched
         if v_vectors.dim() != 1 and v_vectors.dim() != 2:
             raise ValueError(f"Expected v_vectors to be single (vector_dim) or batched (num_points, vector_dim); got {v_vectors.shape}")
+
+        # check that the prev_memory is single
+        if prev_memory.dim() != 1:
+            raise ValueError(f"Expected prev_memory to be single (vector_dim); got {prev_memory.shape}")
         
         if p_vectors.dim() != 3 or v_vectors.dim() != 3:
             raise ValueError("Input p_vectors and v_vectors must be 3D tensors of shape (num_samples, 1, vectorD).")
