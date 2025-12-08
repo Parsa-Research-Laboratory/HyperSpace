@@ -1,5 +1,6 @@
 from torch import Tensor
 
+from ..backends.base import BaseBackend
 from .base_module import BaseModule
 
 class PositionalInversionModule(BaseModule):
@@ -10,8 +11,18 @@ class PositionalInversionModule(BaseModule):
     such as sinusoidal and learned positional inversions.
     """
     def __init__(self, backend):
+        """
+        Initialize the PositionalInversionModule.
+
+        Arguments:
+            backend : BaseBackend
+                The backend to use for encoding operations.
+        """
         super().__init__()
-        self.backend = backend
+        self.backend: BaseBackend = backend
+
+        if not isinstance(backend, BaseBackend):
+            raise TypeError(f"Expected the argued backend to extend the BaseBackend class; got {type(self.backend)}")
 
     def __call__(self, basis: Tensor, x: Tensor, method: str = "sinusoidal") -> Tensor:
         """
