@@ -10,7 +10,7 @@ class PositionalInversionModule(BaseModule):
     This module provides positional inversion operations for vectors using various methods
     such as sinusoidal and learned positional inversions.
     """
-    def __init__(self, backend):
+    def __init__(self, backend: BaseBackend):
         """
         Initialize the PositionalInversionModule.
 
