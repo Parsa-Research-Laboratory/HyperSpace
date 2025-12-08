@@ -208,6 +208,24 @@ def _base_batch_bundle(v1: Tensor, v2: Tensor) -> Tensor:
         raise ValueError(f"expected v1 to be (B, D); got {v1.shape}")
 
     v_out = v1 + v2
+
+    return v_out
+
+def _base_list_bundle(v: Tensor) -> Tensor:
+    """
+    List HRR bundling where all vectors in the list are bundled together
+
+    v: (B, D)
+    returns: (D)
+    """
+    if not isinstance(v, Tensor):
+        raise TypeError(f"expected v to be a Tensor; got {type(v)}")
+    
+    if v.ndim != 2:
+        raise ValueError(f"expected v to be (B, D); got {v.shape}")
+
+    v_out = torch.sum(v, dim=0)
+
     return v_out
 
 def _base_single_fpe(basis: Tensor, power: float, length_scale: float) -> Tensor:
@@ -454,6 +472,7 @@ class HRRBackend(BaseBackend):
         self._comp_batch_bundle = torch.compile(_base_batch_bundle)
         self._comp_batch_fpe = torch.compile(_base_batch_fpe)
         self._comp_batch_ve = torch.compile(_base_batch_value_encoding)
+        self._comp_list_bundle = torch.compile(_base_list_bundle)
 
         # ----------------------------------------
         # Initialize all internal data structures
@@ -611,7 +630,7 @@ class HRRBackend(BaseBackend):
         return out, info_dict
 
     @torch.inference_mode()
-    def bundle(self, a: Tensor, b: Tensor) -> Tuple[Tensor, dict]:
+    def bundle(self, a: Tensor, b: Tensor = None) -> Tuple[Tensor, dict]:
         """
         Bundling operation for HRR backend using vector addition (superposition).
 
@@ -634,13 +653,15 @@ class HRRBackend(BaseBackend):
                 Information dictionary (currently empty).
         """
 
-        if a.shape != b.shape:
+        if b is not None and a.shape != b.shape:
             raise ValueError(f"Expected a and b to have the same shape; got {a.shape} and {b.shape}")
         
-        if a.ndim == 1: # Single Bind
+        if a.ndim == 1 and b is not None: # Single Bind
             out = self._comp_single_bundle(a, b)
-        elif a.ndim == 2: # Batch Bind
+        elif a.ndim == 2 and b is not None: # Batch Bind
             out = self._comp_batch_bundle(a, b)
+        elif a.ndim == 2 and b is None:
+            out = self._comp_list_bundle(a)
         else:
             raise ValueError(f"Expected tensors to be single or two dimensional; got {a.ndim}")
 

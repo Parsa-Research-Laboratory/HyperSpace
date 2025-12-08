@@ -244,6 +244,44 @@ def test_base_batch_bundle():
         atol=1e-7,
     )
 
+def test_batch_list_bund():
+    """
+    test the _base_list_bundle function
+    """
+    import numpy as np
+    import torch
+    from torch import Generator
+
+    from hyperspace.backends.hrr import (
+        _base_create_single_vector,
+        _base_list_bundle,
+        _base_single_bundle
+    )
+
+    B: int = 2
+    D: int = 256
+
+    gen = Generator().manual_seed(0)
+
+    # Build batched tensors (B, D)
+    v_list = [_base_create_single_vector(D, gen) for _ in range(B)]
+
+    v1 = torch.stack(v_list, dim=0)
+
+    v_bundle_list = _base_list_bundle(v1)  # (D,)
+
+    v_out_gt = _base_single_bundle(v_list[0], v_list[1])
+
+    assert v_bundle_list.shape == (D,)
+    assert v_out_gt.shape == (D,)
+
+    assert np.allclose(
+        v_out_gt.numpy(),
+        v_bundle_list.numpy(),
+        rtol=1e-5,
+        atol=1e-7,
+    )
+
 def test_base_single_fpe():
     """
     test the _base_single_fpe function
@@ -2075,3 +2113,4 @@ def test_create_empty_vector_values():
     gt = np.zeros((D))
 
     assert np.array_equal(v, gt)
+
