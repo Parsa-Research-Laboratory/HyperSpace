@@ -1892,7 +1892,15 @@ def test_value_encoding_invalid_x_dim():
     Test that the backend's value encoding method
     throws an error when x isn't single or batched
     """
-    raise NotImplementedError()
+    import torch
+    from hyperspace.backends.hrr import HRRBackend
+
+    b = HRRBackend(vector_dim=128)
+
+    x_invalid = torch.zeros((5, 5, 5))
+    
+    with pytest.raises(ValueError):
+        b.value_encoding(x_invalid)
 
 def test_value_encoding_invalid_x_val_dim():
     """
