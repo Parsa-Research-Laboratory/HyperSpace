@@ -301,10 +301,17 @@ def test_msm_single_storage_with_prev():
     )
 
 @pytest.mark.skip(reason="Not Implemented")
-def test_msm_batched_storage():
+def test_msm_batched_storage_no_prev():
     """
     test the memory storage module when storing a batch of points
     and values into the memory
     """
     pass
 
+@pytest.mark.skip(reason="Not Implemented")
+def test_msm_batched_storage_with_prev():
+    """
+    test the memory storage module when storing a batch of points
+    and values into the memory
+    """
+    pass
