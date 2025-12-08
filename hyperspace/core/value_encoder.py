@@ -45,11 +45,9 @@ class ValueEncoderModule(BaseModule):
             raise TypeError(f"Input x should be a Tensor, got {type(x)}")
         if x.dim() != 2 and x.dim() != 1:
             raise ValueError(f"Input x must be a 1D or 2D tensor of shape (env_dim) or (batch_size, env_dim); got {x.dim()}")
-        if x.shape[-1] != self.env_dim:
-            raise ValueError(f"Input x's last dimension should have shape {self.env_dim}; got {x.shape[-1]}")
 
         # TODO: Add batched processing for embedded / smaller devices
         
-        out, info = backend.value_encoding(x)
+        out, info = self.backend.value_encoding(x)
 
         return out, info

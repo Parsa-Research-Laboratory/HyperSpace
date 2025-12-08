@@ -218,7 +218,6 @@ def run_hyperspace_experiment(X_true: Tensor, Y_true: Tensor, args: dict) -> tup
     )
     positional_encoder_module = PositionalEncoderModule(
         backend=hrr_backend,
-        env_dim=X_true.shape[1]
     )
     positional_inversion_module = PositionalInversionModule(
         backend=hrr_backend
@@ -227,8 +226,7 @@ def run_hyperspace_experiment(X_true: Tensor, Y_true: Tensor, args: dict) -> tup
         backend=hrr_backend
     )
     value_encoder_module = ValueEncoderModule(
-        backend=hrr_backend,
-        value_dim=Y_true.shape[1]
+        backend=hrr_backend
     )
     print("HyperSpace modules initialized.\n")
 
@@ -238,7 +236,12 @@ def run_hyperspace_experiment(X_true: Tensor, Y_true: Tensor, args: dict) -> tup
     print("Encoding data...")
     positional_encodings, pe_info = positional_encoder_module(X_true)
     value_encodings, ve_info = value_encoder_module(Y_true)
-    memory, memory_info = memory_storage_module(positional_encodings, value_encodings)
+    prev_memory = hrr_backend.create_empty_vector()
+    memory, memory_info = memory_storage_module(
+        p_vectors=positional_encodings,
+        v_vectors=value_encodings,
+        prev_memory=prev_memory
+    )
     
 
     # Placeholder for HyperSpace experiment logic
