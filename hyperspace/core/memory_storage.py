@@ -31,8 +31,14 @@ class MemoryStorageModule(BaseModule):
         Apply the specified memory storage method to the input tensor.
         """
 
-        if not isinstance(p_vectors, Tensor) or not isinstance(v_vectors, Tensor):
-            raise TypeError("Input p_vectors and v_vectors must be torch.Tensors.")
+        if not isinstance(p_vectors, Tensor):
+            raise TypeError(f"Expected p_vectors to be a torch.Tensor; got {type(p_vectors)}")
+
+        if not isinstance(v_vectors, Tensor):
+            raise TypeError(f"Expected v_vectors to be a torch.Tensor; got {type(p_vectors)}")
+
+        if not isinstance(prev_memory, Tensor):
+            raise TypeError(f"Expected prev_memory to be a torch.Tensor; got {type(prev_memory)}")
         
         if p_vectors.dim() != 3 or v_vectors.dim() != 3:
             raise ValueError("Input p_vectors and v_vectors must be 3D tensors of shape (num_samples, 1, vectorD).")
