@@ -511,8 +511,12 @@ def _base_single_invert(x: Tensor) -> Tensor:
         raise TypeError(f"Input x should be a Tensor, got {type(x)}")
     if x.dim() != 1:
         raise ValueError("Input x must be a 1D tensor of shape (vector_dim).")
+    
+    out = torch.fft.fft(x)
+    out = torch.conj(out)
+    out = torch.fft.ifft(out).real
 
-    return x
+    return out
 
 def _base_batch_invert(x: Tensor) -> Tensor:
     """

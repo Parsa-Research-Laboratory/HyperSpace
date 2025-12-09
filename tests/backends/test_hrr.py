@@ -2354,12 +2354,36 @@ def test_base_single_invert_invalid_x_shape():
     with pytest.raises(ValueError):
         _base_single_invert(v)
 
-@pytest.mark.skip(reason="Not Implemented")
 def test_base_single_invert_valid_x():
     """
-    
+    test the `base_single_invert` function works with
+    a single vector
     """
-    pass
+    import torch
+    from hyperspace.backends.hrr import (
+        HRRBackend,
+        _base_single_invert
+    )
+
+    D: int = 128
+
+    b = HRRBackend(vector_dim=D)
+
+    v = b.create_random_vector()
+
+    pred = _base_single_invert(v)
+    
+    # calculate ground truth
+    gt = torch.fft.fft(v)
+    gt = torch.conj(gt)
+    gt = torch.fft.ifft(gt).real
+
+    assert torch.allclose(
+        pred,
+        gt,
+        rtol=1e-5,
+        atol=1e-7,
+    )
 
 @pytest.mark.skip(reason="Not Implemented")
 def test_base_batch_invert_invalid_x_type():
