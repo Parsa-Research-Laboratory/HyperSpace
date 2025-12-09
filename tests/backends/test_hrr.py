@@ -2511,12 +2511,34 @@ def test_backend_invert_invalid_x_dim():
     with pytest.raises(ValueError):
         b.invert(v_batch_large)
 
-@pytest.mark.skip(reason="Not Implemented")
 def test_backend_single_invert_valid_x():
     """
-    
+    test the backend's invert method with a single vector
     """
-    pass
+    import torch
+    from hyperspace.backends.hrr import (
+        HRRBackend,
+    )
+
+    D: int = 128
+
+    b = HRRBackend(vector_dim=D)
+
+    v = b.create_random_vector()
+
+    pred, _ = b.invert(v)
+    
+    # calculate ground truth
+    gt = torch.fft.fft(v)
+    gt = torch.conj(gt)
+    gt = torch.fft.ifft(gt).real
+
+    assert torch.allclose(
+        pred,
+        gt,
+        rtol=1e-5,
+        atol=1e-7,
+    )
 
 @pytest.mark.skip(reason="Not Implemented")
 def test_backend_batch_invert_valid_x():
