@@ -2453,12 +2453,19 @@ def test_base_batch_invert_valid_x():
         atol=1e-7,
     )
 
-@pytest.mark.skip(reason="Not Implemented")
 def test_backend_invert_invalid_x_type():
     """
-    
+    test that the backend's invert method doesn't
+    accept not torch.Tensors
     """
-    pass
+    import numpy as np
+    from hyperspace.backends.hrr import HRRBackend
+    
+    v = np.zeros(10)
+    b = HRRBackend(vector_dim=128)
+
+    with pytest.raises(TypeError):
+        b.invert(b)
 
 @pytest.mark.skip(reason="Not Implemented")
 def test_backend_invert_invalid_x_shape():

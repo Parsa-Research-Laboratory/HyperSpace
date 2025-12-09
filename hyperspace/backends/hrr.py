@@ -932,11 +932,27 @@ class HRRBackend(BaseBackend):
 
         return out, info
     
-    def invert(self, tensor: Tensor) -> Tensor:
+    def invert(self, x: Tensor) -> Tuple[Tensor, dict]:
         """
         Invert the input tensor.
         """
-        return super().invert(tensor)
+        if not isinstance(x, Tensor):
+            raise TypeError(f"Input x should be a Tensor, got {type(x)}")
+        if x.dim() != 2 and x.dim() != 1:
+            raise ValueError("Input x must be a 1D or 2D tensor of shape (vector_dim) or (batch_size, vector_dim).")
+        if x.shape[-1] != self.vector_dim:
+            raise ValueError(f"Input x's last dimensional should have shape {self.vector_dim}; got {x.shape[-1]}")
+
+        if x.ndim == 1: # Single Invert
+            out = self._comp_single_invert(x)
+        elif x.ndim == 2: # Batch Invert
+            out = self._comp_batch_invert(x)
+        else:
+            raise ValueError(f"Expected tensors to be single or two dimensional; got {x.ndim}")
+
+        info = {}
+
+        return out, info
     
     def weight(self, tensor: Tensor, weight: float) -> Tensor:
         """
