@@ -2189,12 +2189,33 @@ def test_base_batch_normalize_invalid_x_shape():
     with pytest.raises(ValueError):
         _base_batch_normalize(x_large)
 
-@pytest.mark.skip(reason="not implemented")
 def test_base_batch_normalize_valid_x():
     """
-    
+    test that the base_batch_normalize function converts
+    the single value 
     """
-    pass
+    import torch
+    from hyperspace.backends.hrr import _base_batch_normalize
+
+    x = torch.rand((10, 10))
+
+    pred = _base_batch_normalize(x)
+    gt = x / (torch.linalg.norm(x, dim=0) + 1e-10)
+
+    assert torch.allclose(
+        torch.linalg.norm(pred, dim=0),
+        torch.ones(10),
+        rtol=1e-5,
+        atol=1e-7,
+    )
+    
+    # Should produce identical results
+    assert torch.allclose(
+        gt,
+        pred,
+        rtol=1e-5,
+        atol=1e-7,
+    )
 
 @pytest.mark.skip(reason="not implemented")
 def test_backend_normalize_invalid_x_type():
