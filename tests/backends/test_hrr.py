@@ -2415,12 +2415,43 @@ def test_base_batch_invert_invalid_x_shape():
     with pytest.raises(ValueError):
         _base_batch_invert(v_large)
 
-@pytest.mark.skip(reason="Not Implemented")
 def test_base_batch_invert_valid_x():
     """
-    
+    test that the base batch invert function performs
+    the operation across a batch of vectors
     """
-    pass
+    import torch
+    from hyperspace.backends.hrr import (
+        HRRBackend,
+        _base_batch_invert
+    )
+
+    B: int = 10
+    D: int = 128
+
+    b = HRRBackend(vector_dim=D)
+
+    v_list = [b.create_random_vector() for _ in range(B)]
+    v_tensor = torch.stack(v_list, dim=0)
+
+    assert v_tensor.shape == (B, D)
+
+    pred = _base_batch_invert(v_tensor)
+
+    gt = torch.zeros((B, D))
+    for i in range(B):
+        v = v_list[i]
+        v = torch.fft.fft(v)
+        v = torch.conj(v)
+        v = torch.fft.ifft(v).real
+        gt[i] = v
+
+    assert torch.allclose(
+        pred,
+        gt,
+        rtol=1e-5,
+        atol=1e-7,
+    )
 
 @pytest.mark.skip(reason="Not Implemented")
 def test_backend_invert_invalid_x_type():

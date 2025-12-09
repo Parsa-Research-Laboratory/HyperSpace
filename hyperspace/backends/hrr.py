@@ -545,14 +545,42 @@ def _base_single_invert(x: Tensor) -> Tensor:
 
 def _base_batch_invert(x: Tensor) -> Tensor:
     """
-    
+    Compute the inverse of a batch of HRR vectors via Fourier-domain conjugation.
+
+    This function performs the HRR inverse operation by applying a Fast Fourier
+    Transform (FFT) along the feature dimension, taking the complex conjugate
+    in the frequency domain, and transforming back with the inverse FFT (IFFT).
+    The operation is applied independently to each vector in the batch.
+
+    Parameters
+    ----------
+    x : Tensor
+        A real-valued tensor of shape (batch_size, vector_dim) containing a batch
+        of HRR vectors to be inverted.
+
+    Returns
+    -------
+    Tensor
+        A real-valued tensor of shape (batch_size, vector_dim) containing the
+        inverted HRR vectors.
+
+    Raises
+    ------
+    TypeError
+        If ``x`` is not a torch Tensor.
+    ValueError
+        If ``x`` is not a 2D tensor of shape (batch_size, vector_dim).
     """
     if not isinstance(x, Tensor):
         raise TypeError(f"Input x should be a Tensor, got {type(x)}")
     if x.dim() != 2:
         raise ValueError("Input x must be a 2D tensor of shape (batch_size, vector_dim).")
     
-    return x
+    out = torch.fft.fft(x, dim=-1)
+    out = torch.conj(out)
+    out = torch.fft.ifft(out, dim=-1).real
+
+    return out
 
 def _base_single_weight(x: Tensor, w: Tensor) -> Tensor:
     """
