@@ -2112,12 +2112,18 @@ def test_create_empty_vector_values():
 
     assert np.array_equal(v, gt)
 
-@pytest.mark.skip(reason="not implemented")
 def test_base_single_normalize_invalid_x_type():
     """
-    
+    test that the base_single_normalize function throws an
+    error when x isn't a torch tensor
     """
-    pass
+    import numpy as np
+    from hyperspace.backends.hrr import _base_single_normalize
+    
+    x = np.zeros(10)
+
+    with pytest.raises(TypeError):
+        _base_single_normalize(x)
 
 @pytest.mark.skip(reason="not implemented")
 def test_base_single_normalize_invalid_x_shape():
