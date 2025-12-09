@@ -2138,12 +2138,26 @@ def test_base_single_normalize_invalid_x_shape():
     with pytest.raises(ValueError):
         _base_single_normalize(x)
 
-@pytest.mark.skip(reason="not implemented")
 def test_base_single_normalize_valid_x():
     """
-    
+    test that the base_single_normalize function converts
+    the single value 
     """
-    pass
+    import torch
+    from hyperspace.backends.hrr import _base_single_normalize
+
+    x = torch.rand((10))
+
+    pred = _base_single_normalize(x)
+    gt = x / (torch.linalg.norm(x) + 1e-10)
+    
+    # Should produce identical results
+    assert torch.allclose(
+        gt,
+        pred,
+        rtol=1e-5,
+        atol=1e-7,
+    )
 
 @pytest.mark.skip(reason="not implemented")
 def test_base_batch_normalize_invalid_x_type():
