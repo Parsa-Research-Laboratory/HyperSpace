@@ -110,8 +110,7 @@ def test_positional_encoding_module_single_x():
         atol=1e-7,
     )
 
-@pytest.mark.skip(reason="Not Updated")
-def test_positional_encoding_batched_x():
+def test_positional_encoding_module_batched_x():
     """
     test that the positional encoding module works when given
     a batched x value
@@ -119,6 +118,7 @@ def test_positional_encoding_batched_x():
     import numpy as np
     import torch
     from hyperspace.backends.hrr import HRRBackend
+    from hyperspace.core.positional_encoder import PositionalEncoderModule
 
     batch_size: int = 3
     env_dim: int = 2
@@ -135,27 +135,15 @@ def test_positional_encoding_batched_x():
         env_dim=env_dim,
         length_scale=length_scale
     )
+    pem = PositionalEncoderModule(
+        backend=b
+    )
 
     assert b.env_basis_vectors.shape == (env_dim, vector_dim)
 
     # Calculate baseline results
-    base = b.env_basis_vectors
-    base = torch.fft.fft(base, dim=-1)
-
-    gt = torch.zeros((batch_size, vector_dim))
-
-    for bs in range(batch_size):
-        components = torch.zeros((env_dim, vector_dim), dtype=torch.complex64)
-
-        for ed in range(env_dim):
-            v = base[ed]
-            v = v ** (position[bs][ed] / length_scale)
-            components[ed] = v
-
-        components = torch.prod(components, axis=0)
-        gt[bs] = torch.fft.ifft(components, dim=-1).real
-
-    pred, _ = b.positional_encoding(position)
+    pred, _ = pem(position)
+    gt, _ = b.positional_encoding(position)
 
     assert gt.shape == (batch_size, vector_dim)
     assert pred.shape == (batch_size, vector_dim)
