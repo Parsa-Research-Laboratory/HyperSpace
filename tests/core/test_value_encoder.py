@@ -110,7 +110,6 @@ def test_value_encoding_single_x():
         atol=1e-7,
     )
 
-@pytest.mark.skip(reason="Not Updated")
 def test_value_encoding_batched_x():
     """
     test that the value encoding module works when given
@@ -119,6 +118,7 @@ def test_value_encoding_batched_x():
     import numpy as np
     import torch
     from hyperspace.backends.hrr import HRRBackend
+    from hyperspace.core.value_encoder import ValueEncoderModule
 
     batch_size: int = 3
     value_dim: int = 2
@@ -135,27 +135,14 @@ def test_value_encoding_batched_x():
         value_dim=value_dim,
         length_scale=length_scale
     )
+    vem = ValueEncoderModule(
+        backend=b
+    )
 
     assert b.value_basis_vectors.shape == (value_dim, vector_dim)
 
-    # Calculate baseline results
-    base = b.value_basis_vectors
-    base = torch.fft.fft(base, dim=-1)
-
-    gt = torch.zeros((batch_size, vector_dim))
-
-    for bs in range(batch_size):
-        components = torch.zeros((value_dim, vector_dim), dtype=torch.complex64)
-
-        for ed in range(value_dim):
-            v = base[ed]
-            v = v ** (value[bs][ed] / length_scale)
-            components[ed] = v
-
-        components = torch.prod(components, axis=0)
-        gt[bs] = torch.fft.ifft(components, dim=-1).real
-
-    pred, _ = b.value_encoding(value)
+    pred, _ = vem(value)
+    gt, _ = b.value_encoding(value)
 
     assert gt.shape == (batch_size, vector_dim)
     assert pred.shape == (batch_size, vector_dim)
