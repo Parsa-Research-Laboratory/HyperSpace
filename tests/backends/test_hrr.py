@@ -2341,12 +2341,18 @@ def test_base_single_invert_invalid_x_type():
     with pytest.raises(TypeError):
         _base_single_invert(v)
 
-@pytest.mark.skip(reason="Not Implemented")
 def test_base_single_invert_invalid_x_shape():
     """
-    
+    test that the `base_single_invert` method throws an
+    error with x isn't a single vector
     """
-    pass
+    import torch
+    from hyperspace.backends.hrr import _base_single_invert
+    
+    v = torch.zeros((10, 10))
+
+    with pytest.raises(ValueError):
+        _base_single_invert(v)
 
 @pytest.mark.skip(reason="Not Implemented")
 def test_base_single_invert_valid_x():
