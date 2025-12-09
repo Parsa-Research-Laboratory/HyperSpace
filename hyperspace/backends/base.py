@@ -60,28 +60,55 @@ class BaseBackend(nn.Module):
             A random vector of shape (self.vectorD, ).
         """
         raise NotImplementedError("create_random_vector method must be implemented by subclasses.")
-
-    def continuous_encoding(self, x: Tensor, indexes: Tensor) -> Tuple[Tensor, dict]:
+    
+    def create_empty_vector(self) -> torch.Tensor:
         """
-        Abstract definition of the continuous encoding method (\\mathcal{E})
+        Create a empty vector of dimension self.vectorD.
+
+        Returns:
+        -------
+        torch.Tensor
+            A empty vector of shape (self.vectorD, ).
+        """
+        raise NotImplementedError("create_empty_vector method must be implemented by subclasses.")
+
+    def positional_encoding(self, x: Tensor) -> Tuple[Tensor, dict]:
+        """
+        Abstract definition of the positional encoding method (\\mathcal{E})
         from the HyperSpace paper.
 
         Arguments:
         ----------
         x : torch.Tensor
-            Continuous value to be encoded. Shape should be (batch_size, ).
-    
-        indexes : torch.Tensor
-            Indexes of the basis vectors to use for encoding. Shape should be (batch_size, ).
+            Continuous value to be encoded. Shape should be (env_dim,) or (batch_size, env_dim).
 
         Returns:
         -------
         torch.Tensor
-            Encoded representation of the input value. Shape should be (batch_size, vectorD).
+            Encoded representation of the input value. Shape should be (vectorD) or (batch_size, vectorD).
         dict
             Information dictionary containing any relevant metadata.
         """
-        raise NotImplementedError("continuous_encoding method must be implemented by subclasses.")
+        raise NotImplementedError("positional_encoding method must be implemented by subclasses.")
+    
+    def value_encoding(self, x: Tensor) -> Tuple[Tensor, dict]:
+        """
+        Abstract definition of the value encoding method (\\mathcal{V})
+        from the HyperSpace paper.
+
+        Arguments:
+        ----------
+        x : torch.Tensor
+            Continuous value to be encoded. Shape should be (value_dim,) or (batch_size, value_dim).
+
+        Returns:
+        -------
+        torch.Tensor
+            Encoded representation of the input value. Shape should be (vectorD) or (batch_size, vectorD).
+        dict
+            Information dictionary containing any relevant metadata.
+        """
+        raise NotImplementedError("value_encoding method must be implemented by subclasses.")
     
     def bind(self, a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
         """
