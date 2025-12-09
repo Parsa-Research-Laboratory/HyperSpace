@@ -2172,12 +2172,22 @@ def test_base_batch_normalize_invalid_x_type():
     with pytest.raises(TypeError):
         _base_batch_normalize(x)
 
-@pytest.mark.skip(reason="not implemented")
 def test_base_batch_normalize_invalid_x_shape():
     """
-    
+    test that the base_batch_normalize function throws an
+    error when x isn't a batch of vectors
     """
-    pass
+    import torch
+    from hyperspace.backends.hrr import _base_batch_normalize
+    
+    x_small = torch.zeros((10))
+    x_large = torch.zeros((10, 10, 10))
+
+    with pytest.raises(ValueError):
+        _base_batch_normalize(x_small)
+
+    with pytest.raises(ValueError):
+        _base_batch_normalize(x_large)
 
 @pytest.mark.skip(reason="not implemented")
 def test_base_batch_normalize_valid_x():
