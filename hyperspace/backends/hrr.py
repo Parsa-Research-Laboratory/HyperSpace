@@ -505,7 +505,32 @@ def _base_batch_normalize(x: Tensor) -> Tensor:
 
 def _base_single_invert(x: Tensor) -> Tensor:
     """
-    
+    Compute the inverse of a single HRR vector using frequency-domain conjugation.
+
+    This function computes the approximate inverse of a single
+    Holographic Reduced Representation (HRR) vector by transforming it
+    into the frequency domain, applying complex conjugation, and
+    transforming it back via the inverse FFT. The result corresponds to
+    the circular correlation inverse used in HRR unbinding.
+
+    Parameters
+    ----------
+    x : Tensor
+        A one-dimensional real-valued tensor of shape (vector_dim,)
+        representing an HRR vector.
+
+    Returns
+    -------
+    Tensor
+        A one-dimensional real-valued tensor of shape (vector_dim,)
+        representing the inverse HRR vector.
+
+    Raises
+    ------
+    TypeError
+        If `x` is not a torch.Tensor.
+    ValueError
+        If `x` is not one-dimensional.
     """
     if not isinstance(x, Tensor):
         raise TypeError(f"Input x should be a Tensor, got {type(x)}")
