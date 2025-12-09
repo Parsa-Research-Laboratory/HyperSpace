@@ -547,6 +547,11 @@ def _base_batch_invert(x: Tensor) -> Tensor:
     """
     
     """
+    if not isinstance(x, Tensor):
+        raise TypeError(f"Input x should be a Tensor, got {type(x)}")
+    if x.dim() != 2:
+        raise ValueError("Input x must be a 2D tensor of shape (batch_size, vector_dim).")
+    
     return x
 
 def _base_single_weight(x: Tensor, w: Tensor) -> Tensor:
