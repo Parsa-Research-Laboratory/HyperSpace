@@ -503,6 +503,30 @@ def _base_batch_normalize(x: Tensor) -> Tensor:
 
     return x
 
+def _base_single_invert(x: Tensor) -> Tensor:
+    """
+    
+    """
+    return x
+
+def _base_batch_invert(x: Tensor) -> Tensor:
+    """
+    
+    """
+    return x
+
+def _base_single_weight(x: Tensor, w: Tensor) -> Tensor:
+    """
+    
+    """
+    return x
+
+def _base_batch_weight(x: Tensor, w: Tensor) -> Tensor:
+    """
+    
+    """
+    return x
+
 
 class HRRBackend(BaseBackend):
     """
@@ -544,11 +568,15 @@ class HRRBackend(BaseBackend):
         self._comp_single_fpe = torch.compile(_base_single_fpe)
         self._comp_single_ve = torch.compile(_base_single_value_encoding)
         self._comp_single_normalize = torch.compile(_base_single_normalize)
+        self._comp_single_invert = torch.compile(_base_single_invert)
+        self._comp_single_weight = torch.compile(_base_single_weight)
         self._comp_batch_bind = torch.compile(_base_batch_bind)
         self._comp_batch_bundle = torch.compile(_base_batch_bundle)
         self._comp_batch_fpe = torch.compile(_base_batch_fpe)
         self._comp_batch_ve = torch.compile(_base_batch_value_encoding)
         self._comp_batch_normalize = torch.compile(_base_batch_normalize)
+        self._comp_batch_invert = torch.compile(_base_batch_invert)
+        self._comp_batch_weight = torch.compile(_base_batch_weight)
         self._comp_list_bundle = torch.compile(_base_list_bundle)
 
         # ----------------------------------------

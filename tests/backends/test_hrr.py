@@ -2327,3 +2327,201 @@ def test_backend_normalize_batched_x():
         rtol=1e-5,
         atol=1e-7,
     )
+
+@pytest.mark.skip(reason="Not Implemented")
+def test_base_single_invert_invalid_x_type():
+    """
+    
+    """
+    pass
+
+@pytest.mark.skip(reason="Not Implemented")
+def test_base_single_invert_invalid_x_shape():
+    """
+    
+    """
+    pass
+
+@pytest.mark.skip(reason="Not Implemented")
+def test_base_single_invert_valid_x():
+    """
+    
+    """
+    pass
+
+@pytest.mark.skip(reason="Not Implemented")
+def test_base_batch_invert_invalid_x_type():
+    """
+    
+    """
+    pass
+
+@pytest.mark.skip(reason="Not Implemented")
+def test_base_batch_invert_invalid_x_shape():
+    """
+    
+    """
+    pass
+
+@pytest.mark.skip(reason="Not Implemented")
+def test_base_batch_invert_valid_x():
+    """
+    
+    """
+    pass
+
+@pytest.mark.skip(reason="Not Implemented")
+def test_backend_invert_invalid_x_type():
+    """
+    
+    """
+    pass
+
+@pytest.mark.skip(reason="Not Implemented")
+def test_backend_invert_invalid_x_shape():
+    """
+    
+    """
+    pass
+
+
+@pytest.mark.skip(reason="Not Implemented")
+def test_backend_invert_invalid_x_dim():
+    """
+    
+    """
+    pass
+
+@pytest.mark.skip(reason="Not Implemented")
+def test_backend_single_invert_valid_x():
+    """
+    
+    """
+    pass
+
+@pytest.mark.skip(reason="Not Implemented")
+def test_backend_batch_invert_valid_x():
+    """
+    
+    """
+    pass
+
+@pytest.mark.skip(reason="Not Implemented")
+def test_base_single_weight_invalid_x_type():
+    """
+    
+    """
+    pass
+
+@pytest.mark.skip(reason="Not Implemented")
+def test_base_single_weight_invalid_x_shape():
+    """
+    
+    """
+    pass
+
+@pytest.mark.skip(reason="Not Implemented")
+def test_base_single_weight_invalid_weight_type():
+    """
+    
+    """
+    pass
+
+@pytest.mark.skip(reason="Not Implemented")
+def test_base_single_weight_invalid_weight_shape():
+    """
+    
+    """
+    pass
+
+
+@pytest.mark.skip(reason="Not Implemented")
+def test_base_single_weight_valid_x():
+    """
+    
+    """
+    pass
+
+@pytest.mark.skip(reason="Not Implemented")
+def test_base_batch_weight_invalid_x_type():
+    """
+    
+    """
+    pass
+
+@pytest.mark.skip(reason="Not Implemented")
+def test_base_batch_weight_invalid_x_shape():
+    """
+    
+    """
+    pass
+
+@pytest.mark.skip(reason="Not Implemented")
+def test_base_batch_weight_invalid_weight_type():
+    """
+    
+    """
+    pass
+
+@pytest.mark.skip(reason="Not Implemented")
+def test_base_batch_weight_invalid_weight_shape():
+    """
+    
+    """
+    pass
+
+@pytest.mark.skip(reason="Not Implemented")
+def test_base_batch_weight_valid_x():
+    """
+    
+    """
+    pass
+
+@pytest.mark.skip(reason="Not Implemented")
+def test_backend_weight_invalid_x_type():
+    """
+    
+    """
+    pass
+
+@pytest.mark.skip(reason="Not Implemented")
+def test_backend_weight_invalid_x_shape():
+    """
+    
+    """
+    pass
+
+@pytest.mark.skip(reason="Not Implemented")
+def test_backend_weight_invalid_x_dim():
+    """
+    
+    """
+    pass
+
+@pytest.mark.skip(reason="Not Implemented")
+def test_backend_weight_invalid_weight_type():
+    """
+    
+    """
+    pass
+
+@pytest.mark.skip(reason="Not Implemented")
+def test_backend_weight_invalid_weight_shape():
+    """
+    
+    """
+    pass
+
+@pytest.mark.skip(reason="Not Implemented")
+def test_backend_single_weight_valid_x():
+    """
+    
+    """
+    pass
+
+@pytest.mark.skip(reason="Not Implemented")
+def test_backend_batch_weight_valid_x():
+    """
+    
+    """
+    pass
