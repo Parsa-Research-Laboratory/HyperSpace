@@ -2125,12 +2125,18 @@ def test_base_single_normalize_invalid_x_type():
     with pytest.raises(TypeError):
         _base_single_normalize(x)
 
-@pytest.mark.skip(reason="not implemented")
 def test_base_single_normalize_invalid_x_shape():
     """
-    
+    test that the base_single_normalize function throws an
+    error when x isn't a singular vector
     """
-    pass
+    import torch
+    from hyperspace.backends.hrr import _base_single_normalize
+    
+    x = torch.zeros((10, 10))
+
+    with pytest.raises(ValueError):
+        _base_single_normalize(x)
 
 @pytest.mark.skip(reason="not implemented")
 def test_base_single_normalize_valid_x():
