@@ -507,6 +507,11 @@ def _base_single_invert(x: Tensor) -> Tensor:
     """
     
     """
+    if not isinstance(x, Tensor):
+        raise TypeError(f"Input x should be a Tensor, got {type(x)}")
+    if x.dim() != 1:
+        raise ValueError("Input x must be a 1D tensor of shape (vector_dim).")
+
     return x
 
 def _base_batch_invert(x: Tensor) -> Tensor:

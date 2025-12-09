@@ -2328,12 +2328,18 @@ def test_backend_normalize_batched_x():
         atol=1e-7,
     )
 
-@pytest.mark.skip(reason="Not Implemented")
 def test_base_single_invert_invalid_x_type():
     """
-    
+    test that the `base_single_invert` method throws an
+    error when x isn't a torch tensor
     """
-    pass
+    import numpy as np
+    from hyperspace.backends.hrr import _base_single_invert
+
+    v = np.zeros(10)
+
+    with pytest.raises(TypeError):
+        _base_single_invert(v)
 
 @pytest.mark.skip(reason="Not Implemented")
 def test_base_single_invert_invalid_x_shape():
