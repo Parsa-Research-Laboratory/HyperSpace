@@ -428,6 +428,29 @@ def _base_batch_value_encoding(x: Tensor, basis: Tensor, length_scale: float) ->
     
     return encoded
 
+def _base_single_normalize(x: Tensor) -> Tensor:
+    """
+    
+    """
+
+    if not isinstance(x, Tensor):
+        raise TypeError(f"Input x should be a Tensor, got {type(x)}")
+    if x.dim() != 1:
+        raise ValueError("Input x must be a 1D tensor of shape (vector_dim).")
+
+    return x
+
+def _base_batch_normalize(x: Tensor) -> Tensor:
+    """
+    
+    """
+    if not isinstance(x, Tensor):
+        raise TypeError(f"Input x should be a Tensor, got {type(x)}")
+    if x.dim() != 2:
+        raise ValueError("Input x must be a 2D tensor of shape (batch_size, vector_dim).")
+    
+    return x
+
 
 class HRRBackend(BaseBackend):
     """
@@ -468,10 +491,12 @@ class HRRBackend(BaseBackend):
         self._comp_single_bundle = torch.compile(_base_single_bundle)
         self._comp_single_fpe = torch.compile(_base_single_fpe)
         self._comp_single_ve = torch.compile(_base_single_value_encoding)
+        self._comp_single_normalize = torch.compile(_base_single_normalize)
         self._comp_batch_bind = torch.compile(_base_batch_bind)
         self._comp_batch_bundle = torch.compile(_base_batch_bundle)
         self._comp_batch_fpe = torch.compile(_base_batch_fpe)
         self._comp_batch_ve = torch.compile(_base_batch_value_encoding)
+        self._comp_batch_normalize = torch.compile(_base_batch_normalize)
         self._comp_list_bundle = torch.compile(_base_list_bundle)
 
         # ----------------------------------------
@@ -708,11 +733,57 @@ class HRRBackend(BaseBackend):
 
         return out, info_dict
     
-    def normalize(self, tensor: Tensor) -> Tensor:
+    def normalize(self, x: Tensor) -> Tuple[Tensor, dict]:
         """
-        Normalize the input tensor.
+        Normalize a single or batched hypervector.
+
+        This method applies the backend-specific normalization operator to either
+        a single vector of shape ``(vector_dim,)`` or a batch of vectors of shape
+        ``(batch_size, vector_dim)``. The normalization is dispatched to the
+        appropriate single or batched compute kernel based on the dimensionality
+        of the input.
+
+        Parameters
+        ----------
+        x : Tensor
+            Input tensor to normalize. Must be either a 1D tensor of shape
+            ``(vector_dim,)`` or a 2D tensor of shape
+            ``(batch_size, vector_dim)``.
+
+        Returns
+        -------
+        out : Tensor
+            The normalized output tensor with the same shape as the input.
+        info : dict
+            Dictionary containing auxiliary normalization metadata. Currently
+            returned as an empty dictionary for API consistency.
+
+        Raises
+        ------
+        TypeError
+            If ``x`` is not a ``Tensor``.
+        ValueError
+            If ``x`` is not 1D or 2D, or if the last dimension does not match
+            ``self.vector_dim``.
         """
-        return super().normalize(tensor)
+
+        if not isinstance(x, Tensor):
+            raise TypeError(f"Input x should be a Tensor, got {type(x)}")
+        if x.dim() != 2 and x.dim() != 1:
+            raise ValueError("Input x must be a 1D or 2D tensor of shape (vector_dim) or (batch_size, vector_dim).")
+        if x.shape[-1] != self.vector_dim:
+            raise ValueError(f"Input x's last dimensional should have shape {self.vector_dim}; got {x.shape[-1]}")
+
+        if x.ndim == 1: # Single Bind
+            out = self._comp_single_normalize(x)
+        elif x.ndim == 2: # Batch Bind
+            out = self._comp_batch_normalize(x)
+        else:
+            raise ValueError(f"Expected tensors to be single or two dimensional; got {x.ndim}")
+
+        info = {}
+
+        return out, info
     
     def invert(self, tensor: Tensor) -> Tensor:
         """

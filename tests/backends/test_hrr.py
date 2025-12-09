@@ -2090,7 +2090,6 @@ def test_create_empty_vector_shape():
     """
     test the shape of the vector from create_empty_vector
     """
-    import torch
     from hyperspace.backends.hrr import HRRBackend
 
     D: int = 128
@@ -2104,7 +2103,6 @@ def test_create_empty_vector_values():
     test the values within the empty vector from create_empty_vector
     """
     import numpy as np
-    import torch
     from hyperspace.backends.hrr import HRRBackend
 
     D: int = 128
@@ -2114,3 +2112,79 @@ def test_create_empty_vector_values():
 
     assert np.array_equal(v, gt)
 
+@pytest.mark.skip(reason="not implemented")
+def test_base_single_normalize_invalid_x_type():
+    """
+    
+    """
+    pass
+
+@pytest.mark.skip(reason="not implemented")
+def test_base_single_normalize_invalid_x_shape():
+    """
+    
+    """
+    pass
+
+@pytest.mark.skip(reason="not implemented")
+def test_base_single_normalize_valid_x():
+    """
+    
+    """
+    pass
+
+@pytest.mark.skip(reason="not implemented")
+def test_base_batch_normalize_invalid_x_type():
+    """
+    
+    """
+    pass
+
+@pytest.mark.skip(reason="not implemented")
+def test_base_batch_normalize_invalid_x_shape():
+    """
+    
+    """
+    pass
+
+@pytest.mark.skip(reason="not implemented")
+def test_base_batch_normalize_valid_x():
+    """
+    
+    """
+    pass
+
+@pytest.mark.skip(reason="not implemented")
+def test_backend_normalize_invalid_x_type():
+    """
+    
+    """
+    pass
+
+@pytest.mark.skip(reason="not implemented")
+def test_backend_normalize_invalid_x_shape():
+    """
+    
+    """
+    pass
+
+@pytest.mark.skip(reason="not implemented")
+def test_backend_normalize_invalid_x_dimensionality():
+    """
+    
+    """
+    pass
+
+@pytest.mark.skip(reason="not implemented")
+def test_backend_normalize_single_x():
+    """
+    
+    """
+    pass
+
+@pytest.mark.skip(reason="not implemented")
+def test_backend_normalize_batched_x():
+    """
+    
+    """
+    pass
