@@ -934,7 +934,35 @@ class HRRBackend(BaseBackend):
     
     def invert(self, x: Tensor) -> Tuple[Tensor, dict]:
         """
-        Invert the input tensor.
+        Invert one or more HRR vectors.
+
+        This method computes the HRR inverse of the input using Fourier-domain
+        conjugation. It supports both single-vector inversion and batched
+        inversion, automatically dispatching to the appropriate backend
+        implementation based on the dimensionality of the input.
+
+        Parameters
+        ----------
+        x : Tensor
+            A real-valued tensor representing one or more HRR vectors.
+            - If 1D: shape (vector_dim,)
+            - If 2D: shape (batch_size, vector_dim)
+
+        Returns
+        -------
+        Tuple[Tensor, dict]
+            A tuple ``(out, info)`` where:
+            - ``out`` is a tensor of the same shape as ``x`` containing the inverted
+            HRR vector(s).
+            - ``info`` is a dictionary reserved for auxiliary information (currently empty).
+
+        Raises
+        ------
+        TypeError
+            If ``x`` is not a torch Tensor.
+        ValueError
+            If ``x`` is not 1D or 2D.
+            If the last dimension of ``x`` does not match ``self.vector_dim``.
         """
         if not isinstance(x, Tensor):
             raise TypeError(f"Input x should be a Tensor, got {type(x)}")
