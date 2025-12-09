@@ -499,7 +499,7 @@ def _base_batch_normalize(x: Tensor) -> Tensor:
     if x.dim() != 2:
         raise ValueError("Input x must be a 2D tensor of shape (batch_size, vector_dim).")
     
-    x = F.normalize(x, p=2, dim=0)
+    x = F.normalize(x, p=2, dim=-1)
 
     return x
 

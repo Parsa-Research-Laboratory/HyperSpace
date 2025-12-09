@@ -2197,22 +2197,13 @@ def test_base_batch_normalize_valid_x():
     import torch
     from hyperspace.backends.hrr import _base_batch_normalize
 
-    x = torch.rand((10, 10))
+    x = torch.rand((5, 10))
 
     pred = _base_batch_normalize(x)
-    gt = x / (torch.linalg.norm(x, dim=0) + 1e-10)
 
     assert torch.allclose(
-        torch.linalg.norm(pred, dim=0),
-        torch.ones(10),
-        rtol=1e-5,
-        atol=1e-7,
-    )
-    
-    # Should produce identical results
-    assert torch.allclose(
-        gt,
-        pred,
+        torch.linalg.norm(pred, dim=-1),
+        torch.ones(5),
         rtol=1e-5,
         atol=1e-7,
     )
@@ -2293,9 +2284,12 @@ def test_backend_normalize_single_x():
     pred, _ = b.normalize(x)
     gt = x / (torch.linalg.norm(x, dim=0) + 1e-10)
 
+    assert pred.shape == (D,)
+    assert gt.shape == (D,)
+
     assert torch.allclose(
         torch.linalg.norm(pred, dim=0),
-        torch.ones(10),
+        torch.ones(D),
         rtol=1e-5,
         atol=1e-7,
     )
@@ -2308,9 +2302,28 @@ def test_backend_normalize_single_x():
         atol=1e-7,
     )
 
-@pytest.mark.skip(reason="not implemented")
 def test_backend_normalize_batched_x():
     """
-    
+    test the backend's normalization functionality
+    with a batch of vectors
     """
-    pass
+    import torch
+    from hyperspace.backends.hrr import HRRBackend
+
+    B: int = 32
+    D: int = 128
+
+    x = torch.rand((B, D))
+
+    b = HRRBackend(vector_dim=D)
+
+    pred, _ = b.normalize(x)
+
+    assert pred.shape == (B, D)
+
+    assert torch.allclose(
+        torch.linalg.norm(pred, dim=-1),
+        torch.ones(B),
+        rtol=1e-5,
+        atol=1e-7,
+    )
