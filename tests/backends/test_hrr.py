@@ -2232,12 +2232,20 @@ def test_backend_normalize_invalid_x_type():
     with pytest.raises(TypeError):
         b.normalize(v)
 
-@pytest.mark.skip(reason="not implemented")
 def test_backend_normalize_invalid_x_shape():
     """
-    
+    test that the backend's normalize method throws an error
+    when x isn't a single vector or 2d batch of vectors
     """
-    pass
+    import torch
+    from hyperspace.backends.hrr import HRRBackend
+
+    D: int = 128
+    b = HRRBackend(vector_dim=D)
+    v = torch.zeros((D, D, D))
+
+    with pytest.raises(ValueError):
+        b.normalize(v)
 
 @pytest.mark.skip(reason="not implemented")
 def test_backend_normalize_invalid_x_dimensionality():
