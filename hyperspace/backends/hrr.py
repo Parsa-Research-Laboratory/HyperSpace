@@ -1035,7 +1035,18 @@ class HRRBackend(BaseBackend):
 
     def create_empty_vector(self) -> Tensor:
         """
-        Create and return an empty HRR vector.
+        Create an empty HRR vector initialized to all zeros.
+
+        This method allocates a real-valued tensor of shape ``(vector_dim,)`` on the
+        backend's configured device. The returned vector represents the neutral
+        (zero) element in HRR space prior to any binding, bundling, or encoding
+        operations.
+
+        Returns
+        -------
+        Tensor
+            A real-valued tensor of shape ``(vector_dim,)`` initialized to zeros and
+            placed on ``self.device``.
         """
         v = torch.zeros((self.vector_dim))
         v = v.to(self.device)
