@@ -2540,12 +2540,39 @@ def test_backend_single_invert_valid_x():
         atol=1e-7,
     )
 
-@pytest.mark.skip(reason="Not Implemented")
 def test_backend_batch_invert_valid_x():
     """
-    
+    test the backend's invert method with a batch of vectors
     """
-    pass
+    import torch
+    from hyperspace.backends.hrr import HRRBackend
+
+    B: int = 10
+    D: int = 128
+
+    b = HRRBackend(vector_dim=D)
+
+    v_list = [b.create_random_vector() for _ in range(B)]
+    v_tensor = torch.stack(v_list, dim=0)
+
+    assert v_tensor.shape == (B, D)
+
+    pred, _ = b.invert(v_tensor)
+
+    gt = torch.zeros((B, D))
+    for i in range(B):
+        v = v_list[i]
+        v = torch.fft.fft(v)
+        v = torch.conj(v)
+        v = torch.fft.ifft(v).real
+        gt[i] = v
+
+    assert torch.allclose(
+        pred,
+        gt,
+        rtol=1e-5,
+        atol=1e-7,
+    )
 
 @pytest.mark.skip(reason="Not Implemented")
 def test_base_single_weight_invalid_x_type():
