@@ -2217,12 +2217,20 @@ def test_base_batch_normalize_valid_x():
         atol=1e-7,
     )
 
-@pytest.mark.skip(reason="not implemented")
 def test_backend_normalize_invalid_x_type():
     """
-    
+    test that the backend's normalize method doesn't
+    accept non torch.Tensors
     """
-    pass
+    import numpy as np
+    from hyperspace.backends.hrr import HRRBackend
+
+    D: int = 128
+    b = HRRBackend(vector_dim=D)
+    v = np.zeros(D)
+
+    with pytest.raises(TypeError):
+        b.normalize(v)
 
 @pytest.mark.skip(reason="not implemented")
 def test_backend_normalize_invalid_x_shape():
