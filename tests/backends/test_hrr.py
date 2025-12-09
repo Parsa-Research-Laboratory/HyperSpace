@@ -2465,22 +2465,51 @@ def test_backend_invert_invalid_x_type():
     b = HRRBackend(vector_dim=128)
 
     with pytest.raises(TypeError):
-        b.invert(b)
+        b.invert(v)
 
-@pytest.mark.skip(reason="Not Implemented")
 def test_backend_invert_invalid_x_shape():
     """
-    
+    test that the backend's invert method doesn't accept
+    3D tensors
     """
-    pass
+    import torch
+    from hyperspace.backends.hrr import HRRBackend
+    
+    v = torch.zeros((10, 10, 10))
+    b = HRRBackend(vector_dim=128)
 
+    with pytest.raises(ValueError):
+        b.invert(v)
 
-@pytest.mark.skip(reason="Not Implemented")
 def test_backend_invert_invalid_x_dim():
     """
-    
+    test that the backend's invert method doesn't accept
+    vectors with incorrect dimensionality
     """
-    pass
+    import torch
+    from hyperspace.backends.hrr import HRRBackend
+
+    D: int = 128
+    B: int = 8
+
+    b = HRRBackend(vector_dim=D)
+
+    v_single_small = torch.rand((D - 1))
+    v_single_large = torch.rand((D + 1))
+    v_batch_small = torch.rand((B, D - 1))
+    v_batch_large = torch.rand((B, D + 1))
+
+    with pytest.raises(ValueError):
+        b.invert(v_single_small)
+
+    with pytest.raises(ValueError):
+        b.invert(v_single_large)
+
+    with pytest.raises(ValueError):
+        b.invert(v_batch_small)
+
+    with pytest.raises(ValueError):
+        b.invert(v_batch_large)
 
 @pytest.mark.skip(reason="Not Implemented")
 def test_backend_single_invert_valid_x():
