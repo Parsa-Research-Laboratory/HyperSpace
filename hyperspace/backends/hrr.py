@@ -468,13 +468,39 @@ def _base_single_normalize(x: Tensor) -> Tensor:
 
 def _base_batch_normalize(x: Tensor) -> Tensor:
     """
-    
+    Normalize a batch of vector to unit L2 norm.
+
+    This function rescales a one-dimensional input tensor so that its
+    Euclidean (L2) norm is equal to 1. Normalization is performed using
+    ``torch.nn.functional.normalize``, which is numerically stable and
+    safely handles zero vectors.
+
+    Parameters
+    ----------
+    x : Tensor
+        A one-dimensional tensor of shape ``(batch_size, vector_dim)`` representing
+        the input vector to be normalized.
+
+    Returns
+    -------
+    Tensor
+        A two-dimensional tensor of the same shape as ``x`` with unit
+        L2 norm.
+
+    Raises
+    ------
+    TypeError
+        If ``x`` is not a ``torch.Tensor``.
+    ValueError
+        If ``x`` is not a two-dimensional tensor.
     """
     if not isinstance(x, Tensor):
         raise TypeError(f"Input x should be a Tensor, got {type(x)}")
     if x.dim() != 2:
         raise ValueError("Input x must be a 2D tensor of shape (batch_size, vector_dim).")
     
+    x = F.normalize(x, p=2, dim=0)
+
     return x
 
 
