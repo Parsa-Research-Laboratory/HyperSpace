@@ -1070,7 +1070,40 @@ class HRRBackend(BaseBackend):
     
     def weight(self, x: Tensor, w: Tensor) -> Tuple[Tensor, dict]:
         """
-        Apply weighting to the input tensor using the specified method.
+        Apply scalar weighting to a single vector or a batch of vectors.
+
+        This method scales each input vector in `x` by the corresponding weight
+        in `w`. When `x` is a 1D tensor, a single weight must be provided.
+        When `x` is a 2D tensor representing a batch, `w` must contain one
+        weight per vector in the batch. The function automatically dispatches
+        to the appropriate single-vector or batch-vector implementation.
+
+        Parameters
+        ----------
+        x : Tensor
+            A 1D tensor of shape (vector_dim,) or a 2D tensor of shape
+            (batch_size, vector_dim) representing the input vector(s).
+        w : Tensor
+            A 1D tensor of shape (1,) for single-vector weighting, or
+            (batch_size,) for batch weighting.
+
+        Returns
+        -------
+        Tuple[Tensor, dict]
+            A tuple containing:
+            - A tensor of the same shape as `x` with the weighted vectors.
+            - An empty info dictionary (reserved for future metadata).
+
+        Raises
+        ------
+        TypeError
+            If `x` or `w` is not a Tensor.
+        ValueError
+            If `x` is not 1D or 2D.
+            If `x`'s last dimension does not match `self.vector_dim`.
+            If `w` is not 1D.
+            If batch sizes do not match for 2D input.
+            If a single-vector input does not receive exactly one weight.
         """
         if not isinstance(x, Tensor):
             raise TypeError(f"Input x should be a Tensor, got {type(x)}")
