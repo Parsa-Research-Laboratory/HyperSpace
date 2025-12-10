@@ -114,26 +114,32 @@ def test_pi_invalid_positions_shape():
     with pytest.raises(ValueError):
         PositionalInversionModule(b, p_big_d)
 
-@pytest.mark.skip(reason="Not Implemented")
 def test_pi_valid_position_generation():
     """
     Test that the PI module correctly generates the position vectors
     """
-    pass
+    import torch
+    from hyperspace.backends.hrr import HRRBackend
+    from hyperspace.core.positional_inversion import PositionalInversionModule
 
-@pytest.mark.skip(reason="Not Implemented")
-def test_pi_position_vectors_type():
-    """
-    Test the type of the generated position vectors is correct
-    """
-    pass
+    B: int = 2
+    D: int = 128
+    E: int = 1
 
-@pytest.mark.skip(reason="Not Implemented")
-def test_pi_position_vectors_shape():
-    """
-    Test that the shape of the generated position vectors is correct
-    """
-    pass
+    b = HRRBackend(vector_dim=D, env_dim=E)
+    p = torch.rand((B, E))
+
+    pim = PositionalInversionModule(b, p)
+
+    assert pim.inv_position_vectors.shape == (B, D)
+
+    p_gt, _ = b.positional_encoding(p)
+    p_gt, _ = b.invert(p_gt)
+
+    assert torch.allclose(
+        pim.inv_position_vectors,
+        p_gt,
+    )
 
 @pytest.mark.skip(reason="Not Implemented")
 def test_pi_call_memory_type():
