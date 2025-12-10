@@ -2574,12 +2574,20 @@ def test_backend_batch_invert_valid_x():
         atol=1e-7,
     )
 
-@pytest.mark.skip(reason="Not Implemented")
 def test_base_single_weight_invalid_x_type():
     """
-    
+    test that the base single weight checks for the type
+    of x
     """
-    pass
+    import numpy as np
+    import torch
+    from hyperspace.backends.hrr import _base_single_weight
+    
+    x = np.zeros(10)
+    w = torch.ones(10)
+
+    with pytest.raises(TypeError):
+        _base_single_weight(x, w)
 
 @pytest.mark.skip(reason="Not Implemented")
 def test_base_single_weight_invalid_x_shape():

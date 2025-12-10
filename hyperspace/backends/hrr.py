@@ -586,6 +586,22 @@ def _base_single_weight(x: Tensor, w: Tensor) -> Tensor:
     """
     
     """
+
+    if not isinstance(x, Tensor):
+        raise TypeError(f"Input x should be a Tensor, got {type(x)}")
+    
+    if not isinstance(w, Tensor):
+        raise TypeError(f"Input w should be a Tensor; got {type(w)}")
+
+    if x.dim() != 1:
+        raise ValueError("Input x must be a 1D tensor of shape (vector_dim).")
+    
+    if w.dim() != 1:
+        raise ValueError("Input w must be a 1D tensor of shape (1).")
+    
+    if w.shape[0] != 1:
+        raise ValueError("Input w must be a 1D tensor of shape (1).")
+
     return x
 
 def _base_batch_weight(x: Tensor, w: Tensor) -> Tensor:
@@ -982,11 +998,26 @@ class HRRBackend(BaseBackend):
 
         return out, info
     
-    def weight(self, tensor: Tensor, weight: float) -> Tensor:
+    def weight(self, x: Tensor, w: Tensor) -> Tensor:
         """
         Apply weighting to the input tensor using the specified method.
         """
-        return super().weight(tensor, weight)
+        if not isinstance(x, Tensor):
+            raise TypeError(f"Input x should be a Tensor, got {type(x)}")
+        if not isinstance(w, Tensor):
+            raise TypeError(f"Input w should be a Tensor, got {type(w)}")
+        if x.dim() != 2 and x.dim() != 1:
+            raise ValueError("Input x must be a 1D or 2D tensor of shape (vector_dim) or (batch_size, vector_dim).")
+        if x.shape[-1] != self.vector_dim:
+            raise ValueError(f"Input x's last dimensional should have shape {self.vector_dim}; got {x.shape[-1]}")
+        if w.dim() != 1:
+            raise ValueError(f"Expected w to be a matrix with shape (batch_size,); got {w.shape}")
+        if x.dim() == 2 and x.shape[0] != w.shape[0]:
+            raise ValueError(f"Expected the number of weights to match the number of vectors; got {x.shape[0]} vectors and {w.shape[0]} weights")
+        if x.dim() == 1 and w.shape[0] != 1:
+            raise ValueError(f"Expected one weight for the one argued vector; got {w.shape[0]} weights")
+
+        return super().weight(x, w)
     
     def initialize_env_basis_vectors(self, env_dim: int) -> None:
         """
