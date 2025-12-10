@@ -2603,12 +2603,20 @@ def test_base_single_weight_invalid_x_shape():
     with pytest.raises(ValueError):
         _base_single_weight(x, w)
 
-@pytest.mark.skip(reason="Not Implemented")
 def test_base_single_weight_invalid_weight_type():
     """
-    
+    test that the base single weight function checks the
+    type of w
     """
-    pass
+    import numpy as np
+    import torch
+    from hyperspace.backends.hrr import _base_single_weight
+    
+    x = torch.zeros(10)
+    w = np.ones(1)
+
+    with pytest.raises(TypeError):
+        _base_single_weight(x, w)
 
 @pytest.mark.skip(reason="Not Implemented")
 def test_base_single_weight_invalid_weight_shape():
