@@ -631,7 +631,34 @@ def _base_single_weight(x: Tensor, w: Tensor) -> Tensor:
 
 def _base_batch_weight(x: Tensor, w: Tensor) -> Tensor:
     """
-    
+    Apply a scalar weight to each vector in a batch.
+
+    This function scales each vector in the input batch `x` by the
+    corresponding scalar weight in `w` using PyTorch broadcasting.
+
+    Parameters
+    ----------
+    x : Tensor
+        A 2D tensor of shape (batch_size, vector_dim) representing a batch
+        of input vectors.
+    w : Tensor
+        A 1D tensor of shape (batch_size,) containing the scalar weights
+        for each vector in the batch.
+
+    Returns
+    -------
+    Tensor
+        A 2D tensor of shape (batch_size, vector_dim) representing the
+        batch of weighted vectors.
+
+    Raises
+    ------
+    TypeError
+        If `x` or `w` is not a Tensor.
+    ValueError
+        If `x` is not 2D.
+        If `w` is not 1D.
+        If the batch dimension of `w` does not match that of `x`.
     """
 
     if not isinstance(x, Tensor):
@@ -649,11 +676,9 @@ def _base_batch_weight(x: Tensor, w: Tensor) -> Tensor:
     if w.shape[0] != x.shape[0]:
         raise ValueError(f"Input w must have the same batch size of x; got {w.shape[0]} and {x.shape[0]}")
     
-    out = x * w
+    out = x * w.view(-1, 1)
 
     return out
-
-    return x
 
 
 class HRRBackend(BaseBackend):
