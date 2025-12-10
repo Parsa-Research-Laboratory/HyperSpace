@@ -584,7 +584,30 @@ def _base_batch_invert(x: Tensor) -> Tensor:
 
 def _base_single_weight(x: Tensor, w: Tensor) -> Tensor:
     """
-    
+    Apply a scalar weight to a single HRR vector.
+
+    This function performs element-wise scaling of a 1D input vector `x`
+    by a single scalar value stored in a 1D tensor `w` of shape (1).
+
+    Parameters
+    ----------
+    x : Tensor
+        A 1D tensor of shape (vector_dim,) representing the input vector.
+    w : Tensor
+        A 1D tensor of shape (1,) containing the scalar weight.
+
+    Returns
+    -------
+    Tensor
+        A 1D tensor of shape (vector_dim,) representing the weighted vector.
+
+    Raises
+    ------
+    TypeError
+        If `x` or `w` is not a Tensor.
+    ValueError
+        If `x` is not 1D.
+        If `w` is not 1D or does not have shape (1,).
     """
 
     if not isinstance(x, Tensor):
