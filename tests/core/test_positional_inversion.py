@@ -47,3 +47,111 @@ def test_pi_invalid_backend():
 
     with pytest.raises(TypeError):
         _ = PositionalInversionModule(5, p)
+
+@pytest.mark.skip(reason="Not Implemented")
+def test_pi_no_positions():
+    """
+    Test that the PI module throws an error when
+    positions aren't provided
+    """
+    pass
+
+@pytest.mark.skip(reason="Not Implemented")
+def test_pi_invalid_positions_type():
+    """
+    Test that the PI module throws an error when
+    positions aren't the correct type
+    """
+    pass
+
+@pytest.mark.skip(reason="Not Implemented")
+def test_pi_invalid_positions_shape():
+    """
+    Test that the PI module throws an error when
+    positions don't have the same env dimensionality
+    """
+    pass
+
+@pytest.mark.skip(reason="Not Implemented")
+def test_pi_valid_position_generation():
+    """
+    Test that the PI module correctly generates the position vectors
+    """
+    pass
+
+@pytest.mark.skip(reason="Not Implemented")
+def test_pi_position_vectors_type():
+    """
+    Test the type of the generated position vectors is correct
+    """
+    pass
+
+@pytest.mark.skip(reason="Not Implemented")
+def test_pi_position_vectors_shape():
+    """
+    Test that the shape of the generated position vectors is correct
+    """
+    pass
+
+@pytest.mark.skip(reason="Not Implemented")
+def test_pi_call_memory_type():
+    """
+    Test that the call method only accepts tensor memories
+    """
+    pass
+
+@pytest.mark.skip(reason="Not Implemented")
+def test_pi_call_memory_shape():
+    """
+    That that memory shapes are correctly validated in
+    the call method
+    """
+    pass
+
+@pytest.mark.skip(reason="Not Implemented")
+def test_pi_call_single_pos_1D():
+    """
+    Test the PI module to return a single noisy value vector
+    in a 1D positional space
+    """
+    pass
+
+@pytest.mark.skip(reason="Not Implemented")
+def test_pi_call_single_pos_2D():
+    """
+    Test the PI module to return a single noisy value vector
+    in a 2D positional space
+    """
+    pass
+
+@pytest.mark.skip(reason="Not Implemented")
+def test_pi_call_single_pos_3D():
+    """
+    Test the PI module to return a single noisy value vector
+    in a 3D positional space
+    """
+    pass
+
+@pytest.mark.skip(reason="Not Implemented")
+def test_pi_call_multi_pos_1D():
+    """
+    Test the PI module to return a single noisy value vector
+    in a 1D positional space
+    """
+    pass
+
+@pytest.mark.skip(reason="Not Implemented")
+def test_pi_call_multi_pos_2D():
+    """
+    Test the PI module to return a single noisy value vector
+    in a 2D positional space
+    """
+    pass
+
+@pytest.mark.skip(reason="Not Implemented")
+def test_pi_call_multi_pos_3D():
+    """
+    Test the PI module to return a single noisy value vector
+    in a 3D positional space
+    """
+    pass
