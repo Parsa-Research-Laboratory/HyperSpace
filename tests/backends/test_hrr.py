@@ -2777,12 +2777,22 @@ def test_base_batch_weight_valid_x():
         atol=1e-7,
     )
 
-@pytest.mark.skip(reason="Not Implemented")
 def test_backend_weight_invalid_x_type():
     """
-    
+    test that the backend's weight method checks
+    the type of x    
     """
-    pass
+    import numpy as np
+    import torch
+    from hyperspace.backends.hrr import HRRBackend
+
+    x = np.zeros((10))
+    w = torch.zeros((1))
+    
+    b = HRRBackend(vector_dim=128)
+
+    with pytest.raises(TypeError):
+        b.weight(x, w)
 
 @pytest.mark.skip(reason="Not Implemented")
 def test_backend_weight_invalid_x_shape():
