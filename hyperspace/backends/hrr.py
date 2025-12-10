@@ -1068,7 +1068,7 @@ class HRRBackend(BaseBackend):
 
         return out, info
     
-    def weight(self, x: Tensor, w: Tensor) -> Tensor:
+    def weight(self, x: Tensor, w: Tensor) -> Tuple[Tensor, dict]:
         """
         Apply weighting to the input tensor using the specified method.
         """
@@ -1086,8 +1086,17 @@ class HRRBackend(BaseBackend):
             raise ValueError(f"Expected the number of weights to match the number of vectors; got {x.shape[0]} vectors and {w.shape[0]} weights")
         if x.dim() == 1 and w.shape[0] != 1:
             raise ValueError(f"Expected one weight for the one argued vector; got {w.shape[0]} weights")
+        
+        if x.dim() == 1:
+            out = self._comp_single_weight(x, w)
+        elif x.dim() == 2:
+            out = self._comp_batch_weight(x, w)
+        else:
+            raise ValueError(f"Received unknown x dimensionality; {x.dim()}")
 
-        return super().weight(x, w)
+        info = {}
+
+        return out, info
     
     def initialize_env_basis_vectors(self, env_dim: int) -> None:
         """

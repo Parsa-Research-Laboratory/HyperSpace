@@ -2882,12 +2882,44 @@ def test_backend_weight_invalid_weight_shape():
     with pytest.raises(ValueError):
         b.weight(v[0], w_dim[0])
 
-@pytest.mark.skip(reason="Not Implemented")
 def test_backend_single_weight_valid_x():
     """
-    
+    test the backend's weighting functionality with
+    a single vector and weight
     """
-    pass
+    import torch
+    from hyperspace.backends.hrr import HRRBackend
+    
+    D: int = 128
+    x = torch.rand(D)
+
+    b = HRRBackend(vector_dim=D)
+
+    w_small = torch.tensor([0.5])
+    w_large = torch.tensor([2.0])
+
+    x_small_pred, _ = b.weight(x, w_small)
+    x_small_gt = torch.linalg.norm(x) * w_small
+
+    x_large_pred, _ = b.weight(x, w_large)
+    x_large_gt = torch.linalg.norm(x) * w_large
+
+    assert x_small_pred.shape == (D,)
+    assert x_large_pred.shape == (D,)
+
+    assert torch.allclose(
+        torch.linalg.norm(x_small_pred),
+        x_small_gt,
+        rtol=1e-5,
+        atol=1e-7,
+    )
+
+    assert torch.allclose(
+        torch.linalg.norm(x_large_pred),
+        x_large_gt,
+        rtol=1e-5,
+        atol=1e-7,
+    )
 
 @pytest.mark.skip(reason="Not Implemented")
 def test_backend_batch_weight_valid_x():
