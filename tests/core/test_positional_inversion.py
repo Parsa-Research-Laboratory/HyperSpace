@@ -64,13 +64,24 @@ def test_pi_no_positions():
     with pytest.raises(TypeError):
         _ = PositionalInversionModule(b)
 
-@pytest.mark.skip(reason="Not Implemented")
 def test_pi_invalid_positions_type():
     """
     Test that the PI module throws an error when
     positions aren't the correct type
     """
-    pass
+    import numpy as np
+    from hyperspace.backends.hrr import HRRBackend
+    from hyperspace.core.positional_inversion import PositionalInversionModule
+
+    B: int = 64
+    D: int = 128
+    E: int = 3
+
+    b = HRRBackend(vector_dim=D, env_dim=E)
+    p = np.random.random((B, E))
+
+    with pytest.raises(TypeError):
+        _ = PositionalInversionModule(b, p)
 
 @pytest.mark.skip(reason="Not Implemented")
 def test_pi_invalid_positions_shape():
