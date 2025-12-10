@@ -2921,9 +2921,32 @@ def test_backend_single_weight_valid_x():
         atol=1e-7,
     )
 
-@pytest.mark.skip(reason="Not Implemented")
 def test_backend_batch_weight_valid_x():
     """
-    
+    test the backend's weighting function with a batch
+    of vectors and weights
     """
-    pass
+    import torch
+    from hyperspace.backends.hrr import HRRBackend
+    
+    B: int = 10
+    D: int = 256
+
+    b = HRRBackend(vector_dim=D)
+
+    x = torch.rand((B, D))
+    w = torch.rand((B))
+
+    x_pred, _ = b.weight(x, w)
+
+    x_gt = torch.zeros((B, D))
+    for b in range(B):
+        for d in range(D):
+            x_gt[b, d] = x[b, d] * w[b]
+
+    assert torch.allclose(
+        x_pred,
+        x_gt,
+        rtol=1e-5,
+        atol=1e-7,
+    )
