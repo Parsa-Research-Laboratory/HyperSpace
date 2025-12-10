@@ -601,8 +601,10 @@ def _base_single_weight(x: Tensor, w: Tensor) -> Tensor:
     
     if w.shape[0] != 1:
         raise ValueError("Input w must be a 1D tensor of shape (1).")
+    
+    out = x * w
 
-    return x
+    return out
 
 def _base_batch_weight(x: Tensor, w: Tensor) -> Tensor:
     """

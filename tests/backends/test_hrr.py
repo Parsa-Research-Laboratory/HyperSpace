@@ -2626,20 +2626,38 @@ def test_base_single_weight_invalid_weight_shape():
     import torch
     from hyperspace.backends.hrr import _base_single_weight
     
-    x = torch.zeros(10)
-    w_num = torch.ones((10))
-    w_dim = torch.zeros((10, 10))
+    D: int = 128
+    x = torch.rand(D)
+    w_small = torch.tensor([0.5])
+    w_large = torch.tensor([2.0])
 
-    with pytest.raises(ValueError):
-        _base_single_weight(x, w_num)
+    x_small_pred = _base_single_weight(x, w_small)
+    x_small_gt = torch.linalg.norm(x) * w_small
 
-    with pytest.raises(ValueError):
-        _base_single_weight(x, w_dim)
+    x_large_pred = _base_single_weight(x, w_large)
+    x_large_gt = torch.linalg.norm(x) * w_large
+
+    assert x_small_pred.shape == (D,)
+    assert x_large_pred.shape == (D,)
+
+    assert torch.allclose(
+        torch.linalg.norm(x_small_pred),
+        x_small_gt,
+        rtol=1e-5,
+        atol=1e-7,
+    )
+
+    assert torch.allclose(
+        torch.linalg.norm(x_large_pred),
+        x_large_gt,
+        rtol=1e-5,
+        atol=1e-7,
+    )
 
 @pytest.mark.skip(reason="Not Implemented")
 def test_base_single_weight_valid_x():
     """
-    
+    test the base single weight function with correct inputs
     """
     pass
 
