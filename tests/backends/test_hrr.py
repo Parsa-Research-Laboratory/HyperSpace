@@ -2813,12 +2813,28 @@ def test_backend_weight_invalid_x_shape():
     with pytest.raises(ValueError):
         b.weight(v, w)
 
-@pytest.mark.skip(reason="Not Implemented")
 def test_backend_weight_invalid_x_dim():
     """
-    
+    test that the backend's weight method checks
+    the dimensionality of the vectors
     """
-    pass
+    import torch
+    from hyperspace.backends.hrr import HRRBackend
+
+    B: int = 10
+    D: int = 128
+
+    b = HRRBackend(vector_dim=D)
+
+    v_small = torch.rand((B, D - 1))
+    v_large = torch.rand((B, D + 1))
+    w = torch.rand((B))
+
+    with pytest.raises(ValueError):
+        b.weight(v_small, w)
+
+    with pytest.raises(ValueError):
+        b.weight(v_large, w)
 
 def test_backend_weight_invalid_weight_type():
     """
