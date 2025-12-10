@@ -141,12 +141,28 @@ def test_pi_valid_position_generation():
         p_gt,
     )
 
-@pytest.mark.skip(reason="Not Implemented")
 def test_pi_call_memory_type():
     """
     Test that the call method only accepts tensor memories
     """
-    pass
+    import numpy as np
+    import torch
+    from hyperspace.backends.hrr import HRRBackend
+    from hyperspace.core.positional_inversion import PositionalInversionModule
+
+    B: int = 2
+    D: int = 128
+    E: int = 1
+
+    b = HRRBackend(vector_dim=D, env_dim=E)
+    p = torch.rand((B, E))
+
+    pim = PositionalInversionModule(b, p)
+
+    m = np.random.random((B, D))
+
+    with pytest.raises(TypeError):
+        pim(m)
 
 @pytest.mark.skip(reason="Not Implemented")
 def test_pi_call_memory_shape():
