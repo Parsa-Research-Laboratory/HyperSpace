@@ -83,13 +83,36 @@ def test_pi_invalid_positions_type():
     with pytest.raises(TypeError):
         _ = PositionalInversionModule(b, p)
 
-@pytest.mark.skip(reason="Not Implemented")
 def test_pi_invalid_positions_shape():
     """
     Test that the PI module throws an error when
     positions don't have the same env dimensionality
     """
-    pass
+    import torch
+    from hyperspace.backends.hrr import HRRBackend
+    from hyperspace.core.positional_inversion import PositionalInversionModule
+
+    B: int = 64
+    D: int = 128
+    E: int = 3
+
+    b = HRRBackend(vector_dim=D, env_dim=E)
+    p_small_e = torch.rand((B, E - 1))
+    p_big_e = torch.rand((B, E + 1))
+    p_small_d = torch.rand((B))
+    p_big_d = torch.rand((B, E, E))
+
+    with pytest.raises(ValueError):
+        PositionalInversionModule(b, p_small_e)
+
+    with pytest.raises(ValueError):
+        PositionalInversionModule(b, p_big_e)
+
+    with pytest.raises(ValueError):
+        PositionalInversionModule(b, p_small_d)
+
+    with pytest.raises(ValueError):
+        PositionalInversionModule(b, p_big_d)
 
 @pytest.mark.skip(reason="Not Implemented")
 def test_pi_valid_position_generation():
