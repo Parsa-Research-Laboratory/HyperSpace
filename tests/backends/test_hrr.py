@@ -2855,7 +2855,7 @@ def test_backend_weight_invalid_weight_type():
 
 def test_backend_weight_invalid_weight_shape():
     """
-    
+    test if the backend validates the shape of the weight
     """
     import torch
     from hyperspace.backends.hrr import HRRBackend
@@ -2878,6 +2878,9 @@ def test_backend_weight_invalid_weight_shape():
 
     with pytest.raises(ValueError):
         b.weight(v, w_dim)
+
+    with pytest.raises(ValueError):
+        b.weight(v[0], w_dim[0])
 
 @pytest.mark.skip(reason="Not Implemented")
 def test_backend_single_weight_valid_x():
