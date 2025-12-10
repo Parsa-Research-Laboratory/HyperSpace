@@ -164,13 +164,45 @@ def test_pi_call_memory_type():
     with pytest.raises(TypeError):
         pim(m)
 
-@pytest.mark.skip(reason="Not Implemented")
 def test_pi_call_memory_shape():
     """
     That that memory shapes are correctly validated in
     the call method
     """
-    pass
+    import numpy as np
+    import torch
+    from hyperspace.backends.hrr import HRRBackend
+    from hyperspace.core.positional_inversion import PositionalInversionModule
+
+    B: int = 2
+    D: int = 128
+    E: int = 1
+
+    b = HRRBackend(vector_dim=D, env_dim=E)
+    p = torch.rand((B, E))
+
+    pim = PositionalInversionModule(b, p)
+
+    m_single_small_d = torch.rand((D - 1))
+    m_single_big_d = torch.rand((D + 1))
+    m_batch_small_d = torch.rand((B, D - 1))
+    m_batch_big_d = torch.rand((B, D + 1))
+    m_dim = torch.rand((B, D, D))
+
+    with pytest.raises(ValueError):
+        pim(m_single_small_d)
+
+    with pytest.raises(ValueError):
+        pim(m_single_big_d)
+
+    with pytest.raises(ValueError):
+        pim(m_batch_small_d)
+
+    with pytest.raises(ValueError):
+        pim(m_batch_big_d)
+
+    with pytest.raises(ValueError):
+        pim(m_dim)
 
 @pytest.mark.skip(reason="Not Implemented")
 def test_pi_call_single_pos_1D():
