@@ -2706,12 +2706,23 @@ def test_base_batch_weight_invalid_x_shape():
     with pytest.raises(ValueError):
         _base_batch_weight(x_large, w)
 
-@pytest.mark.skip(reason="Not Implemented")
 def test_base_batch_weight_invalid_weight_type():
     """
-    
+    test that the base batch weight method checks for
+    the type of w
     """
-    pass
+    import numpy as np
+    import torch
+    from hyperspace.backends.hrr import _base_batch_weight
+    
+    B: int = 10
+    D: int = 256
+
+    x = torch.zeros((B, D))
+    w = np.ones((D))
+
+    with pytest.raises(TypeError):
+        _base_batch_weight(x, w)
 
 def test_base_batch_weight_invalid_weight_shape():
     """
