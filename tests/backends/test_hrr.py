@@ -2626,6 +2626,19 @@ def test_base_single_weight_invalid_weight_shape():
     import torch
     from hyperspace.backends.hrr import _base_single_weight
     
+    x = torch.zeros((10, 10))
+    w = torch.ones(10)
+
+    with pytest.raises(ValueError):
+        _base_single_weight(x, w)
+
+def test_base_single_weight_valid_x():
+    """
+    test the base single weight function with correct inputs
+    """
+    import torch
+    from hyperspace.backends.hrr import _base_single_weight
+    
     D: int = 128
     x = torch.rand(D)
     w_small = torch.tensor([0.5])
@@ -2654,19 +2667,23 @@ def test_base_single_weight_invalid_weight_shape():
         atol=1e-7,
     )
 
-@pytest.mark.skip(reason="Not Implemented")
-def test_base_single_weight_valid_x():
-    """
-    test the base single weight function with correct inputs
-    """
-    pass
-
-@pytest.mark.skip(reason="Not Implemented")
 def test_base_batch_weight_invalid_x_type():
     """
-    
+    test that the base batch weight method checks for the
+    type of x
     """
-    pass
+    import numpy as np
+    import torch
+    from hyperspace.backends.hrr import _base_batch_weight
+    
+    B: int = 10
+    D: int = 256
+
+    x = np.zeros((B, D))
+    w = torch.ones((D))
+
+    with pytest.raises(TypeError):
+        _base_batch_weight(x, w)
 
 @pytest.mark.skip(reason="Not Implemented")
 def test_base_batch_weight_invalid_x_shape():

@@ -633,6 +633,26 @@ def _base_batch_weight(x: Tensor, w: Tensor) -> Tensor:
     """
     
     """
+
+    if not isinstance(x, Tensor):
+        raise TypeError(f"Input x should be a Tensor, got {type(x)}")
+    
+    if not isinstance(w, Tensor):
+        raise TypeError(f"Input w should be a Tensor; got {type(w)}")
+
+    if x.dim() != 2:
+        raise ValueError("Input x must be a 2D tensor of shape (batch_size, vector_dim).")
+    
+    if w.dim() != 1:
+        raise ValueError("Input w must be a 1D tensor of shape (batch_size).")
+    
+    if w.shape[0] != x.shape[0]:
+        raise ValueError(f"Input w must have the same batch size of x; got {w.shape[0]} and {x.shape[0]}")
+    
+    out = x * w
+
+    return out
+
     return x
 
 
