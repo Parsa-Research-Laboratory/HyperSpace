@@ -332,7 +332,70 @@ def test_pi_call_single_pos_3D_orth():
     Test the PI module to return a single noisy value vector
     in a 3D positional space
     """
-    pass
+    import torch
+    from hyperspace.backends.hrr import HRRBackend
+    from hyperspace.core.memory_storage import MemoryStorageModule
+    from hyperspace.core.positional_inversion import PositionalInversionModule
+
+    D: int = 1024
+    E: int = 2
+
+    # Single position in 2D
+    position = torch.tensor([[1.3, 1.3, 1.3]])  # (1, 2)
+
+    # Create uniform axes
+    axis_1d = torch.arange(0, 2, 0.1)  # 20 points: 0.0, 0.1, ..., 1.9
+
+    # 2D meshgrid over the axis
+    X, Y, Z = torch.meshgrid(axis_1d, axis_1d, axis_1d, indexing="ij")  # each (20, 20, 20)
+
+    # Stack and flatten to (num_points, E) = (400, 2)
+    axis_positions = torch.stack([X, Y, Z], dim=-1).reshape(-1, E)  # (400, 2)
+
+    assert position.shape == (1, E)
+    assert axis_positions.shape == (20 ** E, E)
+
+    b = HRRBackend(vector_dim=D, env_dim=E)
+    msm = MemoryStorageModule(backend=b)
+    pim = PositionalInversionModule(
+        backend=b,
+        positions=axis_positions
+    )
+
+    # construct the hypervector memory
+    memory = msm.initialize_memory()
+    
+    pv, _ = b.positional_encoding(position) # (batch_size, vector_dim)
+    vv = b.create_random_vector()           # (vector_dim,)
+    vv = vv.unsqueeze(0)                    # (batch_size, vector_dim)
+
+    assert pv.shape == (1, D)
+    assert vv.shape == (1, D)
+
+    memory, _ = msm(
+        p_vectors=pv,
+        v_vectors=vv,
+        prev_memory=memory
+    )
+
+    vv_prime, _ = pim(memory)
+
+    assert vv_prime.shape == (20 ** E, D)
+
+    sims = torch.einsum("bd,ad->b", vv_prime, vv)
+
+    # position: (1, 3) → (3,)
+    pos = position[0]  # (3,)
+
+    # Boolean mask: which rows in axis_positions equal pos?
+    matches = torch.all(torch.isclose(axis_positions, pos, atol=1e-6), dim=-1)  # (20 ** 3,)
+
+    # Get the single index where this is True
+    gt_idx = torch.nonzero(matches, as_tuple=False).item()
+
+    assert sims.shape == (20 ** E,)
+    assert torch.argmax(sims) == gt_idx
+    assert torch.argmax(sims) == 5473
 
 @pytest.mark.skip(reason="Not Implemented")
 def test_pi_call_multi_pos_1D_orth():
@@ -364,8 +427,6 @@ def test_pi_call_single_pos_1D_value_2D():
     Test the PI module to return a single noisy value vector
     in a 1D positional space
     """
-
-
     pass
 
 @pytest.mark.skip(reason="Not Implemented")
