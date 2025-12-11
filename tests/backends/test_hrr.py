@@ -3053,13 +3053,33 @@ def test_base_single_to_batch_bind_v_shape():
     with pytest.raises(ValueError):
         _base_single_to_batch_bind(v_batched, batch)
 
-@pytest.mark.skip(reason="Not Implemented")
 def test_base_single_to_batch_bind_batch_shape():
     """
     test the shape checking of batch in _base_single_to_batch_bind
     """
     import torch
     from hyperspace.backends.hrr import _base_single_to_batch_bind
+
+    B: int = 64
+    D: int = 1024
+
+    v = torch.rand((D,))
+    b_small_d = torch.rand((B, D - 1))
+    b_large_d = torch.rand((B, D + 1))
+    b_small_dim = torch.rand((B))
+    b_large_dim = torch.rand((B, D, D))
+
+    with pytest.raises(ValueError):
+        _base_single_to_batch_bind(v, b_small_d)
+
+    with pytest.raises(ValueError):
+        _base_single_to_batch_bind(v, b_large_d)
+
+    with pytest.raises(ValueError):
+        _base_single_to_batch_bind(v, b_small_dim)
+
+    with pytest.raises(ValueError):
+        _base_single_to_batch_bind(v, b_large_dim)
 
 @pytest.mark.skip(reason="Not Implemented")
 def test_base_single_to_batch_bind():
