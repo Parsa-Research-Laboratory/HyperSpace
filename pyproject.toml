@@ -1,0 +1,60 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hyperspace"
+version = "0.1.0"
+description = "A Unified Framework for Evaluating Vector Symbolic Architectures on Continuous Spatial Domains"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+authors = [
+    {name = "Shay Snyder", email = "ssnyde9@gmu.edu"}
+]
+keywords = ["vector symbolic architectures", "hyperdimensional computing", "continuous spatial domains", "pytorch"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "IPython",
+    "ipykernel",
+    "pytest",
+    "matplotlib",
+    "scipy",
+    "torch",
+    "torchvision",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "flake8",
+]
+docs = [
+    "sphinx",
+]
+
+[project.urls]
+Homepage = "https://github.com/shaymeister/HyperSpace"
+Repository = "https://github.com/shaymeister/HyperSpace"
+Issues = "https://github.com/shaymeister/HyperSpace/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]
+exclude = ["tests*", "docs*", "experiments*", "scratch*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
