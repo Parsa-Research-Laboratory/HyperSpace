@@ -7,9 +7,6 @@
 <p align="center">
   <img src="https://img.shields.io/badge/Python-3.12%20-blue" />
   <img src="https://img.shields.io/badge/PyTorch-2.9%20-ee4c2c" />
-  <a href="https://github.com/shaymeister/HyperSpace/actions/workflows/tests.yml">
-    <img src="https://github.com/shaymeister/HyperSpace/actions/workflows/tests.yml/badge.svg" alt="Tests" />
-  </a>
 </p>
 
 <p align="center">
