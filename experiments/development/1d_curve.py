@@ -220,7 +220,8 @@ def run_hyperspace_experiment(X_true: Tensor, Y_true: Tensor, args: dict) -> tup
         backend=hrr_backend,
     )
     positional_inversion_module = PositionalInversionModule(
-        backend=hrr_backend
+        backend=hrr_backend,
+        positions=X_true
     )
     regression_module = RegressionModule(
         backend=hrr_backend
@@ -242,6 +243,7 @@ def run_hyperspace_experiment(X_true: Tensor, Y_true: Tensor, args: dict) -> tup
         v_vectors=value_encodings,
         prev_memory=prev_memory
     )
+    phi_hat, pim_info = positional_inversion_module(memory)
     
 
     # Placeholder for HyperSpace experiment logic
