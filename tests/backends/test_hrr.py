@@ -3307,7 +3307,6 @@ def test_backend_single_to_batch_bundle_v_shape():
     with pytest.raises(ValueError):
         b.bundle(v_batch, v_single_large)
 
-@pytest.mark.skip(reason="Not Implemented")
 def test_backend_single_to_batch_bundle_batch_shape():
     """
     test the shape checking of batch in backend's single to batch bundle
@@ -3325,16 +3324,16 @@ def test_backend_single_to_batch_bundle_batch_shape():
     v_batch_large = torch.rand((B, D + 1))
 
     with pytest.raises(ValueError):
-        b.bind(v_single, v_batch_small)
+        b.bundle(v_single, v_batch_small)
 
     with pytest.raises(ValueError):
-        b.bind(v_single, v_batch_large)
+        b.bundle(v_single, v_batch_large)
 
     with pytest.raises(ValueError):
         b.bind(v_batch_small, v_single)
 
     with pytest.raises(ValueError):
-        b.bind(v_batch_large, v_single)
+        b.bundle(v_batch_large, v_single)
 
 @pytest.mark.skip(reason="Not Implemented")
 def test_backend_single_to_batch_bundle():
