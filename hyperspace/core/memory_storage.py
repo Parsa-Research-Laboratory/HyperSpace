@@ -54,7 +54,7 @@ class MemoryStorageModule(BaseModule):
         
         # check that p_vectors and v_vectors have the same shape
         if p_vectors.shape != v_vectors.shape:
-            raise ValueError(f"Expected p_vectors and v_vectors to have the same shape; got {p_vectors} and {v_vectors.shape}")
+            raise ValueError(f"Expected p_vectors and v_vectors to have the same shape; got {p_vectors.shape} and {v_vectors.shape}")
 
         # check that the dimensionalities of the vectors match
         if p_vectors.shape[-1] != prev_memory.shape[-1]:
