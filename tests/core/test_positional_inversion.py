@@ -326,7 +326,6 @@ def test_pi_call_single_pos_2D_orth():
     assert torch.argmax(sims) == gt_idx
     assert torch.argmax(sims) == 273
 
-@pytest.mark.skip(reason="Not Implemented")
 def test_pi_call_single_pos_3D_orth():
     """
     Test the PI module to return a single noisy value vector
@@ -338,7 +337,7 @@ def test_pi_call_single_pos_3D_orth():
     from hyperspace.core.positional_inversion import PositionalInversionModule
 
     D: int = 1024
-    E: int = 2
+    E: int = 3
 
     # Single position in 2D
     position = torch.tensor([[1.3, 1.3, 1.3]])  # (1, 2)
@@ -396,59 +395,3 @@ def test_pi_call_single_pos_3D_orth():
     assert sims.shape == (20 ** E,)
     assert torch.argmax(sims) == gt_idx
     assert torch.argmax(sims) == 5473
-
-@pytest.mark.skip(reason="Not Implemented")
-def test_pi_call_multi_pos_1D_orth():
-    """
-    Test the PI module to return a single noisy value vector
-    in a 1D positional space
-    """
-    pass
-
-@pytest.mark.skip(reason="Not Implemented")
-def test_pi_call_multi_pos_2D_orth():
-    """
-    Test the PI module to return a single noisy value vector
-    in a 2D positional space
-    """
-    pass
-
-@pytest.mark.skip(reason="Not Implemented")
-def test_pi_call_multi_pos_3D_orth():
-    """
-    Test the PI module to return a single noisy value vector
-    in a 3D positional space
-    """
-    pass
-
-@pytest.mark.skip(reason="Not Implemented")
-def test_pi_call_single_pos_1D_value_2D():
-    """
-    Test the PI module to return a single noisy value vector
-    in a 1D positional space
-    """
-    pass
-
-@pytest.mark.skip(reason="Not Implemented")
-def test_pi_call_single_pos_2D_value_2D():
-    """
-    Test the PI module to return a single noisy value vector
-    in a 2D positional space
-    """
-    pass
-
-@pytest.mark.skip(reason="Not Implemented")
-def test_pi_call_multi_pos_1D_value_2D():
-    """
-    Test the PI module to return a single noisy value vector
-    in a 1D positional space
-    """
-    pass
-
-@pytest.mark.skip(reason="Not Implemented")
-def test_pi_call_multi_pos_2D_value_2D():
-    """
-    Test the PI module to return a single noisy value vector
-    in a 2D positional space
-    """
-    pass
