@@ -705,7 +705,7 @@ def _base_single_to_batch_bind(v: Tensor, batch: Tensor) -> Tensor:
     v_expanded = v.unsqueeze(0).expand(batch.shape[0], -1)
     return _base_batch_bind(v_expanded, batch)
 
-def _base_single_to_batch_bundle(self, v: Tensor, batch: Tensor) -> Tensor:
+def _base_single_to_batch_bundle(v: Tensor, batch: Tensor) -> Tensor:
     """
     Bundle a single hypervector with every hypervector in a batch.
 
