@@ -13,8 +13,8 @@
 <p align="center">
   <a href="#introduction">Introduction</a> •
   <a href="#key-features">Key Features</a> •
-  <a href="#how-to-use">Basic Usage</a> •
-  <a href="#download">Installation</a> •
+  <a href="#basic-usage">Basic Usage</a> •
+  <a href="#installation">Installation</a> •
   <a href="#credits">Credits</a>
 </p>
 
