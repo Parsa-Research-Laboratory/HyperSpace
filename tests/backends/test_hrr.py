@@ -3057,19 +3057,33 @@ def test_base_single_to_batch_bind_v_shape():
     with pytest.raises(ValueError):
         b.bind(v_batch, v_single_large)
 
-@pytest.mark.skip(reason="Not Implemented")
 def test_base_single_to_batch_bind_batch_shape():
     """
     test the shape checking of batch in _base_single_to_batch_bind
     """
-    pass
+    import torch
+    from hyperspace.backends.hrr import HRRBackend
 
-@pytest.mark.skip(reason="Not Implemented")
-def test_base_single_to_batch_bind_dim():
-    """
-    test the dimensionality in _base_single_to_batch_bind
-    """
-    pass
+    B: int = 64
+    D: int = 1024
+
+    b = HRRBackend(vector_dim=D)
+
+    v_single = torch.rand((D,))
+    v_batch_small = torch.rand((B, D - 1))
+    v_batch_large = torch.rand((B, D + 1))
+
+    with pytest.raises(ValueError):
+        b.bind(v_single, v_batch_small)
+
+    with pytest.raises(ValueError):
+        b.bind(v_single, v_batch_large)
+
+    with pytest.raises(ValueError):
+        b.bind(v_batch_small, v_single)
+
+    with pytest.raises(ValueError):
+        b.bind(v_batch_large, v_single)
 
 @pytest.mark.skip(reason="Not Implemented")
 def test_base_single_to_batch_bind():
@@ -3117,13 +3131,6 @@ def test_base_single_to_batch_bundle_v_shape():
 def test_base_single_to_batch_bundle_batch_shape():
     """
     test the shape checking of batch in _base_single_to_batch_bundle
-    """
-    pass
-
-@pytest.mark.skip(reason="Not Implemented")
-def test_base_single_to_batch_bundle_dim():
-    """
-    test the dimensionality in _base_single_to_batch_bundle
     """
     pass
 
