@@ -28,3 +28,74 @@ def test_cm_invalid_backend():
 
     with pytest.raises(TypeError):
         _ = CleanupModule(5)
+
+@pytest.mark.skip(reason="NI")
+def test_cm_missing_values_and_codebook():
+    """
+    Test that the module throws an error when
+    missing both values and codebook arguments
+    """
+    pass
+
+@pytest.mark.skip(reason="NI")
+def test_cm_both_values_and_codebook():
+    """
+    Test that the module throws an error when
+    receiving both values and codebook arguments
+    """
+    pass
+
+@pytest.mark.skip(reason="NI")
+def test_cm_constructor_values_type():
+    """
+    Test that the module throws an error when
+    values isn't a Tensor
+    """
+    pass
+
+@pytest.mark.skip(reason="NI")
+def test_cm_constructor_values_shape():
+    """
+    Test that the module throws an error when
+    values isn't a 2D Tensor
+    """
+    pass
+
+@pytest.mark.skip(reason="NI")
+def test_cm_constructor_values_dim():
+    """
+    Test that the module throws an error when
+    values doesn't match value_dim
+    """
+    pass
+
+@pytest.mark.skip(reason="NI")
+def test_cm_constructor_values_generated_codebook():
+    """
+    Test the fidelity of the generated codebook
+    """
+    pass
+
+@pytest.mark.skip(reason="NI")
+def test_cm_constructor_codebook_type():
+    """
+    Test that the module throws an error when
+    values isn't a Tensor
+    """
+    pass
+
+@pytest.mark.skip(reason="NI")
+def test_cm_constructor_codebook_shape():
+    """
+    Test that the module throws an error when
+    codebook isn't a 2D Tensor
+    """
+    pass
+
+@pytest.mark.skip(reason="NI")
+def test_cm_constructor_codebook_dim():
+    """
+    Test that the module throws an error when
+    codebook doesn't match vector_dim
+    """
+    pass
