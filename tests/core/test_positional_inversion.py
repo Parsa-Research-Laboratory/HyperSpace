@@ -204,7 +204,6 @@ def test_pi_call_memory_shape():
     with pytest.raises(ValueError):
         pim(m_dim)
 
-@pytest.mark.skip(reason="Not Implemented")
 def test_pi_call_single_pos_1D_orth():
     """
     Test the PI module to return a single noisy value vector
@@ -225,10 +224,7 @@ def test_pi_call_single_pos_1D_orth():
     assert position.shape == (1, 1)         # (batch_size, env_dim)
     assert axis_positions.shape == (20, 1)  # (batch_size, env_dim)
 
-    b = HRRBackend(
-        vector_dim=D,
-        env_dim=E
-    )
+    b = HRRBackend(vector_dim=D, env_dim=E)
     msm = MemoryStorageModule(backend=b)
     pim = PositionalInversionModule(
         backend=b,
@@ -251,10 +247,14 @@ def test_pi_call_single_pos_1D_orth():
         prev_memory=memory
     )
 
-    vv_prime = pim(memory)
+    vv_prime, _ = pim(memory)
 
     assert vv_prime.shape == (20, D)
 
+    sims = torch.einsum("bd,ad->b", vv_prime, vv)
+
+    assert sims.shape == (20,)
+    assert torch.argmax(sims) == 13
 
 @pytest.mark.skip(reason="Not Implemented")
 def test_pi_call_single_pos_2D_orth():
