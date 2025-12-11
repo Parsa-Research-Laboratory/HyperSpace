@@ -3148,12 +3148,51 @@ def test_backend_single_to_batch_bind_batch_shape():
     with pytest.raises(ValueError):
         b.bind(v_batch_large, v_single)
 
-@pytest.mark.skip(reason="Not Implemented")
 def test_backend_single_to_batch_bind():
     """
     test the functionality of backend single_to_batch_bind
     """
-    pass
+    import torch
+    from hyperspace.backends.hrr import HRRBackend
+    
+    B: int = 2
+    D: int = 1024
+
+    b = HRRBackend(D)
+
+    phi_red = b.create_random_vector()
+    phi_blue = b.create_random_vector()
+    phi_car = b.create_random_vector()
+    phi_colors = torch.stack([phi_red, phi_blue], dim=0)
+
+    phi_gt = torch.zeros((B, D))
+    phi_red_car, _ = b.bind(phi_red, phi_car)
+    phi_blue_car, _ = b.bind(phi_blue, phi_car)
+    phi_gt[0, :] = phi_red_car
+    phi_gt[1, :] = phi_blue_car
+
+    phi_pred, _ = b.bind(phi_car, phi_colors)
+
+    assert phi_pred.shape == (B, D)
+
+    assert torch.allclose(
+        phi_pred,
+        phi_gt,
+        rtol=0.001,
+        atol=0.001
+    )
+
+    # reverse args = same ouput
+    phi_pred, _ = b.bind(phi_colors, phi_car)
+
+    assert phi_pred.shape == (B, D)
+
+    assert torch.allclose(
+        phi_pred,
+        phi_gt,
+        rtol=0.001,
+        atol=0.001
+    )
 
 def test_base_single_to_batch_bundle_v_shape():
     """
