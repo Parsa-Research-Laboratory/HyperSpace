@@ -2950,3 +2950,151 @@ def test_backend_batch_weight_valid_x():
         rtol=1e-5,
         atol=1e-7,
     )
+
+def test_batch_list_bind():
+    """
+    test the _base_list_bind function
+    """
+    import numpy as np
+    import torch
+    from torch import Generator
+
+    from hyperspace.backends.hrr import (
+        _base_create_single_vector,
+        _base_list_bind,
+        _base_single_bind
+    )
+
+    B: int = 2
+    D: int = 256
+
+    gen = Generator().manual_seed(0)
+
+    # Build batched tensors (B, D)
+    v_list = [_base_create_single_vector(D, gen) for _ in range(B)]
+
+    v1 = torch.stack(v_list, dim=0)
+
+    v_bundle_list = _base_list_bind(v1)  # (D,)
+
+    v_out_gt = _base_single_bind(v_list[0], v_list[1])
+
+    assert v_bundle_list.shape == (D,)
+    assert v_out_gt.shape == (D,)
+
+    assert np.allclose(
+        v_out_gt.numpy(),
+        v_bundle_list.numpy(),
+        rtol=1e-5,
+        atol=1e-7,
+    )
+
+def test_backend_list_bind():
+    """
+    test the backend's list bind method
+    """
+    import numpy as np
+    import torch
+    from torch import Generator
+
+    from hyperspace.backends.hrr import (
+        HRRBackend,
+        _base_create_single_vector,
+        _base_single_bind
+    )
+
+    B: int = 2
+    D: int = 256
+
+    b = HRRBackend(vector_dim=D)
+
+    gen = Generator().manual_seed(0)
+
+    # Build batched tensors (B, D)
+    v_list = [_base_create_single_vector(D, gen) for _ in range(B)]
+
+    v1 = torch.stack(v_list, dim=0)
+
+    v_bundle_list, _ = b.bind(v1)  # (D,)
+
+    v_out_gt = _base_single_bind(v_list[0], v_list[1])
+
+    assert v_bundle_list.shape == (D,)
+    assert v_out_gt.shape == (D,)
+
+    assert np.allclose(
+        v_out_gt.numpy(),
+        v_bundle_list.numpy(),
+        rtol=1e-5,
+        atol=1e-7,
+    )
+
+@pytest.mark.skip(reason="Not Implemented")
+def test_base_single_to_batch_bind_v_shape():
+    """
+    test the shape checking of v in _base_single_to_batch_bind
+    """
+    pass
+
+@pytest.mark.skip(reason="Not Implemented")
+def test_base_single_to_batch_bind_batch_shape():
+    """
+    test the shape checking of batch in _base_single_to_batch_bind
+    """
+    pass
+
+@pytest.mark.skip(reason="Not Implemented")
+def test_base_single_to_batch_bind_dim():
+    """
+    test the dimensionality in _base_single_to_batch_bind
+    """
+    pass
+
+@pytest.mark.skip(reason="Not Implemented")
+def test_base_single_to_batch_bind():
+    """
+    test the functionality of base_single_to_batch_bind
+    """
+    pass
+
+@pytest.mark.skip(reason="Not Implemented")
+def test_backend_single_to_batch_bind():
+    """
+    test the functionality of backend single_to_batch_bind
+    """
+    pass
+
+@pytest.mark.skip(reason="Not Implemented")
+def test_base_single_to_batch_bundle_v_shape():
+    """
+    test the shape checking of v in _base_single_to_batch_bundle
+    """
+    pass
+
+@pytest.mark.skip(reason="Not Implemented")
+def test_base_single_to_batch_bundle_batch_shape():
+    """
+    test the shape checking of batch in _base_single_to_batch_bundle
+    """
+    pass
+
+@pytest.mark.skip(reason="Not Implemented")
+def test_base_single_to_batch_bundle_dim():
+    """
+    test the dimensionality in _base_single_to_batch_bundle
+    """
+    pass
+
+@pytest.mark.skip(reason="Not Implemented")
+def test_base_single_to_batch_bundle():
+    """
+    test the functionality of base_single_to_batch_bundle
+    """
+    pass
+
+@pytest.mark.skip(reason="Not Implemented")
+def test_backend_single_to_batch_bundle():
+    """
+    test the functionality of backend single_to_batch_bundle
+    """
+    pass
