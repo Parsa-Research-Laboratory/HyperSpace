@@ -205,15 +205,59 @@ def test_pi_call_memory_shape():
         pim(m_dim)
 
 @pytest.mark.skip(reason="Not Implemented")
-def test_pi_call_single_pos_1D():
+def test_pi_call_single_pos_1D_orth():
     """
     Test the PI module to return a single noisy value vector
     in a 1D positional space
     """
-    pass
+    import torch
+    from hyperspace.backends.hrr import HRRBackend
+    from hyperspace.core.memory_storage import MemoryStorageModule
+    from hyperspace.core.positional_inversion import PositionalInversionModule
+
+    D: int = 1024
+    E: int = 1
+
+    position = torch.tensor([[1.3]])
+    axis_positions = torch.arange(0, 2, 0.1)
+    axis_positions = axis_positions.unsqueeze(-1)
+
+    assert position.shape == (1, 1)         # (batch_size, env_dim)
+    assert axis_positions.shape == (20, 1)  # (batch_size, env_dim)
+
+    b = HRRBackend(
+        vector_dim=D,
+        env_dim=E
+    )
+    msm = MemoryStorageModule(backend=b)
+    pim = PositionalInversionModule(
+        backend=b,
+        positions=axis_positions
+    )
+
+    # construct the hypervector memory
+    memory = msm.initialize_memory()
+    
+    pv, _ = b.positional_encoding(position) # (batch_size, vector_dim)
+    vv = b.create_random_vector()           # (vector_dim,)
+    vv = vv.unsqueeze(0)                    # (batch_size, vector_dim)
+
+    assert pv.shape == (1, D)
+    assert vv.shape == (1, D)
+
+    memory, _ = msm(
+        p_vectors=pv,
+        v_vectors=vv,
+        prev_memory=memory
+    )
+
+    vv_prime = pim(memory)
+
+    assert vv_prime.shape == (20, D)
+
 
 @pytest.mark.skip(reason="Not Implemented")
-def test_pi_call_single_pos_2D():
+def test_pi_call_single_pos_2D_orth():
     """
     Test the PI module to return a single noisy value vector
     in a 2D positional space
@@ -221,7 +265,7 @@ def test_pi_call_single_pos_2D():
     pass
 
 @pytest.mark.skip(reason="Not Implemented")
-def test_pi_call_single_pos_3D():
+def test_pi_call_single_pos_3D_orth():
     """
     Test the PI module to return a single noisy value vector
     in a 3D positional space
@@ -229,7 +273,7 @@ def test_pi_call_single_pos_3D():
     pass
 
 @pytest.mark.skip(reason="Not Implemented")
-def test_pi_call_multi_pos_1D():
+def test_pi_call_multi_pos_1D_orth():
     """
     Test the PI module to return a single noisy value vector
     in a 1D positional space
@@ -237,7 +281,7 @@ def test_pi_call_multi_pos_1D():
     pass
 
 @pytest.mark.skip(reason="Not Implemented")
-def test_pi_call_multi_pos_2D():
+def test_pi_call_multi_pos_2D_orth():
     """
     Test the PI module to return a single noisy value vector
     in a 2D positional space
@@ -245,9 +289,43 @@ def test_pi_call_multi_pos_2D():
     pass
 
 @pytest.mark.skip(reason="Not Implemented")
-def test_pi_call_multi_pos_3D():
+def test_pi_call_multi_pos_3D_orth():
     """
     Test the PI module to return a single noisy value vector
     in a 3D positional space
+    """
+    pass
+
+@pytest.mark.skip(reason="Not Implemented")
+def test_pi_call_single_pos_1D_value_2D():
+    """
+    Test the PI module to return a single noisy value vector
+    in a 1D positional space
+    """
+
+
+    pass
+
+@pytest.mark.skip(reason="Not Implemented")
+def test_pi_call_single_pos_2D_value_2D():
+    """
+    Test the PI module to return a single noisy value vector
+    in a 2D positional space
+    """
+    pass
+
+@pytest.mark.skip(reason="Not Implemented")
+def test_pi_call_multi_pos_1D_value_2D():
+    """
+    Test the PI module to return a single noisy value vector
+    in a 1D positional space
+    """
+    pass
+
+@pytest.mark.skip(reason="Not Implemented")
+def test_pi_call_multi_pos_2D_value_2D():
+    """
+    Test the PI module to return a single noisy value vector
+    in a 2D positional space
     """
     pass

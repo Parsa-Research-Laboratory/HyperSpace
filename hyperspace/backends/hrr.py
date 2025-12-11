@@ -3,7 +3,7 @@ import numpy as np
 import torch
 from torch import device, Generator, Tensor
 import torch.nn.functional as F
-from typing import Tuple
+from typing import Optional, Tuple
 
 from .base import BaseBackend
 
@@ -680,6 +680,77 @@ def _base_batch_weight(x: Tensor, w: Tensor) -> Tensor:
 
     return out
 
+def _base_single_to_batch_bind(v: Tensor, batch: Tensor) -> Tensor:
+    """
+    Bind a single hypervector with every hypervector in a batch.
+
+    Args:
+        v: Single hypervector. Shape (D,).
+        batch: Batch of hypervectors. Shape (B, D).
+
+    Returns:
+        out: Bound batch. Shape (B, D).
+    """
+    if v.ndim != 1:
+        raise ValueError(f"Expected v to be 1D; got v.shape={v.shape}")
+    if batch.ndim != 2:
+        raise ValueError(f"Expected batch to be 2D; got batch.shape={batch.shape}")
+    if v.shape[-1] != batch.shape[-1]:
+        raise ValueError(
+            f"Last dimension mismatch: v.shape={v.shape}, batch.shape={batch.shape}"
+        )
+
+    # Version 1 (simple): expand and reuse your batch kernel
+    # You can later replace this with a custom fused/compiled implementation.
+    v_expanded = v.unsqueeze(0).expand(batch.shape[0], -1)
+    return _base_batch_bind(v_expanded, batch)
+
+def _base_single_to_batch_bundle(self, v: Tensor, batch: Tensor) -> Tensor:
+    """
+    Bundle a single hypervector with every hypervector in a batch.
+
+    Args:
+        v: Single hypervector. Shape (D,).
+        batch: Batch of hypervectors. Shape (B, D).
+
+    Returns:
+        out: Bundled batch. Shape (B, D).
+    """
+    if v.ndim != 1:
+        raise ValueError(f"Expected v to be 1D; got v.shape={v.shape}")
+    if batch.ndim != 2:
+        raise ValueError(f"Expected batch to be 2D; got batch.shape={batch.shape}")
+    if v.shape[-1] != batch.shape[-1]:
+        raise ValueError(
+            f"Last dimension mismatch: v.shape={v.shape}, batch.shape={batch.shape}"
+        )
+
+    # Simple version: expand and reuse batch bundle kernel.
+    # You can replace this with a fused/compiled kernel later.
+    v_expanded = v.unsqueeze(0).expand(batch.shape[0], -1)
+    return _base_batch_bundle(v_expanded, batch)
+
+def _base_list_bind(batch: Tensor) -> Tensor:
+    """
+    Sequentially bind all hypervectors in a batch into a single hypervector.
+
+    Args:
+        batch: Batch of hypervectors to bind together.
+            Shape: (B, D), where B is batch size and D is vector dimension.
+
+    Returns:
+        out: Single hypervector representing the binding of all batch elements.
+            Shape: (D,).
+    """
+    if batch.ndim != 2:
+        raise ValueError(f"Expected batch to be 2D; got batch.shape={batch.shape}")
+
+    # Simple reference implementation using your single-bind primitive.
+    # You can replace this with a fused/compiled implementation later.
+    out = batch[0]
+    for i in range(1, batch.shape[0]):
+        out = _base_single_bind(out, batch[i])
+    return out
 
 class HRRBackend(BaseBackend):
     """
@@ -731,6 +802,10 @@ class HRRBackend(BaseBackend):
         self._comp_batch_invert = torch.compile(_base_batch_invert)
         self._comp_batch_weight = torch.compile(_base_batch_weight)
         self._comp_list_bundle = torch.compile(_base_list_bundle)
+        self._comp_list_bind = torch.compile(_base_list_bind)
+        self._comp_single_to_batch_bind = torch.compile(_base_single_to_batch_bind)
+        self._comp_single_to_batch_bundle = torch.compile(_base_single_to_batch_bundle)
+        
 
         # ----------------------------------------
         # Initialize all internal data structures
@@ -855,76 +930,201 @@ class HRRBackend(BaseBackend):
         return out, info_dict
 
     @torch.inference_mode()
-    def bind(self, a: Tensor, b: Tensor) -> Tuple[Tensor, dict]:
+    def bind(self, a: Tensor, b: Optional[Tensor] = None) -> Tuple[Tensor, dict]:
         """
-        Binding operation for HRR backend using circular convolution. The function
-        expects 3-dimensional tensors for batch processing. The function also expects
-        the input tensors to have the same shape. The binding is performed along the
-        dimension and we are assuming the vectors are in the complex domain.
+        Binding operation for HRR backend using circular convolution.
 
-        Arguments:
-            a : Tensor
-                Input tensor to bind. Shape should be (N, M, D).
+        This method supports:
+            Pairwise binding:
+                * a: (D,),   b: (D,)     -> out: (D,)
+                * a: (B, D), b: (B, D)   -> out: (B, D)
+
+            Single↔batch binding:
+                * a: (D,),   b: (B, D)   -> out: (B, D)
+                * a: (B, D), b: (D,)     -> out: (B, D)
+
+            List binding (reduction over batch):
+                * a: (B, D), b: None     -> out: (D,)
+
+        Args:
+            a:
+                First input tensor. Shape (D,) or (B, D).
+            b:
+                Second input tensor. If provided, must have shape (D,) or (B, D)
+                with matching last dimension. If None and `a` is (B, D), performs
+                list binding over the batch.
 
         Returns:
-            Tensor
-                Bound tensor. Shape should be (N, D).
-            dict
-                Information dictionary.
+            out:
+                Bound hypervector(s). Shape depends on the mode:
+                - (D,) for single–single or list-binding
+                - (B, D) for batch-related modes
+            info_dict:
+                Information dictionary (currently empty).
         """
+        if not isinstance(a, Tensor):
+            raise TypeError(f"Expected a to be a Tensor; got {type(a)}")
+        if b is not None and not isinstance(b, Tensor):
+            raise TypeError(f"Expected b to be a Tensor or None; got {type(b)}")
 
-        if a.shape != b.shape:
-            raise ValueError(f"Expected a and b to have the same shape; got {a.shape} and {b.shape}")
-        
-        if a.ndim == 1: # Single Bind
-            out = self._comp_single_bind(a, b)
-        elif a.ndim == 2: # Batch Bind
-            out = self._comp_batch_bind(a, b)
+        if a.ndim not in (1, 2):
+            raise ValueError(f"Expected a to be 1D or 2D; got a.ndim={a.ndim}")
+        if b is not None and b.ndim not in (1, 2):
+            raise ValueError(f"Expected b to be 1D or 2D; got b.ndim={b.ndim}")
+
+        # Vector dimension check when b is present
+        if b is not None:
+            if a.shape[-1] != self.vector_dim or b.shape[-1] != self.vector_dim:
+                raise ValueError(
+                    f"Last dimension must be {self.vector_dim}; "
+                    f"got a.shape={a.shape}, b.shape={b.shape}"
+                )
         else:
-            raise ValueError(f"Expected tensors to be single or two dimensional; got {a.ndim}")
+            # Only a is provided; still sanity-check its last dim
+            if a.shape[-1] != self.vector_dim:
+                raise ValueError(
+                    f"Last dimension must be {self.vector_dim}; got a.shape={a.shape}"
+                )
 
-        info_dict = {}
+        # ---- List binding when b is None ----
+        if b is None:
+            if a.ndim == 2:
+                # (B, D) -> (D,)
+                out = self._comp_list_bind(a)
+            elif a.ndim == 1:
+                # Reasonable identity behavior: binding a single vector list is itself.
+                # If you prefer stricter semantics, you could raise here instead.
+                out = a
+            else:
+                # Should be unreachable with ndim guard
+                raise ValueError(f"Unsupported shape for a: {a.shape}")
 
+        # ---- Pairwise and single↔batch binding when b is not None ----
+        else:
+            if a.ndim == 1 and b.ndim == 1:
+                # (D,) with (D,)
+                out = self._comp_single_bind(a, b)
+
+            elif a.ndim == 2 and b.ndim == 2:
+                # (B, D) with (B, D) (pairwise)
+                if a.shape[0] != b.shape[0]:
+                    raise ValueError(
+                        f"Batch sizes must match for batched bind; "
+                        f"got a.shape[0]={a.shape[0]}, b.shape[0]={b.shape[0]}"
+                    )
+                out = self._comp_batch_bind(a, b)
+
+            elif a.ndim == 1 and b.ndim == 2:
+                # (D,) with (B, D) → (B, D)
+                out = self._comp_single_to_batch_bind(a, b)
+
+            elif a.ndim == 2 and b.ndim == 1:
+                # (B, D) with (D,) → (B, D)
+                out = self._comp_single_to_batch_bind(b, a)
+
+            else:
+                raise ValueError(
+                    f"Unsupported combination of shapes: a.shape={a.shape}, b.shape={b.shape}"
+                )
+
+        info_dict: dict = {}
         return out, info_dict
 
     @torch.inference_mode()
-    def bundle(self, a: Tensor, b: Tensor = None) -> Tuple[Tensor, dict]:
+    def bundle(self, a: Tensor, b: Optional[Tensor] = None) -> Tuple[Tensor, dict]:
         """
         Bundling operation for HRR backend using vector addition (superposition).
 
-        Bundling creates a superposition of two vectors through elementwise addition,
-        allowing multiple vectors to be combined into a single representation. This
-        operation supports both single vector and batched operations.
+        Bundling creates a superposition of vectors through elementwise addition,
+        allowing multiple hypervectors to be combined into a single representation.
+        This method supports:
 
-        Arguments:
-            a : Tensor
-                First input tensor to bundle. Shape should be either (D,) for single
-                vectors or (B, D) for batch operations, where B is batch size and D
-                is the vector dimension.
-            b : Tensor
-                Second input tensor to bundle. Must have the same shape as `a`.
+        Pairwise bundling:
+            * a: (D,),   b: (D,)     -> out: (D,)
+            * a: (B, D), b: (B, D)   -> out: (B, D)
+
+        Single↔batch bundling:
+            * a: (D,),   b: (B, D)   -> out: (B, D)   (a bundled with each row of b)
+            * a: (B, D), b: (D,)     -> out: (B, D)   (b bundled with each row of a)
+
+        List bundling (reduction):
+            * a: (B, D), b: None     -> out: (D,)    (superpose all rows in `a`)
+
+        Args:
+            a:
+                First input tensor to bundle. Shape (D,) or (B, D).
+            b:
+                Second input tensor to bundle. If provided, must have shape
+                (D,) or (B, D) with matching last dimension. If None and
+                `a` is (B, D), performs list bundling over the batch.
 
         Returns:
-            Tensor
-                Bundled tensor with the same shape as inputs.
-            dict
+            out:
+                Bundled tensor with shape determined by the inputs.
+            info_dict:
                 Information dictionary (currently empty).
         """
+        if not isinstance(a, Tensor):
+            raise TypeError(f"Expected a to be a Tensor; got {type(a)}")
+        if b is not None and not isinstance(b, Tensor):
+            raise TypeError(f"Expected b to be a Tensor or None; got {type(b)}")
 
-        if b is not None and a.shape != b.shape:
-            raise ValueError(f"Expected a and b to have the same shape; got {a.shape} and {b.shape}")
-        
-        if a.ndim == 1 and b is not None: # Single Bind
-            out = self._comp_single_bundle(a, b)
-        elif a.ndim == 2 and b is not None: # Batch Bind
-            out = self._comp_batch_bundle(a, b)
-        elif a.ndim == 2 and b is None:
-            out = self._comp_list_bundle(a)
+        if a.ndim not in (1, 2):
+            raise ValueError(f"Expected a to be 1D or 2D; got a.ndim={a.ndim}")
+        if b is not None and b.ndim not in (1, 2):
+            raise ValueError(f"Expected b to be 1D or 2D; got b.ndim={b.ndim}")
+
+        # Vector-dim consistency check if b is present
+        if b is not None:
+            if a.shape[-1] != self.vector_dim or b.shape[-1] != self.vector_dim:
+                raise ValueError(
+                    f"Last dimension must be {self.vector_dim}; "
+                    f"got a.shape={a.shape}, b.shape={b.shape}"
+                )
+
+        # Case A: list bundling (reduce batch) when b is None
+        if b is None:
+            if a.ndim == 2:
+                # Superpose all rows in the batch: (B, D) -> (D,)
+                out = self._comp_list_bundle(a)
+            elif a.ndim == 1:
+                # Reasonable behavior: bundling a single vector alone = identity.
+                # You can also choose to raise if you prefer strictness.
+                out = a
+            else:
+                # Shouldn't be reachable with the ndim guard
+                raise ValueError(f"Unsupported shape for a: {a.shape}")
+
         else:
-            raise ValueError(f"Expected tensors to be single or two dimensional; got {a.ndim}")
+            # Case B: pairwise / single↔batch bundling
+            if a.ndim == 1 and b.ndim == 1:
+                # (D,) + (D,) -> (D,)
+                out = self._comp_single_bundle(a, b)
 
-        info_dict = {}
+            elif a.ndim == 2 and b.ndim == 2:
+                # (B, D) + (B, D) -> (B, D), require same batch size
+                if a.shape[0] != b.shape[0]:
+                    raise ValueError(
+                        f"Batch sizes must match for batched bundle; "
+                        f"got a.shape[0]={a.shape[0]}, b.shape[0]={b.shape[0]}"
+                    )
+                out = self._comp_batch_bundle(a, b)
 
+            elif a.ndim == 1 and b.ndim == 2:
+                # (D,) + (B, D) -> (B, D)
+                out = self._comp_single_to_batch_bundle(a, b)
+
+            elif a.ndim == 2 and b.ndim == 1:
+                # (B, D) + (D,) -> (B, D)
+                out = self._comp_single_to_batch_bundle(b, a)
+
+            else:
+                # Shouldn't happen with ndim guards
+                raise ValueError(
+                    f"Unsupported combination of shapes: a.shape={a.shape}, b.shape={b.shape}"
+                )
+
+        info_dict: dict = {}
         return out, info_dict
 
     def similarity(self, a: Tensor, b: Tensor) -> Tuple[Tensor, dict]:
