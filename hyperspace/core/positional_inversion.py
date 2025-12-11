@@ -1,4 +1,5 @@
 from torch import Tensor
+from typing import Tuple
 
 from ..backends.base import BaseBackend
 from .base_module import BaseModule
@@ -47,7 +48,7 @@ class PositionalInversionModule(BaseModule):
         if self.inv_position_vectors.shape[-1] != backend.vector_dim:
             raise ValueError(f"Expected the vector_dim of position vectors to match the backend; got {self.inv_position_vectors.shape[-1]} and {backend.vector_dim}")
 
-    def __call__(self, m: Tensor) -> Tensor:
+    def __call__(self, m: Tensor) -> Tuple[Tensor, dict]:
         """
         Apply the specified positional inversion method to the input tensor.
         """
@@ -55,13 +56,16 @@ class PositionalInversionModule(BaseModule):
         if not isinstance(m, Tensor):
             raise TypeError(f"Expected m to be a Tensor; got {type(m)}")
         
-        if m.dim() != 2 and m.dim() != 1:
-            raise ValueError(f"Expected m to be a 1D or 2D Tensor with shape (vector_dim,) or (batch_size, vector_dim); got {m.shape}")
+        if m.dim() != 1:
+            raise ValueError(f"Expected m to be a 1D tensor with shape (vector_dim,); got {m.shape}")
         
         if m.shape[-1] != self.backend.vector_dim:
             raise ValueError(f"Expected m to have the same vector_dim as the backend; got {m.shape[-1]} and {self.backend.vector_dim}")
-
-        return self.backend.positional_inversion(basis, x, method)
+        
+        return self.backend.bind(
+            a=m,                         # (vector_dim)
+            b=self.inv_position_vectors  # (batch_size, vector_dim)
+        )
     
     def _create_inv_position_vectors(self) -> Tensor:
         """
