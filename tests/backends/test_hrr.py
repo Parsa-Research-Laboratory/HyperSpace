@@ -3029,12 +3029,33 @@ def test_backend_list_bind():
         atol=1e-7,
     )
 
-@pytest.mark.skip(reason="Not Implemented")
 def test_base_single_to_batch_bind_v_shape():
     """
     test the shape checking of v in _base_single_to_batch_bind
     """
-    pass
+    import torch
+    from hyperspace.backends.hrr import HRRBackend
+
+    B: int = 64
+    D: int = 1024
+
+    b = HRRBackend(vector_dim=D)
+
+    v_single_small = torch.rand((D - 1,))
+    v_single_large = torch.rand((D + 1,))
+    v_batch = torch.rand((B, D))
+
+    with pytest.raises(ValueError):
+        b.bind(v_single_small, v_batch)
+
+    with pytest.raises(ValueError):
+        b.bind(v_single_large, v_batch)
+
+    with pytest.raises(ValueError):
+        b.bind(v_batch, v_single_small)
+
+    with pytest.raises(ValueError):
+        b.bind(v_batch, v_single_large)
 
 @pytest.mark.skip(reason="Not Implemented")
 def test_base_single_to_batch_bind_batch_shape():
