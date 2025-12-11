@@ -3272,12 +3272,34 @@ def test_base_single_to_batch_bundle_batch_shape():
     with pytest.raises(ValueError):
         _base_single_to_batch_bundle(v, b_large_dim)
 
-@pytest.mark.skip(reason="Not Implemented")
 def test_base_single_to_batch_bundle():
     """
     test the functionality of base_single_to_batch_bundle
     """
-    pass
+    import torch
+    from hyperspace.backends.hrr import (
+        HRRBackend,
+        _base_single_to_batch_bundle
+    )
+
+    B: int = 2
+    D: int = 1024
+
+    b = HRRBackend(D)
+
+    phi_pizza = b.create_random_vector()
+    phi_cheese = b.create_random_vector()
+    phi_ham = b.create_random_vector()
+    phi_toppings = torch.stack([phi_cheese, phi_ham], dim=0)
+
+    phi_gt = torch.zeros((B, D))
+    phi_cheese_pizza, _ = b.bundle(phi_pizza, phi_cheese)
+    phi_ham_pizza, _ = b.bundle(phi_pizza, phi_ham)
+    phi_gt[0, :] = phi_cheese_pizza
+    phi_gt[1, :] = phi_ham_pizza
+
+    phi_pred = _base_single_to_batch_bundle(phi_pizza, phi_toppings)
+    assert torch.allclose(phi_pred, phi_gt)
 
 def test_backend_single_to_batch_bundle_v_shape():
     """
