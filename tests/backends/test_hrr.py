@@ -3029,9 +3029,36 @@ def test_backend_list_bind():
         atol=1e-7,
     )
 
+@pytest.mark.skip(reason="Not Implemented")
 def test_base_single_to_batch_bind_v_shape():
     """
     test the shape checking of v in _base_single_to_batch_bind
+    """
+    import torch
+    from hyperspace.backends.hrr import _base_single_to_batch_bind
+
+@pytest.mark.skip(reason="Not Implemented")
+def test_base_single_to_batch_bind_batch_shape():
+    """
+    test the shape checking of batch in _base_single_to_batch_bind
+    """
+    import torch
+    from hyperspace.backends.hrr import _base_single_to_batch_bind
+
+@pytest.mark.skip(reason="Not Implemented")
+def test_base_single_to_batch_bind():
+    """
+    test the functionality of base_single_to_batch_bind
+    """
+    import torch
+    from hyperspace.backends.hrr import (
+        _base_single_bind,
+        _base_single_to_batch_bind
+    )
+
+def test_backend_single_to_batch_bind_v_shape():
+    """
+    test the shape checking of v in backend's single to batch bind
     """
     import torch
     from hyperspace.backends.hrr import HRRBackend
@@ -3057,9 +3084,9 @@ def test_base_single_to_batch_bind_v_shape():
     with pytest.raises(ValueError):
         b.bind(v_batch, v_single_large)
 
-def test_base_single_to_batch_bind_batch_shape():
+def test_backend_single_to_batch_bind_batch_shape():
     """
-    test the shape checking of batch in _base_single_to_batch_bind
+    test the shape checking of batch in the backend's single to batch bind
     """
     import torch
     from hyperspace.backends.hrr import HRRBackend
@@ -3086,22 +3113,36 @@ def test_base_single_to_batch_bind_batch_shape():
         b.bind(v_batch_large, v_single)
 
 @pytest.mark.skip(reason="Not Implemented")
-def test_base_single_to_batch_bind():
-    """
-    test the functionality of base_single_to_batch_bind
-    """
-    pass
-
-@pytest.mark.skip(reason="Not Implemented")
 def test_backend_single_to_batch_bind():
     """
     test the functionality of backend single_to_batch_bind
     """
     pass
 
+@pytest.mark.skip(reason="Not Implemented")
 def test_base_single_to_batch_bundle_v_shape():
     """
     test the shape checking of v in _base_single_to_batch_bundle
+    """
+    pass
+
+@pytest.mark.skip(reason="Not Implemented")
+def test_base_single_to_batch_bundle_batch_shape():
+    """
+    test the shape checking of batch in _base_single_to_batch_bundle
+    """
+    pass
+
+@pytest.mark.skip(reason="Not Implemented")
+def test_base_single_to_batch_bundle():
+    """
+    test the functionality of base_single_to_batch_bundle
+    """
+    pass
+
+def test_backend_single_to_batch_bundle_v_shape():
+    """
+    test the shape checking of v in the backend's single to batch bundling
     """
     import torch
     from hyperspace.backends.hrr import HRRBackend
@@ -3128,18 +3169,33 @@ def test_base_single_to_batch_bundle_v_shape():
         b.bundle(v_batch, v_single_large)
 
 @pytest.mark.skip(reason="Not Implemented")
-def test_base_single_to_batch_bundle_batch_shape():
+def test_backend_single_to_batch_bundle_batch_shape():
     """
-    test the shape checking of batch in _base_single_to_batch_bundle
+    test the shape checking of batch in backend's single to batch bundle
     """
-    pass
+    import torch
+    from hyperspace.backends.hrr import HRRBackend
 
-@pytest.mark.skip(reason="Not Implemented")
-def test_base_single_to_batch_bundle():
-    """
-    test the functionality of base_single_to_batch_bundle
-    """
-    pass
+    B: int = 64
+    D: int = 1024
+
+    b = HRRBackend(vector_dim=D)
+
+    v_single = torch.rand((D,))
+    v_batch_small = torch.rand((B, D - 1))
+    v_batch_large = torch.rand((B, D + 1))
+
+    with pytest.raises(ValueError):
+        b.bind(v_single, v_batch_small)
+
+    with pytest.raises(ValueError):
+        b.bind(v_single, v_batch_large)
+
+    with pytest.raises(ValueError):
+        b.bind(v_batch_small, v_single)
+
+    with pytest.raises(ValueError):
+        b.bind(v_batch_large, v_single)
 
 @pytest.mark.skip(reason="Not Implemented")
 def test_backend_single_to_batch_bundle():
