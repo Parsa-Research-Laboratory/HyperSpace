@@ -3385,3 +3385,167 @@ def test_backend_single_to_batch_bundle():
 
     phi_pred, _ = b.bundle(phi_toppings, phi_pizza)
     assert torch.allclose(phi_pred, phi_gt)
+
+@pytest.mark.skip(reason="NI")
+def test_backend_resonator_cleanup_v_non_tensor():
+    """
+    Test that the backend's resonator cleanup method
+    throws an error when v is not a Tensor
+    """
+    pass
+
+@pytest.mark.skip(reason="NI")
+def test_backend_resonator_cleanup_codebook_non_tensor():
+    """
+    Test that the backend's resonator cleanup method
+    throws an error when codebook isn't a tensor
+    """
+    pass
+
+@pytest.mark.skip(reason="NI")
+def test_backend_resonator_cleanup_v_shape_missmatch():
+    """
+    Test that the backend's resonator cleanup method
+    throws an error when v isn't the correct
+    dimensionality
+    """
+    pass
+
+@pytest.mark.skip(reason="NI")
+def test_backend_resonator_cleanup_v_vector_dim_missmatch():
+    """
+    Test that the backend's resonator cleanup method throws
+    an error when v doesn't have the correct vector
+    dimensionality
+    """
+    pass
+
+@pytest.mark.skip(reason="NI")
+def test_backend_resonator_cleanup_codebook_shape_missmatch():
+    """
+    Test that the backend's resonator cleanup method throws an
+    error when the dimensionality of the codebook doesn't match
+    """
+    pass
+
+@pytest.mark.skip(reason="NI")
+def test_backend_resonator_cleanup_codebook_vector_dim_missmatch():
+    """
+    Test that the backend's resonator cleanup method throws an error
+    when the vector dim of the codebook doesn't match
+    """
+    pass
+
+@pytest.mark.skip(reason="NI")
+def test_backend_resonator_cleanup_num_iters_non_int():
+    """
+    Test that the backend's resonator cleanup method throws an error
+    when the number of iterations isn't an integer
+    """
+    pass
+
+@pytest.mark.skip(reason="NI")
+def test_backend_resonator_cleanup_num_iters_lt_one():
+    """
+    Test that the backend's resonator cleanup method throws an error
+    when the number of iterations is less than one
+    """
+    pass
+
+@pytest.mark.skip(reason="NI")
+def test_backend_resonator_cleanup_single_memory():
+    """
+    Test that the backend's resonator cleanup method works correctly
+    with a single memory
+    """
+    pass
+
+@pytest.mark.skip(reason="NI")
+def test_backend_resonator_cleanup_batched_memory():
+    """
+    Test that the backend's resonator cleanup method works correctly
+    with a batch of memories
+    """
+    pass
+
+@pytest.mark.skip(reason="NI")
+def test_backend_hopfield_cleanup_v_non_tensor():
+    """
+    Test that the backend's hopfield cleanup method
+    throws an error when v is not a Tensor
+    """
+    pass
+
+@pytest.mark.skip(reason="NI")
+def test_backend_hopfield_cleanup_codebook_non_tensor():
+    """
+    Test that the backend's hopfield cleanup method
+    throws an error when codebook isn't a tensor
+    """
+    pass
+
+@pytest.mark.skip(reason="NI")
+def test_backend_hopfield_cleanup_v_shape_missmatch():
+    """
+    Test that the backend's hopfield cleanup method
+    throws an error when v isn't the correct
+    dimensionality
+    """
+    pass
+
+@pytest.mark.skip(reason="NI")
+def test_backend_hopfield_cleanup_v_vector_dim_missmatch():
+    """
+    Test that the backend's hopfield cleanup method throws
+    an error when v doesn't have the correct vector
+    dimensionality
+    """
+    pass
+
+@pytest.mark.skip(reason="NI")
+def test_backend_hopfield_cleanup_codebook_shape_missmatch():
+    """
+    Test that the backend's hopfield cleanup method throws an
+    error when the dimensionality of the codebook doesn't match
+    """
+    pass
+
+@pytest.mark.skip(reason="NI")
+def test_backend_hopfield_cleanup_codebook_vector_dim_missmatch():
+    """
+    Test that the backend's hopfield cleanup method throws an error
+    when the vector dim of the codebook doesn't match
+    """
+    pass
+
+@pytest.mark.skip(reason="NI")
+def test_backend_hopfield_cleanup_num_iters_non_int():
+    """
+    Test that the backend's hopfield cleanup method throws an error
+    when the number of iterations isn't an integer
+    """
+    pass
+
+@pytest.mark.skip(reason="NI")
+def test_backend_hopfield_cleanup_num_iters_lt_one():
+    """
+    Test that the backend's hopfield cleanup method throws an error
+    when the number of iterations is less than one
+    """
+    pass
+
+@pytest.mark.skip(reason="NI")
+def test_backend_hopfield_cleanup_single_memory():
+    """
+    Test that the backend's hopfield cleanup method works correctly
+    with a single memory
+    """
+    pass
+
+@pytest.mark.skip(reason="NI")
+def test_backend_hopfield_cleanup_batched_memory():
+    """
+    Test that the backend's hopfield cleanup method works correctly
+    with a batch of memories
+    """
+    pass
