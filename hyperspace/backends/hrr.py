@@ -752,6 +752,17 @@ def _base_list_bind(batch: Tensor) -> Tensor:
         out = _base_single_bind(out, batch[i])
     return out
 
+def _base_batch_resonator_cleanup(v: Tensor, codebook: Tensor) -> Tensor:
+    """
+    """
+    pass
+
+def _base_batch_modern_hopfield_cleanup(v: Tensor, codebook: Tensor) -> Tensor:
+    """
+    """
+    pass
+
+
 class HRRBackend(BaseBackend):
     """
     Holographic Reduced Representations (HRR) backend implementation.
@@ -801,6 +812,8 @@ class HRRBackend(BaseBackend):
         self._comp_batch_normalize = torch.compile(_base_batch_normalize)
         self._comp_batch_invert = torch.compile(_base_batch_invert)
         self._comp_batch_weight = torch.compile(_base_batch_weight)
+        self._comp_batch_resonator_cleanup = torch.compile(_base_batch_resonator_cleanup)
+        self._comp_batch_modern_hopfield_cleanup = torch.compile(_base_batch_modern_hopfield_cleanup)
         self._comp_list_bundle = torch.compile(_base_list_bundle)
         self._comp_list_bind = torch.compile(_base_list_bind)
         self._comp_single_to_batch_bind = torch.compile(_base_single_to_batch_bind)
@@ -1407,14 +1420,137 @@ class HRRBackend(BaseBackend):
         """
         return super()._neural_network_regression(vectors)
     
-    def _resonator_cleanup(self, tensor: Tensor) -> Tensor:
+    def _resonator_cleanup(self, v: Tensor, codebook: Tensor) -> Tensor:
         """
-        Resonator cleanup for HRR backend.
+        Perform resonator-based cleanup of an HRR vector using a codebook.
+
+        This method applies a resonator-style cleanup operation to project a noisy
+        or superposed HRR vector onto the closest valid symbol contained in a
+        codebook. The operation is commonly used after binding or superposition to
+        recover a discrete symbol by iteratively reinforcing similarity to stored
+        code vectors.
+
+        The method supports both single vectors and batched inputs. Internally,
+        single vectors are temporarily promoted to a batch dimension for uniform
+        processing.
+
+        Arguments:
+            v : Tensor
+                Input HRR vector to be cleaned. Must have shape
+                `(vector_dim,)` for a single vector or `(batch_size, vector_dim)`
+                for batched inputs.
+
+            codebook : Tensor
+                Tensor containing candidate HRR code vectors to clean against.
+                Must have shape `(num_codes, vector_dim)`.
+
+        Returns:
+            Tuple[Tensor, dict]
+                - Cleaned HRR vector(s) with the same shape as `v`
+                (`(vector_dim,)` or `(batch_size, vector_dim)`).
+                - Information dictionary containing intermediate values or
+                diagnostics from the resonator computation.
+
+        Raises:
+            TypeError
+                If `v` or `codebook` is not a torch.Tensor.
+            ValueError
+                If tensor dimensions are invalid or do not match `vector_dim`.
         """
-        return super()._resonator_cleanup(tensor)
+
+        if not isinstance(v, Tensor):
+            raise TypeError(f"v must be a torch.Tensor; got {type(v)}")
+        
+        if not isinstance(codebook, Tensor):
+            raise TypeError(f"codebook must be a torch.Tensor; got {type(codebook)}")
+        
+        if v.ndim not in [1, 2]:
+            raise ValueError(f"v must be a 1D or 2D Tensor with shape (vector_dim,) or (batch_size, vector_dim); got {v.shape}")
+        
+        if codebook.ndim != 2:
+            raise ValueError(f"Expected codebook to be a 2D tensor with shape (num_codes, vector_dim); got {codebook.shape}")
+        
+        if v.shape[-1] != self.vector_dim:
+            raise ValueError(f"Expected the last dimension of v to match vector_dim; got {v.shape[-1]}")
+        
+        if codebook.shape[-1] != self.vector_dim:
+            raise ValueError(f"Expected the last dimension of codebook to match vector_dim; got {codebook.shape[-1]}")
+        
+        batched: bool = True
+        if v.ndim == 1:
+            batched = False
+            v = v.unsqueeze(0)
+
+        out, info_dict = self._comp_batch_resonator_cleanup(v, codebook)
+
+        if not batched:
+            out = out.squeeze(0)
+
+        return out, info_dict
     
-    def _hopfield_cleanup(self, tensor: Tensor) -> Tensor:
+    def _hopfield_cleanup(self, v: Tensor, codebook: Tensor) -> Tensor:
         """
-        Hopfield cleanup for HRR backend.
+        Perform Hopfield-style associative cleanup of an HRR vector using a codebook.
+
+        This method treats the codebook vectors as attractor states in an associative
+        memory and applies a Hopfield-like cleanup procedure to map a noisy or
+        superposed HRR vector onto a stable stored pattern. Conceptually, the update
+        dynamics increase agreement with the codebook and reduce an implicit energy
+        until the representation converges (or a stopping criterion is met).
+
+        The method supports both single vectors and batched inputs. Internally, a
+        single input vector is temporarily promoted to a batch dimension for
+        uniform computation.
+
+        Arguments:
+            v : Tensor
+                Input HRR vector to be cleaned. Must have shape `(vector_dim,)`
+                for a single vector or `(batch_size, vector_dim)` for batched inputs.
+
+            codebook : Tensor
+                Tensor containing candidate HRR code vectors representing stored
+                memory items / attractor states. Must have shape
+                `(num_codes, vector_dim)`.
+
+        Returns:
+            Tuple[Tensor, dict]
+                - Cleaned HRR vector(s) with the same shape as `v`
+                (`(vector_dim,)` or `(batch_size, vector_dim)`).
+                - Information dictionary containing diagnostics from the Hopfield
+                computation (e.g., similarities, iteration count, convergence flags).
+
+        Raises:
+            TypeError
+                If `v` or `codebook` is not a torch.Tensor.
+            ValueError
+                If tensor dimensions are invalid or do not match `vector_dim`.
         """
-        return super()._hopfield_cleanup(tensor)
+        if not isinstance(v, Tensor):
+            raise TypeError(f"v must be a torch.Tensor; got {type(v)}")
+        
+        if not isinstance(codebook, Tensor):
+            raise TypeError(f"codebook must be a torch.Tensor; got {type(codebook)}")
+        
+        if v.ndim not in [1, 2]:
+            raise ValueError(f"v must be a 1D or 2D Tensor with shape (vector_dim,) or (batch_size, vector_dim); got {v.shape}")
+        
+        if codebook.ndim != 2:
+            raise ValueError(f"Expected codebook to be a 2D tensor with shape (num_codes, vector_dim); got {codebook.shape}")
+        
+        if v.shape[-1] != self.vector_dim:
+            raise ValueError(f"Expected the last dimension of v to match vector_dim; got {v.shape[-1]}")
+        
+        if codebook.shape[-1] != self.vector_dim:
+            raise ValueError(f"Expected the last dimension of codebook to match vector_dim; got {codebook.shape[-1]}")
+        
+        batched: bool = True
+        if v.ndim == 1:
+            batched = False
+            v = v.unsqueeze(0)
+
+        out, info_dict = self._comp_batch_modern_hopfield_cleanup(v, codebook)
+
+        if not batched:
+            out = out.squeeze(0)
+
+        return out, info_dict
