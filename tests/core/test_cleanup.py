@@ -52,17 +52,30 @@ def test_cm_missing_values_and_codebook():
     D: int = 1024
 
     b = HRRBackend(vector_dim=D)
-    
+
     with pytest.raises(ValueError):
         CleanupModule(b)
 
-@pytest.mark.skip(reason="NI")
 def test_cm_both_values_and_codebook():
     """
     Test that the module throws an error when
     receiving both values and codebook arguments
     """
-    pass
+    import torch
+    from hyperspace.backends import HRRBackend
+    from hyperspace.core import CleanupModule
+
+    V: int = 3
+    D: int = 1024
+    B: int = 64
+
+    values = torch.rand((B, V))
+    codebook = torch.rand((B, D))
+
+    b = HRRBackend(vector_dim=D)
+
+    with pytest.raises(ValueError):
+        CleanupModule(b, values, codebook)
 
 @pytest.mark.skip(reason="NI")
 def test_cm_constructor_values_type():
