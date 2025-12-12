@@ -34,18 +34,18 @@ class CleanupModule(BaseModule):
                 manipulated with the backend; shape = (batch_size, vector_dim)
         """
         if not isinstance(backend, BaseBackend):
-            raise TypeError(f"Expected the argued backend to extend the BaseBackend class; got {type(self.backend)}")
+            raise TypeError(f"Expected the argued backend to extend the BaseBackend class; got {type(backend)}")
         
-        if values is None and codebook is None:
-            raise ValueError(f"Can only accept values or a codebook not both.")
+        if not isinstance(values, Tensor) and not isinstance(codebook, Tensor):
+            raise ValueError(f"Must receive values or a codebook.")
         
-        if values is not None and codebook is not None:
-            raise ValueError(f"Must receive values or codebook.")
+        if isinstance(values, Tensor) and isinstance(codebook, Tensor):
+            raise ValueError(f"Must receive values or codebook; not both.")
         
         super().__init__()
         self.backend: BaseBackend = backend
         self.values: Optional[Tensor] = values
-        self.codebook: Union[Tensor, None] = values
+        self.codebook: Union[Tensor, None] = codebook
 
         if self.values is not None:
             if not isinstance(self.values, Tensor):
