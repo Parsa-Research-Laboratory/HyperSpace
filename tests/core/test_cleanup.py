@@ -92,7 +92,6 @@ def test_cm_constructor_values_type():
     B: int = 64
 
     values = np.random.random((B, V))
-    codebook = torch.rand((B, D))
 
     b = HRRBackend(vector_dim=D, value_dim=V)
 
@@ -114,7 +113,6 @@ def test_cm_constructor_values_shape():
 
     values_small = torch.rand((B))
     values_large = torch.rand((B, V, V))
-    codebook = torch.rand((B, D))
 
     b = HRRBackend(vector_dim=D, value_dim=V)
 
