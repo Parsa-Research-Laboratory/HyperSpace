@@ -160,7 +160,6 @@ def test_cm_constructor_codebook_type():
     values isn't a Tensor
     """
     import numpy as np
-    import torch
     from hyperspace.backends import HRRBackend
     from hyperspace.core import CleanupModule
 
