@@ -752,16 +752,90 @@ def _base_list_bind(batch: Tensor) -> Tensor:
         out = _base_single_bind(out, batch[i])
     return out
 
-def _base_batch_resonator_cleanup(v: Tensor, codebook: Tensor) -> Tensor:
-    """
-    """
-    pass
 
-def _base_batch_modern_hopfield_cleanup(v: Tensor, codebook: Tensor) -> Tensor:
+def _base_batch_resonator_cleanup(v: Tensor, codebook: Tensor, normalize: bool = True
+                                  ) -> Tuple[Tensor, Tensor]:
     """
-    """
-    pass
+    Resonator-style cleanup of HRR vectors via linear similarity reinforcement.
 
+    This method computes the similarity between each input vector and all
+    codebook vectors, uses these similarities to linearly weight the codebook,
+    and bundles the result into a new vector. The output is normalized to
+    unit length to maintain HRR vector properties.
+
+    Args:
+        v : Tensor
+            Input HRR vectors of shape (B, D).
+        codebook : Tensor
+            Codebook vectors of shape (C, D).
+        normalize : bool
+            If True, L2-normalize inputs before similarity computation.
+
+    Returns:
+        v_out : Tensor
+            Cleaned HRR vectors of shape (B, D).
+        sims : Tensor
+            Similarity scores between v and codebook, shape (B, C).
+    """
+    if normalize:
+        vq = F.normalize(v, dim=-1)
+        kb = F.normalize(codebook, dim=-1)
+    else:
+        vq = v
+        kb = codebook
+
+    # Step 1: Similarities (B, C)
+    sims = torch.einsum("bd,cd->bc", vq, kb)
+
+    # Step 2 + 3: Linear superposition of weighted codebook vectors
+    v_out = torch.einsum("bc,cd->bd", sims, codebook)
+
+    # Step 4: Normalize to unit length (critical for HRR stability)
+    v_out = F.normalize(v_out, dim=-1)
+
+    return v_out, sims
+
+def _base_batch_modern_hopfield_cleanup(v: Tensor, codebook: Tensor, temperature: float = 1.0,
+                                        normalize: bool = True) -> Tuple[Tensor, Tensor]:
+    """
+    Modern Hopfield (dense associative memory) cleanup via softmax retrieval.
+
+    Computes attention weights over the codebook for each query vector in `v`
+    using (optionally normalized) dot-product similarity, then returns the
+    weighted sum of codebook vectors.
+
+    Args:
+        v: Query vectors, shape (B, D).
+        codebook: Stored patterns, shape (C, D).
+        temperature: Softmax temperature. Smaller -> sharper retrieval.
+        normalize: If True, L2-normalize v and codebook before similarity.
+
+    Returns:
+        v_out: Retrieved/cleaned vectors, shape (B, D).
+        attn: Attention weights over codebook, shape (B, C).
+    """
+    if normalize:
+        vq = F.normalize(v, dim=-1)
+        kb = F.normalize(codebook, dim=-1)
+    else:
+        vq = v
+        kb = codebook
+
+    # logits: (B, C)
+    logits = torch.einsum("bd,cd->bc", vq, kb)
+
+    # scale + temperature
+    if temperature <= 0:
+        raise ValueError(f"temperature must be > 0; got {temperature}")
+    
+    logits = logits / temperature
+
+    attn = F.softmax(logits, dim=-1)  # (B, C)
+
+    # weighted sum: (B, D)
+    v_out = torch.einsum("bc,cd->bd", attn, codebook)
+
+    return v_out, attn
 
 class HRRBackend(BaseBackend):
     """
@@ -1420,7 +1494,7 @@ class HRRBackend(BaseBackend):
         """
         return super()._neural_network_regression(vectors)
     
-    def _resonator_cleanup(self, v: Tensor, codebook: Tensor) -> Tuple[Tensor, dict]:
+    def _resonator_cleanup(self, v: Tensor, codebook: Tensor, num_iters: int = 3) -> Tuple[Tensor, dict]:
         """
         Perform resonator-based cleanup of an HRR vector using a codebook.
 
@@ -1443,6 +1517,9 @@ class HRRBackend(BaseBackend):
             codebook : Tensor
                 Tensor containing candidate HRR code vectors to clean against.
                 Must have shape `(num_codes, vector_dim)`.
+
+            num_iters : Int
+                The number of times to perform the resonator cleanup mechanism
 
         Returns:
             Tuple[Tensor, dict]
@@ -1476,81 +1553,127 @@ class HRRBackend(BaseBackend):
         if codebook.shape[-1] != self.vector_dim:
             raise ValueError(f"Expected the last dimension of codebook to match vector_dim; got {codebook.shape[-1]}")
         
-        batched: bool = True
+        # -----------------------
+        # Batch handling
+        # -----------------------
+        batched = True
         if v.ndim == 1:
             batched = False
             v = v.unsqueeze(0)
 
-        out, info_dict = self._comp_batch_resonator_cleanup(v, codebook)
+        # -----------------------
+        # Iterative resonator
+        # -----------------------
+        sims_history = []
+        out = v
 
+        for _ in range(num_iters):
+            out, sims = self._comp_batch_resonator_cleanup(out, codebook)
+            sims_history.append(sims)
+
+        # -----------------------
+        # Cleanup output
+        # -----------------------
         if not batched:
             out = out.squeeze(0)
+
+        info_dict = {
+            "num_iters": num_iters,
+            "sims_history": sims_history,  # list[(B, C)]
+        }
 
         return out, info_dict
     
-    def _hopfield_cleanup(self, v: Tensor, codebook: Tensor) -> Tuple[Tensor, dict]:
+    def _hopfield_cleanup(self, v: Tensor, codebook: Tensor, num_iters: int = 3,
+                          temperature: float = 1.0) -> Tuple[Tensor, dict]:
         """
-        Perform Hopfield-style associative cleanup of an HRR vector using a codebook.
+        Perform iterative Hopfield-style associative cleanup of an HRR vector using a codebook.
 
-        This method treats the codebook vectors as attractor states in an associative
-        memory and applies a Hopfield-like cleanup procedure to map a noisy or
-        superposed HRR vector onto a stable stored pattern. Conceptually, the update
-        dynamics increase agreement with the codebook and reduce an implicit energy
-        until the representation converges (or a stopping criterion is met).
+        This method applies a modern Hopfield (dense associative memory) update by
+        repeatedly computing softmax-weighted combinations of codebook vectors.
+        The temperature parameter controls the sharpness of the attractor dynamics.
 
-        The method supports both single vectors and batched inputs. Internally, a
-        single input vector is temporarily promoted to a batch dimension for
-        uniform computation.
+        Supports both single vectors and batched inputs. Single vectors are promoted
+        to a batch dimension internally for uniform computation.
 
-        Arguments:
+        Args:
             v : Tensor
-                Input HRR vector to be cleaned. Must have shape `(vector_dim,)`
-                for a single vector or `(batch_size, vector_dim)` for batched inputs.
-
+                Input HRR vector(s) of shape `(vector_dim,)` or `(batch_size, vector_dim)`.
             codebook : Tensor
-                Tensor containing candidate HRR code vectors representing stored
-                memory items / attractor states. Must have shape
-                `(num_codes, vector_dim)`.
+                Stored HRR code vectors of shape `(num_codes, vector_dim)`.
+            num_iters : int
+                Number of Hopfield update iterations to perform.
+            temperature : float
+                Softmax temperature controlling retrieval sharpness. Must be > 0.
 
         Returns:
             Tuple[Tensor, dict]
-                - Cleaned HRR vector(s) with the same shape as `v`
-                (`(vector_dim,)` or `(batch_size, vector_dim)`).
-                - Information dictionary containing diagnostics from the Hopfield
-                computation (e.g., similarities, iteration count, convergence flags).
-
-        Raises:
-            TypeError
-                If `v` or `codebook` is not a torch.Tensor.
-            ValueError
-                If tensor dimensions are invalid or do not match `vector_dim`.
+                - Cleaned HRR vector(s) with the same shape as `v`.
+                - Information dictionary containing diagnostics from the Hopfield dynamics.
         """
+        # -----------------------
+        # Input validation
+        # -----------------------
         if not isinstance(v, Tensor):
             raise TypeError(f"v must be a torch.Tensor; got {type(v)}")
-        
         if not isinstance(codebook, Tensor):
             raise TypeError(f"codebook must be a torch.Tensor; got {type(codebook)}")
-        
+
         if v.ndim not in [1, 2]:
-            raise ValueError(f"v must be a 1D or 2D Tensor with shape (vector_dim,) or (batch_size, vector_dim); got {v.shape}")
-        
+            raise ValueError(
+                f"v must be a 1D or 2D Tensor with shape (vector_dim,) or "
+                f"(batch_size, vector_dim); got {v.shape}"
+            )
+
         if codebook.ndim != 2:
-            raise ValueError(f"Expected codebook to be a 2D tensor with shape (num_codes, vector_dim); got {codebook.shape}")
-        
+            raise ValueError(
+                f"Expected codebook to be a 2D tensor with shape "
+                f"(num_codes, vector_dim); got {codebook.shape}"
+            )
+
         if v.shape[-1] != self.vector_dim:
-            raise ValueError(f"Expected the last dimension of v to match vector_dim; got {v.shape[-1]}")
-        
+            raise ValueError(
+                f"Expected the last dimension of v to match vector_dim; got {v.shape[-1]}"
+            )
+
         if codebook.shape[-1] != self.vector_dim:
-            raise ValueError(f"Expected the last dimension of codebook to match vector_dim; got {codebook.shape[-1]}")
-        
-        batched: bool = True
+            raise ValueError(
+                f"Expected the last dimension of codebook to match vector_dim; got {codebook.shape[-1]}"
+            )
+
+        if temperature <= 0:
+            raise ValueError(f"temperature must be > 0; got {temperature}")
+
+        # -----------------------
+        # Batch handling
+        # -----------------------
+        batched = True
         if v.ndim == 1:
             batched = False
             v = v.unsqueeze(0)
 
-        out, info_dict = self._comp_batch_modern_hopfield_cleanup(v, codebook)
+        # -----------------------
+        # Iterative Hopfield dynamics
+        # -----------------------
+        attn_history = []
+        out = v
 
+        for _ in range(num_iters):
+            out, attn = self._comp_batch_modern_hopfield_cleanup(
+                out, codebook, temperature=temperature
+            )
+            attn_history.append(attn)
+
+        # -----------------------
+        # Cleanup output
+        # -----------------------
         if not batched:
             out = out.squeeze(0)
+
+        info_dict = {
+            "num_iters": num_iters,
+            "temperature": temperature,
+            "attn_history": attn_history,  # list[(B, C)]
+        }
 
         return out, info_dict
