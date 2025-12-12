@@ -13,29 +13,48 @@ def test_cm_true_backend():
     """
     Test that the cleanup module initializes with a value backend
     """
+    import torch
     from hyperspace.backends.hrr import HRRBackend
     from hyperspace.core.cleanup import CleanupModule
 
-    b = HRRBackend(vector_dim=128)
-    _ = CleanupModule(b)
+    B: int = 64
+    D: int = 1024
+
+    codebook = torch.rand((B, D))
+
+    b = HRRBackend(vector_dim=D)
+    _ = CleanupModule(b, codebook=codebook)
 
 def test_cm_invalid_backend():
     """
     Test that the cm module throws and error when an invalid
     backend is passed
     """
+    import torch
     from hyperspace.core.cleanup import CleanupModule
 
-    with pytest.raises(TypeError):
-        _ = CleanupModule(5)
+    B: int = 64
+    D: int = 1024
 
-@pytest.mark.skip(reason="NI")
+    codebook = torch.rand((B, D))
+
+    with pytest.raises(TypeError):
+        _ = CleanupModule(5, codebook=codebook)
+
 def test_cm_missing_values_and_codebook():
     """
     Test that the module throws an error when
     missing both values and codebook arguments
     """
-    pass
+    from hyperspace.backends import HRRBackend
+    from hyperspace.core import CleanupModule
+
+    D: int = 1024
+
+    b = HRRBackend(vector_dim=D)
+    
+    with pytest.raises(ValueError):
+        CleanupModule(b)
 
 @pytest.mark.skip(reason="NI")
 def test_cm_both_values_and_codebook():
