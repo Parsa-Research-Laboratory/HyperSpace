@@ -36,10 +36,10 @@ class CleanupModule(BaseModule):
         if not isinstance(backend, BaseBackend):
             raise TypeError(f"Expected the argued backend to extend the BaseBackend class; got {type(backend)}")
         
-        if not isinstance(values, Tensor) and not isinstance(codebook, Tensor):
+        if values is None and codebook is None:
             raise ValueError(f"Must receive values or a codebook.")
         
-        if isinstance(values, Tensor) and isinstance(codebook, Tensor):
+        if values is not None and codebook is not None:
             raise ValueError(f"Must receive values or codebook; not both.")
         
         super().__init__()
