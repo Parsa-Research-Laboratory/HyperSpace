@@ -221,3 +221,108 @@ def test_cm_constructor_codebook_dim():
 
     with pytest.raises(ValueError):
         CleanupModule(b, codebook_large)
+
+@pytest.mark.skip(reason="NI")
+def test_cm_call_missing_v():
+    """
+    
+    """
+    pass
+
+@pytest.mark.skip(reason="NI")
+def test_cm_call_v_type():
+    """
+    
+    """
+    pass
+
+@pytest.mark.skip(reason="NI")
+def test_cm_call_v_shape():
+    """
+    
+    """
+    pass
+
+@pytest.mark.skip(reason="NI")
+def test_cm_call_v_dim():
+    """
+    
+    """
+    pass
+
+@pytest.mark.skip(reason="NI")
+def test_cm_call_missing_method():
+    """
+    
+    """
+    pass
+
+@pytest.mark.skip(reason="NI")
+def test_cm_call_non_string_method():
+    """
+    
+    """
+    pass
+
+@pytest.mark.skip(reason="NI")
+def test_cm_call_invalid_method():
+    """
+    
+    """
+    pass
+
+@pytest.mark.skip(reason="NI")
+def test_cm_call_single_value_predef_codebook_resonator():
+    """
+    
+    """
+    pass
+
+@pytest.mark.skip(reason="NI")
+def test_cm_call_single_value_derived_codebook_resonator():
+    """
+    
+    """
+    pass
+
+@pytest.mark.skip(reason="NI")
+def test_cm_call_multi_value_predef_codebook_hopfield():
+    """
+    
+    """
+    pass
+
+@pytest.mark.skip(reason="NI")
+def test_cm_call_multi_value_derived_codebook_hopfield():
+    """
+    
+    """
+    pass
+
+@pytest.mark.skip(reason="NI")
+def test_cm_call_single_value_predef_codebook():
+    """
+    
+    """
+    pass
+
+@pytest.mark.skip(reason="NI")
+def test_cm_call_single_value_derived_codebook():
+    """
+    
+    """
+    pass
+
+@pytest.mark.skip(reason="NI")
+def test_cm_call_multi_value_predef_codebook():
+    """
+    
+    """
+    pass
+
+@pytest.mark.skip(reason="NI")
+def test_cm_call_multi_value_derived_codebook():
+    """
+    
+    """
+    pass

@@ -1,6 +1,6 @@
 import torch
 from torch import Tensor
-from typing import List, Optional, Union
+from typing import List, Optional, Tuple, Union
 
 from ..backends.base import BaseBackend
 from .base_module import BaseModule
@@ -72,8 +72,28 @@ class CleanupModule(BaseModule):
         # final sanity check
         assert self.codebook is not None
 
-    def __call__(self, tensor, method: str = "resonator"):
+    def __call__(self, v: Tensor, method: str = "resonator") -> Tuple[Tensor, dict]:
         """
         Apply the specified cleanup method to the input tensor.
         """
-        return self.backend.cleanup(tensor, method)
+
+        if not isinstance(v, Tensor):
+            raise TypeError(f"Expected v to be a Tensor; got {type(v)}")
+        
+        if v.ndim not in [1, 2]:
+            raise ValueError(f"Expected v to be a 1D or 2D Tensor; got shape {v.shape}")
+        
+        if v.shape[-1] != self.backend.vector_dim:
+            raise ValueError(f"Expected dimensionality of v to match the backend; got {v.shape[-1]} and {self.backend.vector_dim}")
+        
+        if method not in self.valid_methods:
+            raise ValueError(f"Expected method to be on of [{self.valid_methods}]; got {method}")
+        
+        if method == "resonator":
+            out, info_dict = self.backend._resonator_cleanup(v, self.codebook)
+        elif method == "modern_hopfield":
+            out, info_dict = self.backend._hopfield_cleanup(v, self.codebook)
+        else:
+            raise ValueError(f"received invalid cleanup method: {method}")
+
+        return out, info_dict
