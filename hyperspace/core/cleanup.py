@@ -1,4 +1,3 @@
-import torch
 from torch import Tensor
 from typing import List, Optional, Tuple, Union
 
@@ -7,10 +6,23 @@ from .base_module import BaseModule
 
 class CleanupModule(BaseModule):
     """
-    Cleanup module for HyperSpace.
+    CleanupModule performs associative cleanup of hypervectors using a
+    backend-defined set of cleanup rules.
 
-    This module provides cleanup operations for vectors using various methods
-    such as resonator, identity, and hopfield network cleanup.
+    The module constructs a cleanup codebook from either raw input values (which
+    are encoded using the backend) or a precomputed set of hypervectors. At
+    runtime, the module applies a chosen cleanup method—such as resonator dynamics
+    or a modern Hopfield update—to move an input vector toward the nearest item in
+    the codebook under the backend’s similarity metric.
+
+    Supported cleanup methods depend on the backend but typically include:
+        - "resonator": Iterative resonator-based attractor dynamics.
+        - "modern_hopfield": A modern Hopfield-style update rule.
+        - "identity": Returns the input unchanged (useful for debugging).
+
+    This module provides both single-vector and batched cleanup, allowing it to be
+    used in encoding pipelines, memory-retrieval systems, or iterative inference
+    procedures within HyperSpace.
     """
 
     valid_methods: List[str] = [
@@ -21,17 +33,48 @@ class CleanupModule(BaseModule):
     def __init__(self, backend: BaseBackend, values: Optional[Tensor] = None,
                  codebook: Optional[Tensor] = None):
         """
-        Initialize the CleanupModule.
+        Initialize a CleanupModule for performing hypervector cleanup operations.
 
-        Arguments:
-            backend : BaseBackend
-                The backend to use for encoding operations.
-            positions : Optional(Tensor)
-                The specific values to clean over; these values will be encoded to
-                hypervectors with the backend; shape = (batch_size, value_dim)
-            codebook : Optional(Tensor)
-                The specific codes to clean over; these values will not be
-                manipulated with the backend; shape = (batch_size, vector_dim)
+        The module constructs a cleanup codebook either by:
+        (1) encoding a set of input values into hypervectors using the backend, or
+        (2) accepting a precomputed codebook of hypervectors directly.
+
+        Exactly one of `values` or `codebook` must be provided. If `values` is
+        supplied, each row is encoded into a hypervector via the backend’s
+        value-encoding method. If `codebook` is supplied, it is used verbatim
+        without modification.
+
+        Parameters
+        ----------
+        backend : BaseBackend
+            Backend instance that defines the vector dimensionality and provides
+            encoding and cleanup operations.
+
+        values : Optional[Tensor], default=None
+            Tensor of raw values to encode into hypervectors. Must have shape
+            (batch_size, value_dim). When provided, the module encodes these values
+            into a cleanup codebook using `backend.value_encoding`.
+
+        codebook : Optional[Tensor], default=None
+            Precomputed cleanup codebook. Must be a tensor of shape
+            (batch_size, vector_dim). These vectors are assumed to already reside in
+            the backend’s hypervector space and will not be re-encoded.
+
+        Raises
+        ------
+        TypeError
+            If `backend` does not extend BaseBackend, or if `values`/`codebook` 
+            are not tensors when provided.
+
+        ValueError
+            If neither or both of `values` and `codebook` are provided;
+            if either input has incorrect dimensionality or mismatched backend 
+            value/vector dimension requirements.
+
+        Notes
+        -----
+        After initialization, `self.codebook` will always be a valid 2D tensor
+        of encoded hypervectors suitable for cleanup procedures.
         """
         if not isinstance(backend, BaseBackend):
             raise TypeError(f"Expected the argued backend to extend the BaseBackend class; got {type(backend)}")
@@ -74,7 +117,43 @@ class CleanupModule(BaseModule):
 
     def __call__(self, v: Tensor, method: str = "resonator") -> Tuple[Tensor, dict]:
         """
-        Apply the specified cleanup method to the input tensor.
+        Perform cleanup of an input vector using the specified cleanup method.
+
+        This method selects and applies a cleanup procedure—such as resonator
+        dynamics or a modern Hopfield update—to move the input vector toward the
+        closest item in the codebook according to the backend's similarity
+        structure. Cleanup can be performed on a single vector of shape (D,) or a
+        batch of vectors of shape (B, D).
+
+        Parameters
+        ----------
+        v : Tensor
+            Input tensor to clean up. Must be either a 1D tensor of shape (D,) or a 
+            2D tensor of shape (B, D), where D matches the backend's vector 
+            dimensionality.
+        
+        method : str, optional
+            The cleanup rule to apply. Supported options include:
+            - `"resonator"`: Uses iterative resonator dynamics for cleanup.
+            - `"modern_hopfield"`: Uses a modern Hopfield-style update rule.
+            Defaults to `"resonator"`.
+
+        Returns
+        -------
+        Tensor
+            The cleaned vector(s), matching the shape of the input.
+        
+        dict
+            An information dictionary containing method-specific diagnostics.
+
+        Raises
+        ------
+        TypeError
+            If `v` is not a Tensor.
+        ValueError
+            If `v` does not have 1 or 2 dimensions;
+            if its last dimension does not match the backend's vector dimensionality;
+            or if an unsupported cleanup method is provided.
         """
 
         if not isinstance(v, Tensor):
