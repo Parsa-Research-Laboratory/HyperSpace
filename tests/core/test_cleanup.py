@@ -99,13 +99,30 @@ def test_cm_constructor_values_type():
     with pytest.raises(TypeError):
         CleanupModule(b, values, codebook)
 
-@pytest.mark.skip(reason="NI")
 def test_cm_constructor_values_shape():
     """
     Test that the module throws an error when
     values isn't a 2D Tensor
     """
-    pass
+    import torch
+    from hyperspace.backends import HRRBackend
+    from hyperspace.core import CleanupModule
+
+    V: int = 3
+    D: int = 1024
+    B: int = 64
+
+    values_small = torch.rand((B))
+    values_large = torch.rand((B, V, V))
+    codebook = torch.rand((B, D))
+
+    b = HRRBackend(vector_dim=D, value_dim=V)
+
+    with pytest.raises(ValueError):
+        CleanupModule(b, values_small, codebook)
+
+    with pytest.raises(ValueError):
+        CleanupModule(b, values_large, codebook)
 
 @pytest.mark.skip(reason="NI")
 def test_cm_constructor_values_dim():
