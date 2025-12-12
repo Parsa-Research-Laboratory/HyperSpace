@@ -72,18 +72,32 @@ def test_cm_both_values_and_codebook():
     values = torch.rand((B, V))
     codebook = torch.rand((B, D))
 
-    b = HRRBackend(vector_dim=D)
+    b = HRRBackend(vector_dim=D, value_dim=V)
 
     with pytest.raises(ValueError):
         CleanupModule(b, values, codebook)
 
-@pytest.mark.skip(reason="NI")
 def test_cm_constructor_values_type():
     """
     Test that the module throws an error when
     values isn't a Tensor
     """
-    pass
+    import numpy as np
+    import torch
+    from hyperspace.backends import HRRBackend
+    from hyperspace.core import CleanupModule
+
+    V: int = 3
+    D: int = 1024
+    B: int = 64
+
+    values = np.random.random((B, V))
+    codebook = torch.rand((B, D))
+
+    b = HRRBackend(vector_dim=D, value_dim=V)
+
+    with pytest.raises(TypeError):
+        CleanupModule(b, values, codebook)
 
 @pytest.mark.skip(reason="NI")
 def test_cm_constructor_values_shape():
