@@ -1,4 +1,3 @@
-import torch
 from torch import Tensor
 from typing import Tuple
 
@@ -62,6 +61,7 @@ class MemoryStorageModule(BaseModule):
 
         new_memory, _ = self.backend.bind(p_vectors, v_vectors)
 
+        # combine multiple points into a single memory
         if new_memory.ndim > 1:
             new_memory, _ = self.backend.bundle(new_memory)
 
