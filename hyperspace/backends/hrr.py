@@ -1420,7 +1420,7 @@ class HRRBackend(BaseBackend):
         """
         return super()._neural_network_regression(vectors)
     
-    def _resonator_cleanup(self, v: Tensor, codebook: Tensor) -> Tensor:
+    def _resonator_cleanup(self, v: Tensor, codebook: Tensor) -> Tuple[Tensor, dict]:
         """
         Perform resonator-based cleanup of an HRR vector using a codebook.
 
@@ -1488,7 +1488,7 @@ class HRRBackend(BaseBackend):
 
         return out, info_dict
     
-    def _hopfield_cleanup(self, v: Tensor, codebook: Tensor) -> Tensor:
+    def _hopfield_cleanup(self, v: Tensor, codebook: Tensor) -> Tuple[Tensor, dict]:
         """
         Perform Hopfield-style associative cleanup of an HRR vector using a codebook.
 
