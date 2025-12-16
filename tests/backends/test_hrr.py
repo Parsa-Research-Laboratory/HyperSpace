@@ -4243,12 +4243,82 @@ def test_backend_hopfield_cleanup_converges_over_iterations_batched():
                 )
 
 
-@pytest.mark.skip(reason="NI")
-def test_base_batch_resonator_cleanup():
+def test_base_batch_resonator_cleanup_single_step_batched_equivalence():
     """
-    Test the functionality of the _base_batch_resonator_cleanup
-    function
+    Batched single-step resonator cleanup should behave identically to running
+    the same function on each element individually.
+
+    This test is *only* about the single-step layer in isolation:
+      1) shapes/dtypes are correct
+      2) sims match the expected cosine/dot-product range assumptions
+      3) output vectors are unit norm (since you normalize)
+      4) batched output == per-sample output (within tolerance)
+      5) batched sims == per-sample sims (within tolerance)
+
+    NOTE: This does not test convergence or retrieval correctness.
     """
+    import torch
+    from hyperspace.backends.hrr import _base_batch_resonator_cleanup
+
+    torch.manual_seed(0)
+
+    D: int = 1024
+    C: int = 8
+    B: int = 16
+    normalize: bool = True
+
+    # ----------------------------
+    # Build codebook + batch queries
+    # ----------------------------
+    codebook = torch.randn(C, D)
+    v = torch.randn(B, D)
+
+    # ----------------------------
+    # Run batched
+    # ----------------------------
+    v_out_b, sims_b = _base_batch_resonator_cleanup(v, codebook, normalize=normalize)
+
+    assert v_out_b.shape == (B, D)
+    assert sims_b.shape == (B, C)
+    assert v_out_b.dtype == v.dtype
+    assert sims_b.dtype == v.dtype
+    assert torch.isfinite(v_out_b).all()
+    assert torch.isfinite(sims_b).all()
+
+    # sims should be bounded if normalize=True (cosine similarity in [-1, 1])
+    if normalize:
+        assert sims_b.max().item() <= 1.0 + 1e-5
+        assert sims_b.min().item() >= -1.0 - 1e-5
+
+    # output should be unit norm because you normalize it
+    norms = v_out_b.norm(dim=-1)
+    assert torch.allclose(norms, torch.ones_like(norms), atol=1e-5, rtol=0.0), (
+        f"Output vectors not unit norm. min={norms.min().item()}, max={norms.max().item()}"
+    )
+
+    # ----------------------------
+    # Run per-sample and compare
+    # ----------------------------
+    v_out_list = []
+    sims_list = []
+    for i in range(B):
+        v_i = v[i : i + 1]  # (1, D)
+        v_out_i, sims_i = _base_batch_resonator_cleanup(v_i, codebook, normalize=normalize)
+        v_out_list.append(v_out_i)
+        sims_list.append(sims_i)
+
+    v_out_s = torch.cat(v_out_list, dim=0)  # (B, D)
+    sims_s = torch.cat(sims_list, dim=0)    # (B, C)
+
+    assert torch.allclose(v_out_b, v_out_s, atol=1e-6, rtol=1e-6), (
+        f"Batched v_out differs from per-sample v_out. "
+        f"max_abs={(v_out_b - v_out_s).abs().max().item():.3e}"
+    )
+    assert torch.allclose(sims_b, sims_s, atol=1e-6, rtol=1e-6), (
+        f"Batched sims differs from per-sample sims. "
+        f"max_abs={(sims_b - sims_s).abs().max().item():.3e}"
+    )
+
 
 def test_base_batch_modern_hopfield_cleanup_single_step_batched_equivalence():
     """
