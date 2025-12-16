@@ -3432,7 +3432,6 @@ def test_backend_resonator_cleanup_v_shape_missmatch():
     throws an error when v isn't the correct
     dimensionality
     """
-    import numpy as np
     import torch
     from hyperspace.backends import HRRBackend
 
