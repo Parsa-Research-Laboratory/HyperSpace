@@ -4250,9 +4250,88 @@ def test_base_batch_resonator_cleanup():
     function
     """
 
-@pytest.mark.skip(reason="NI")
-def test_base_batch_hopfield_cleanup():
+def test_base_batch_modern_hopfield_cleanup_single_step_batched_equivalence():
     """
-    Test the functionality of the _base_batch_resonator_cleanup
-    function
+    Batched single-step Modern Hopfield cleanup (softmax retrieval) should behave
+    identically to running the same function on each element individually.
+
+    This test is intentionally *only* about the single-step layer in isolation:
+      1) shapes/dtypes are correct
+      2) attention rows are valid probabilities (sum ~ 1)
+      3) batched output == per-sample output (within tolerance)
+      4) batched attention == per-sample attention (within tolerance)
+
+    NOTE: This does *not* assert convergence or correct retrieval (those are
+    multi-iteration / regime-dependent properties).
     """
+    import torch
+    from hyperspace.backends.hrr import _base_batch_modern_hopfield_cleanup
+    import torch.nn.functional as F
+
+    torch.manual_seed(0)
+
+    D: int = 1024
+    C: int = 8
+    B: int = 16
+    temperature: float = 0.2
+    normalize: bool = True
+
+    # ----------------------------
+    # Build codebook + batch queries
+    # ----------------------------
+    codebook = torch.randn(C, D)
+    v = torch.randn(B, D)
+
+    # ----------------------------
+    # Run batched
+    # ----------------------------
+    v_out_b, attn_b = _base_batch_modern_hopfield_cleanup(
+        v, codebook, temperature=temperature, normalize=normalize
+    )
+
+    assert v_out_b.shape == (B, D)
+    assert attn_b.shape == (B, C)
+    assert v_out_b.dtype == v.dtype
+    assert attn_b.dtype == v.dtype
+    assert torch.isfinite(v_out_b).all()
+    assert torch.isfinite(attn_b).all()
+
+    # Attention should be row-stochastic
+    row_sums = attn_b.sum(dim=-1)
+    assert torch.allclose(row_sums, torch.ones_like(row_sums), atol=1e-6, rtol=0.0), (
+        f"Attention rows do not sum to 1. min={row_sums.min().item()}, max={row_sums.max().item()}"
+    )
+    assert (attn_b >= 0).all(), "Attention has negative entries"
+
+    # Output should be (approximately) unit norm because you normalize it
+    norms = v_out_b.norm(dim=-1)
+    assert torch.allclose(norms, torch.ones_like(norms), atol=1e-5, rtol=0.0), (
+        f"Output vectors not unit norm. min={norms.min().item()}, max={norms.max().item()}"
+    )
+
+    # ----------------------------
+    # Run per-sample and compare
+    # ----------------------------
+    v_out_list = []
+    attn_list = []
+    for i in range(B):
+        v_i = v[i : i + 1]  # (1, D)
+        v_out_i, attn_i = _base_batch_modern_hopfield_cleanup(
+            v_i, codebook, temperature=temperature, normalize=normalize
+        )
+        v_out_list.append(v_out_i)
+        attn_list.append(attn_i)
+
+    v_out_s = torch.cat(v_out_list, dim=0)  # (B, D)
+    attn_s = torch.cat(attn_list, dim=0)    # (B, C)
+
+    # Batched == stacked-single (tight tolerances; should match exactly up to fp rounding)
+    assert torch.allclose(v_out_b, v_out_s, atol=1e-6, rtol=1e-6), (
+        f"Batched v_out differs from per-sample v_out. "
+        f"max_abs={(v_out_b - v_out_s).abs().max().item():.3e}"
+    )
+    assert torch.allclose(attn_b, attn_s, atol=1e-6, rtol=1e-6), (
+        f"Batched attn differs from per-sample attn. "
+        f"max_abs={(attn_b - attn_s).abs().max().item():.3e}"
+    )
+
