@@ -3707,13 +3707,26 @@ def test_backend_hopfield_cleanup_codebook_vector_dim_missmatch():
     with pytest.raises(ValueError):
         b._hopfield_cleanup(v, codebook_large)
 
-@pytest.mark.skip(reason="NI")
 def test_backend_hopfield_cleanup_num_iters_non_int():
     """
     Test that the backend's hopfield cleanup method throws an error
     when the number of iterations isn't an integer
     """
-    pass
+    import torch
+    from hyperspace.backends import HRRBackend
+
+    D: int = 1024
+    B: int = 3
+    C: int = 64
+
+    v = torch.rand((B, D))
+    c = torch.rand((C, D))
+    i = "None"
+
+    b = HRRBackend(vector_dim=D)
+
+    with pytest.raises(TypeError):
+        b._hopfield_cleanup(v, c, i)
 
 @pytest.mark.skip(reason="NI")
 def test_backend_hopfield_cleanup_num_iters_lt_one():
