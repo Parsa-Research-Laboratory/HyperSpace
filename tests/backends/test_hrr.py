@@ -3763,6 +3763,22 @@ def test_backend_hopfield_cleanup_num_iters_lt_one():
         b._hopfield_cleanup(v, c, i)
 
 @pytest.mark.skip(reason="NI")
+def test_backend_hopfield_cleanup_temp_type():
+    """
+    Test that the backend's hopfield cleanup method throws an error
+    when temperature is not a floating point number
+    """
+    pass
+
+@pytest.mark.skip(reason="NI")
+def test_backend_hopfield_cleanup_temp_range():
+    """
+    Test that the backend's hopfield cleanup method throws an error
+    when temperature is not in the valid range
+    """
+    pass
+
+@pytest.mark.skip(reason="NI")
 def test_backend_hopfield_cleanup_single_memory():
     """
     Test that the backend's hopfield cleanup method works correctly
