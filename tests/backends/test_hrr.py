@@ -3575,14 +3575,37 @@ def test_backend_hopfield_cleanup_v_shape_missmatch():
     """
     pass
 
-@pytest.mark.skip(reason="NI")
 def test_backend_hopfield_cleanup_v_vector_dim_missmatch():
     """
     Test that the backend's hopfield cleanup method throws
     an error when v doesn't have the correct vector
     dimensionality
     """
-    pass
+    import torch
+    from hyperspace.backends import HRRBackend
+
+    D: int = 1024
+    B: int = 64
+
+    b = HRRBackend(vector_dim=D)
+
+    v_1d_small = torch.rand((D - 1,))
+    v_1d_large = torch.rand((D + 1,))
+    v_2d_small = torch.rand((B, D - 1))
+    v_2d_large = torch.rand((B, D + 1))
+    codebook = torch.rand((B, D))
+
+    with pytest.raises(ValueError):
+        b._hopfield_cleanup(v_1d_small, codebook)
+
+    with pytest.raises(ValueError):
+        b._hopfield_cleanup(v_1d_large, codebook)
+
+    with pytest.raises(ValueError):
+        b._hopfield_cleanup(v_2d_small, codebook)
+
+    with pytest.raises(ValueError):
+        b._hopfield_cleanup(v_2d_large, codebook)
 
 @pytest.mark.skip(reason="NI")
 def test_backend_hopfield_cleanup_codebook_shape_missmatch():
