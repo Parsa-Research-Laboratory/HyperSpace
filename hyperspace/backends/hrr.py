@@ -1646,6 +1646,9 @@ class HRRBackend(BaseBackend):
 
         if temperature <= 0:
             raise ValueError(f"temperature must be > 0; got {temperature}")
+        
+        if num_iters < 1:
+            raise ValueError(f"Expected num_iters to be >= 1; got {num_iters}")
 
         # -----------------------
         # Batch handling
