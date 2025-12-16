@@ -3386,13 +3386,25 @@ def test_backend_single_to_batch_bundle():
     phi_pred, _ = b.bundle(phi_toppings, phi_pizza)
     assert torch.allclose(phi_pred, phi_gt)
 
-@pytest.mark.skip(reason="NI")
 def test_backend_resonator_cleanup_v_non_tensor():
     """
     Test that the backend's resonator cleanup method
     throws an error when v is not a Tensor
     """
-    pass
+    import numpy as np
+    import torch
+    from hyperspace.backends import HRRBackend
+
+    D: int = 1024
+    B: int = 64
+
+    b = HRRBackend(vector_dim=D)
+
+    v = np.random.random((D,))
+    codebook = torch.rand((B, D))
+
+    with pytest.raises(TypeError):
+        b._resonator_cleanup(v, codebook)
 
 @pytest.mark.skip(reason="NI")
 def test_backend_resonator_cleanup_codebook_non_tensor():
@@ -3549,3 +3561,17 @@ def test_backend_hopfield_cleanup_batched_memory():
     with a batch of memories
     """
     pass
+
+@pytest.mark.skip(reason="NI")
+def test_base_batch_resonator_cleanup():
+    """
+    Test the functionality of the _base_batch_resonator_cleanup
+    function
+    """
+
+@pytest.mark.skip(reason="NI")
+def test_base_batch_hopfield_cleanup():
+    """
+    Test the functionality of the _base_batch_resonator_cleanup
+    function
+    """
