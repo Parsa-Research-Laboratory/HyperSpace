@@ -3566,21 +3566,304 @@ def test_backend_resonator_cleanup_num_iters_lt_one():
     with pytest.raises(ValueError):
         b._resonator_cleanup(v, c, i)
 
-@pytest.mark.skip(reason="NI")
-def test_backend_resonator_cleanup_single_memory():
+def test_backend_resonator_cleanup_single_memory_single_iter():
     """
-    Test that the backend's resonator cleanup method works correctly
-    with a single memory
-    """
-    pass
+    Single-step resonator cleanup should move the query toward the correct stored pattern.
 
-@pytest.mark.skip(reason="NI")
-def test_backend_resonator_cleanup_batched_memory():
+    Checks:
+      1) output sanity
+      2) cosine similarity to true memory improves after one step
+      3) (optional) sims sanity if returned
     """
-    Test that the backend's resonator cleanup method works correctly
-    with a batch of memories
+    import torch
+    from hyperspace.backends import HRRBackend
+
+    torch.manual_seed(0)
+
+    D: int = 1024
+    C: int = 3
+    true_idx: int = 0
+    noise_scale: float = 0.15
+
+    b = HRRBackend(vector_dim=D)
+
+    codebook_list = [b.create_random_vector() for _ in range(C)]
+    codebook = torch.stack(codebook_list, dim=0)
+    assert codebook.shape == (C, D)
+
+    v_true = codebook_list[true_idx]
+    v_noisy = v_true + noise_scale * torch.randn_like(v_true)
+    assert v_noisy.shape == (D,)
+
+    eps = 1e-12
+
+    def cosine_to_codebook(x: torch.Tensor, cb: torch.Tensor) -> torch.Tensor:
+        x = x / (x.norm() + eps)
+        cb = cb / (cb.norm(dim=-1, keepdim=True) + eps)
+        return cb @ x  # (C,)
+
+    s_before = cosine_to_codebook(v_noisy, codebook)
+    true_sim_before = float(s_before[true_idx].item())
+
+    # ---- call resonator cleanup for a single iter ----
+    # If your API differs, update this line accordingly.
+    v_pred, info = b._resonator_cleanup(v_noisy, codebook, num_iters=1)
+
+    assert isinstance(v_pred, torch.Tensor)
+    assert v_pred.shape == (D,)
+    assert torch.isfinite(v_pred).all()
+
+    s_after = cosine_to_codebook(v_pred, codebook)
+    true_sim_after = float(s_after[true_idx].item())
+
+    # Directional improvement (best single-step invariant for resonator)
+    assert true_sim_after > true_sim_before + 1e-4, (
+        f"Single-step resonator did not improve true similarity. "
+        f"before={true_sim_before:.6f}, after={true_sim_after:.6f}, "
+        f"s_before={s_before.tolist()}, s_after={s_after.tolist()}"
+    )
+
+    # Optional sims sanity if available (expects sims_history list[(B,C)] or a single sims tensor)
+    sims = None
+    if isinstance(info, dict):
+        if "sims_history" in info and len(info["sims_history"]) > 0:
+            sims = info["sims_history"][-1]
+        elif "sims" in info:
+            sims = info["sims"]
+
+    if isinstance(sims, torch.Tensor):
+        if sims.ndim == 2 and sims.shape[0] == 1:
+            sims = sims.squeeze(0)
+        if sims.ndim == 1 and sims.numel() == C:
+            assert torch.isfinite(sims).all()
+            # if you normalize internally, sims should look like cosine similarities
+            assert sims.max().item() <= 1.0 + 1e-5
+            assert sims.min().item() >= -1.0 - 1e-5
+
+
+def test_backend_resonator_cleanup_single_memory_converges_over_iterations():
     """
-    pass
+    Multi-iteration resonator cleanup should converge toward the correct stored memory
+    with a reasonable success rate across seeds.
+
+    Checks:
+      1) output sanity
+      2) final retrieved index matches true memory
+      3) true similarity improves from noisy query
+      4) (optional) sims on true index trends upward from first to last iter
+    """
+    import torch
+    from hyperspace.backends import HRRBackend
+
+    D: int = 1024
+    C: int = 3
+    true_idx: int = 0
+
+    num_iters: int = 8
+    noise_scale: float = 0.20
+
+    trials: int = 10
+    required_success_rate: float = 0.8
+
+    eps = 1e-12
+
+    def cosine_to_codebook(x: torch.Tensor, cb: torch.Tensor) -> torch.Tensor:
+        x = x / (x.norm() + eps)
+        cb = cb / (cb.norm(dim=-1, keepdim=True) + eps)
+        return cb @ x  # (C,)
+
+    successes = 0
+
+    for seed in range(trials):
+        torch.manual_seed(seed)
+        b = HRRBackend(vector_dim=D)
+
+        codebook_list = [b.create_random_vector() for _ in range(C)]
+        codebook = torch.stack(codebook_list, dim=0)
+        assert codebook.shape == (C, D)
+
+        v_true = codebook_list[true_idx]
+        v_noisy = v_true + noise_scale * torch.randn_like(v_true)
+
+        s_before = cosine_to_codebook(v_noisy, codebook)
+        true_sim_before = float(s_before[true_idx].item())
+
+        # ---- call resonator cleanup for multiple iters ----
+        v_out, info = b._resonator_cleanup(v_noisy, codebook, num_iters=num_iters)
+
+        assert isinstance(v_out, torch.Tensor)
+        assert v_out.shape == (D,)
+        assert torch.isfinite(v_out).all()
+
+        s_after = cosine_to_codebook(v_out, codebook)
+        pred_after = int(torch.argmax(s_after).item())
+        true_sim_after = float(s_after[true_idx].item())
+
+        improved = true_sim_after > true_sim_before + 1e-4
+        correct = (pred_after == true_idx)
+
+        sims_ok = True
+        if isinstance(info, dict) and "sims_history" in info:
+            sims_hist = info["sims_history"]
+            true_mass = []
+            for s in sims_hist:
+                if isinstance(s, torch.Tensor):
+                    if s.ndim == 2 and s.shape[0] == 1:
+                        s = s.squeeze(0)
+                    if s.ndim == 1 and s.numel() == C:
+                        true_mass.append(float(s[true_idx].item()))
+            if len(true_mass) >= 2:
+                sims_ok = (true_mass[-1] >= true_mass[0] - 1e-4)
+
+        if improved and correct and sims_ok:
+            successes += 1
+
+    assert successes >= int(required_success_rate * trials), (
+        f"Resonator convergence success-rate too low: {successes}/{trials}. "
+        f"(required >= {int(required_success_rate * trials)}/{trials}) "
+        f"Try reducing noise_scale or increasing num_iters, and ensure normalization is consistent."
+    )
+
+
+def test_backend_resonator_cleanup_single_step_batched_improves_true_alignment():
+    """
+    Batched single-step resonator cleanup should move each query toward its correct stored pattern.
+    """
+    import torch
+    from hyperspace.backends import HRRBackend
+
+    torch.manual_seed(0)
+
+    D: int = 1024
+    C: int = 8
+    B: int = 16
+    noise_scale: float = 0.15
+
+    b = HRRBackend(vector_dim=D)
+
+    codebook_list = [b.create_random_vector() for _ in range(C)]
+    codebook = torch.stack(codebook_list, dim=0)
+    assert codebook.shape == (C, D)
+
+    true_idx = torch.randint(low=0, high=C, size=(B,))
+    v_true = codebook[true_idx]  # (B, D)
+    v_noisy = v_true + noise_scale * torch.randn_like(v_true)
+    assert v_noisy.shape == (B, D)
+
+    eps = 1e-12
+
+    def cosine_to_codebook(x: torch.Tensor, cb: torch.Tensor) -> torch.Tensor:
+        x = x / (x.norm(dim=-1, keepdim=True) + eps)
+        cbn = cb / (cb.norm(dim=-1, keepdim=True) + eps)
+        return x @ cbn.T  # (B, C)
+
+    s_before = cosine_to_codebook(v_noisy, codebook)
+    true_sim_before = s_before.gather(1, true_idx.view(-1, 1)).squeeze(1)
+
+    # ---- batched single-iter resonator cleanup ----
+    v_pred, info = b._resonator_cleanup(v_noisy, codebook, num_iters=1)
+
+    assert isinstance(v_pred, torch.Tensor)
+    assert v_pred.shape == (B, D)
+    assert torch.isfinite(v_pred).all()
+
+    s_after = cosine_to_codebook(v_pred, codebook)
+    true_sim_after = s_after.gather(1, true_idx.view(-1, 1)).squeeze(1)
+
+    improved = true_sim_after > true_sim_before + 1e-4
+    assert bool(improved.all().item()), (
+        "Some batch elements did not improve true similarity in a single resonator step.\n"
+        f"true_idx={true_idx.tolist()}\n"
+        f"true_sim_before={true_sim_before.tolist()}\n"
+        f"true_sim_after ={true_sim_after.tolist()}\n"
+    )
+
+    # Optional sims sanity
+    if isinstance(info, dict) and "sims_history" in info and len(info["sims_history"]) > 0:
+        sims = info["sims_history"][-1]
+        if isinstance(sims, torch.Tensor) and sims.ndim == 2 and sims.shape == (B, C):
+            assert torch.isfinite(sims).all()
+
+
+def test_backend_resonator_cleanup_converges_over_iterations_batched():
+    """
+    Batched multi-iteration resonator cleanup should converge so each query retrieves
+    its correct stored pattern.
+    """
+    import torch
+    from hyperspace.backends import HRRBackend
+
+    torch.manual_seed(0)
+
+    D: int = 1024
+    C: int = 8
+    B: int = 16
+
+    num_iters: int = 8
+    noise_scale: float = 0.20
+
+    b = HRRBackend(vector_dim=D)
+
+    codebook_list = [b.create_random_vector() for _ in range(C)]
+    codebook = torch.stack(codebook_list, dim=0)
+    assert codebook.shape == (C, D)
+
+    true_idx = torch.randint(low=0, high=C, size=(B,))
+    v_true = codebook[true_idx]
+    v_noisy = v_true + noise_scale * torch.randn_like(v_true)
+    assert v_noisy.shape == (B, D)
+
+    eps = 1e-12
+
+    def cosine_to_codebook(x: torch.Tensor, cb: torch.Tensor) -> torch.Tensor:
+        x = x / (x.norm(dim=-1, keepdim=True) + eps)
+        cbn = cb / (cb.norm(dim=-1, keepdim=True) + eps)
+        return x @ cbn.T  # (B, C)
+
+    s_before = cosine_to_codebook(v_noisy, codebook)
+    true_sim_before = s_before.gather(1, true_idx.view(-1, 1)).squeeze(1)
+
+    v_out, info = b._resonator_cleanup(v_noisy, codebook, num_iters=num_iters)
+
+    assert isinstance(v_out, torch.Tensor)
+    assert v_out.shape == (B, D)
+    assert torch.isfinite(v_out).all()
+
+    s_after = cosine_to_codebook(v_out, codebook)
+    pred_after = torch.argmax(s_after, dim=-1)
+    true_sim_after = s_after.gather(1, true_idx.view(-1, 1)).squeeze(1)
+
+    correct = (pred_after == true_idx)
+    assert bool(correct.all().item()), (
+        "Some batch elements retrieved the wrong index after resonator convergence.\n"
+        f"true_idx={true_idx.tolist()}\n"
+        f"pred_after={pred_after.tolist()}\n"
+    )
+
+    improved = true_sim_after > true_sim_before + 1e-4
+    assert bool(improved.all().item()), (
+        "Some batch elements did not improve true similarity after resonator convergence.\n"
+        f"true_sim_before={true_sim_before.tolist()}\n"
+        f"true_sim_after ={true_sim_after.tolist()}\n"
+    )
+
+    # Optional: sims trajectory sanity (true sims should not decrease from first to last iter)
+    if isinstance(info, dict) and "sims_history" in info:
+        sims_hist = info["sims_history"]
+        if isinstance(sims_hist, list) and len(sims_hist) >= 2:
+            s0, sT = sims_hist[0], sims_hist[-1]
+            if (
+                isinstance(s0, torch.Tensor) and isinstance(sT, torch.Tensor)
+                and s0.ndim == 2 and sT.ndim == 2
+                and s0.shape == (B, C) and sT.shape == (B, C)
+            ):
+                true_mass_0 = s0.gather(1, true_idx.view(-1, 1)).squeeze(1)
+                true_mass_T = sT.gather(1, true_idx.view(-1, 1)).squeeze(1)
+                assert bool((true_mass_T >= true_mass_0 - 1e-4).all().item()), (
+                    "Some batch elements did not increase (or maintain) sims on the true index.\n"
+                    f"true_mass_0={true_mass_0.tolist()}\n"
+                    f"true_mass_T={true_mass_T.tolist()}\n"
+                )
 
 def test_backend_hopfield_cleanup_v_non_tensor():
     """
