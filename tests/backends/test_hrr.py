@@ -3480,13 +3480,25 @@ def test_backend_resonator_cleanup_batched_memory():
     """
     pass
 
-@pytest.mark.skip(reason="NI")
 def test_backend_hopfield_cleanup_v_non_tensor():
     """
     Test that the backend's hopfield cleanup method
     throws an error when v is not a Tensor
     """
-    pass
+    import numpy as np
+    import torch
+    from hyperspace.backends import HRRBackend
+
+    D: int = 1024
+    B: int = 64
+
+    b = HRRBackend(vector_dim=D)
+
+    v = np.random.random((D,))
+    codebook = torch.rand((B, D))
+
+    with pytest.raises(TypeError):
+        b._hopfield_cleanup(v, codebook)
 
 @pytest.mark.skip(reason="NI")
 def test_backend_hopfield_cleanup_codebook_non_tensor():
