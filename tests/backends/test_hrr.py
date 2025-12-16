@@ -3478,13 +3478,28 @@ def test_backend_resonator_cleanup_v_vector_dim_missmatch():
     with pytest.raises(ValueError):
         b._resonator_cleanup(v_2d_large, codebook)
 
-@pytest.mark.skip(reason="NI")
 def test_backend_resonator_cleanup_codebook_shape_missmatch():
     """
     Test that the backend's resonator cleanup method throws an
     error when the dimensionality of the codebook doesn't match
     """
-    pass
+    import torch
+    from hyperspace.backends import HRRBackend
+
+    D: int = 1024
+    B: int = 64
+
+    b = HRRBackend(vector_dim=D)
+
+    v = torch.rand((B, D))
+    codebook_small = torch.rand((D,))
+    codebook_large = torch.rand((B, B, D))
+
+    with pytest.raises(ValueError):
+        b._resonator_cleanup(v, codebook_small)
+
+    with pytest.raises(ValueError):
+        b._resonator_cleanup(v, codebook_large)
 
 @pytest.mark.skip(reason="NI")
 def test_backend_resonator_cleanup_codebook_vector_dim_missmatch():
