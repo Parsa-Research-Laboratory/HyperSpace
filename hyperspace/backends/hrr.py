@@ -1553,6 +1553,9 @@ class HRRBackend(BaseBackend):
         if codebook.shape[-1] != self.vector_dim:
             raise ValueError(f"Expected the last dimension of codebook to match vector_dim; got {codebook.shape[-1]}")
         
+        if num_iters < 1:
+            raise ValueError(f"Expected num_iters to be >= 1; got {num_iters}")
+        
         # -----------------------
         # Batch handling
         # -----------------------

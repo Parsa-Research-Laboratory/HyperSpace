@@ -3545,13 +3545,26 @@ def test_backend_resonator_cleanup_num_iters_non_int():
     with pytest.raises(TypeError):
         b._resonator_cleanup(v, c, i)
 
-@pytest.mark.skip(reason="NI")
 def test_backend_resonator_cleanup_num_iters_lt_one():
     """
     Test that the backend's resonator cleanup method throws an error
     when the number of iterations is less than one
     """
-    pass
+    import torch
+    from hyperspace.backends import HRRBackend
+
+    D: int = 1024
+    B: int = 3
+    C: int = 64
+
+    v = torch.rand((B, D))
+    c = torch.rand((C, D))
+    i = 0
+
+    b = HRRBackend(vector_dim=D)
+
+    with pytest.raises(ValueError):
+        b._resonator_cleanup(v, c, i)
 
 @pytest.mark.skip(reason="NI")
 def test_backend_resonator_cleanup_single_memory():
