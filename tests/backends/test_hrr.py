@@ -3783,13 +3783,26 @@ def test_backend_hopfield_cleanup_temp_type():
     with pytest.raises(TypeError):
         b._hopfield_cleanup(v, c, temperature=t)
 
-@pytest.mark.skip(reason="NI")
 def test_backend_hopfield_cleanup_temp_range():
     """
     Test that the backend's hopfield cleanup method throws an error
     when temperature is not in the valid range
     """
-    pass
+    import torch
+    from hyperspace.backends import HRRBackend
+
+    D: int = 1024
+    B: int = 3
+    C: int = 64
+
+    v = torch.rand((B, D))
+    c = torch.rand((C, D))
+    t = 0.0
+
+    b = HRRBackend(vector_dim=D)
+
+    with pytest.raises(ValueError):
+        b._hopfield_cleanup(v, c, temperature=t)
 
 @pytest.mark.skip(reason="NI")
 def test_backend_hopfield_cleanup_single_memory():
