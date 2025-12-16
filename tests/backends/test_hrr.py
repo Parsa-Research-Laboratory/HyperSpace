@@ -3524,13 +3524,26 @@ def test_backend_resonator_cleanup_codebook_vector_dim_missmatch():
     with pytest.raises(ValueError):
         b._resonator_cleanup(v, codebook_large)
 
-@pytest.mark.skip(reason="NI")
 def test_backend_resonator_cleanup_num_iters_non_int():
     """
     Test that the backend's resonator cleanup method throws an error
     when the number of iterations isn't an integer
     """
-    pass
+    import torch
+    from hyperspace.backends import HRRBackend
+
+    D: int = 1024
+    B: int = 3
+    C: int = 64
+
+    v = torch.rand((B, D))
+    c = torch.rand((C, D))
+    i = "None"
+
+    b = HRRBackend(vector_dim=D)
+
+    with pytest.raises(TypeError):
+        b._resonator_cleanup(v, c, i)
 
 @pytest.mark.skip(reason="NI")
 def test_backend_resonator_cleanup_num_iters_lt_one():
@@ -3671,13 +3684,28 @@ def test_backend_hopfield_cleanup_codebook_shape_missmatch():
     with pytest.raises(ValueError):
         b._hopfield_cleanup(v, codebook_large)
 
-@pytest.mark.skip(reason="NI")
 def test_backend_hopfield_cleanup_codebook_vector_dim_missmatch():
     """
     Test that the backend's hopfield cleanup method throws an error
     when the vector dim of the codebook doesn't match
     """
-    pass
+    import torch
+    from hyperspace.backends import HRRBackend
+
+    D: int = 1024
+    B: int = 64
+
+    b = HRRBackend(vector_dim=D)
+
+    v = torch.rand((B, D))
+    codebook_small = torch.rand((B, D - 1))
+    codebook_large = torch.rand((B, D + 1))
+
+    with pytest.raises(ValueError):
+        b._hopfield_cleanup(v, codebook_small)
+
+    with pytest.raises(ValueError):
+        b._hopfield_cleanup(v, codebook_large)
 
 @pytest.mark.skip(reason="NI")
 def test_backend_hopfield_cleanup_num_iters_non_int():
