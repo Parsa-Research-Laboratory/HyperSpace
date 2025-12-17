@@ -293,12 +293,41 @@ def test_cm_call_v_shape():
     with pytest.raises(ValueError):
         cm(v)
 
-@pytest.mark.skip(reason="NI")
 def test_cm_call_v_dim():
     """
-    
+    test that the call method checks the dimensionality
+    of v
     """
-    pass
+    import torch
+    from hyperspace.backends import HRRBackend
+    from hyperspace.core import CleanupModule
+
+    D: int = 1024
+    B: int = 64
+
+    codebook = torch.rand((B, D))
+    b = HRRBackend(vector_dim=D)
+    cm = CleanupModule(
+        backend=b,
+        codebook=codebook
+    )
+
+    v_single_small = torch.rand((D - 1,))
+    v_single_large = torch.rand((D + 1,))
+    v_batch_small = torch.rand((B, D - 1))
+    v_batch_large = torch.rand((B, D + 1))
+
+    with pytest.raises(ValueError):
+        cm(v_single_small)
+
+    with pytest.raises(ValueError):
+        cm(v_single_large)
+
+    with pytest.raises(ValueError):
+        cm(v_batch_small)
+
+    with pytest.raises(ValueError):
+        cm(v_batch_large)
 
 @pytest.mark.skip(reason="NI")
 def test_cm_call_missing_method():
