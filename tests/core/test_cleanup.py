@@ -244,12 +244,30 @@ def test_cm_call_missing_v():
     with pytest.raises(TypeError):
         cm()
 
-@pytest.mark.skip(reason="NI")
 def test_cm_call_v_type():
     """
-    
+    test that calling the cleanup module with a vector that
+    is Tensor throws an error
     """
-    pass
+    import numpy as np
+    import torch
+    from hyperspace.backends import HRRBackend
+    from hyperspace.core import CleanupModule
+
+    D: int = 1024
+    B: int = 64
+
+    codebook = torch.rand((B, D))
+    b = HRRBackend(vector_dim=D)
+    cm = CleanupModule(
+        backend=b,
+        codebook=codebook
+    )
+
+    v = np.random.random((B, D))
+
+    with pytest.raises(TypeError):
+        cm(v)
 
 @pytest.mark.skip(reason="NI")
 def test_cm_call_v_shape():
