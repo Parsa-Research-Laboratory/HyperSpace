@@ -222,12 +222,27 @@ def test_cm_constructor_codebook_dim():
     with pytest.raises(ValueError):
         CleanupModule(b, codebook_large)
 
-@pytest.mark.skip(reason="NI")
 def test_cm_call_missing_v():
     """
-    
+    Test that calling the cleanup module without a vector
+    throws an error
     """
-    pass
+    import torch
+    from hyperspace.backends import HRRBackend
+    from hyperspace.core import CleanupModule
+
+    D: int = 1024
+    B: int = 64
+
+    codebook = torch.rand((B, D))
+    b = HRRBackend(vector_dim=D)
+    cm = CleanupModule(
+        backend=b,
+        codebook=codebook
+    )
+
+    with pytest.raises(TypeError):
+        cm()
 
 @pytest.mark.skip(reason="NI")
 def test_cm_call_v_type():
