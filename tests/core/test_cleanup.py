@@ -344,13 +344,6 @@ def test_cm_call_non_string_method():
     pass
 
 @pytest.mark.skip(reason="NI")
-def test_cm_call_invalid_method():
-    """
-    
-    """
-    pass
-
-@pytest.mark.skip(reason="NI")
 def test_cm_call_single_value_predef_codebook_resonator():
     """
     
