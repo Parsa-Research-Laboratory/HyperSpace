@@ -67,4 +67,14 @@ class RegressionModule(BaseModule):
         """
         Apply the specified regression method to the input tensor.
         """
+
+        if not isinstance(v, Tensor):
+            raise TypeError(f"Expected v to be a Tensor; got {type(v)}")
+        
+        if v.ndim not in [1, 2]:
+            raise ValueError(f"Expected v to be a 1D or 2D Tensor; got shape {v.shape}")
+        
+        if v.shape[-1] != self.backend.vector_dim:
+            raise ValueError(f"Expected dimensionality of v to match the backend; got {v.shape[-1]} and {self.backend.vector_dim}")
+
         return self.backend.regression(v, v, v)
