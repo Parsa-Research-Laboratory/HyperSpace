@@ -56,3 +56,99 @@ def test_rm_invalid_backend():
 
     with pytest.raises(TypeError):
         _ = RegressionModule(5, c, v)
+
+@pytest.mark.skip()
+def test_rm_codebook_invalid_type():
+    """
+    Test that the regression module throws an error when
+    the codebook isn't a Tensor
+    """
+    pass
+
+@pytest.mark.skip()
+def test_rm_codebook_invalid_shape():
+    """
+    Test that the regression module throws an error when
+    the codebook isn't the correct shape
+    """
+    pass
+
+@pytest.mark.skip()
+def test_rm_codebook_invalid_dim():
+    """
+    Test that the regression module throws an error when
+    the codebook doesn't have the correct dimensionality
+    """
+    pass
+
+@pytest.mark.skip()
+def test_rm_values_invalid_type():
+    """
+    Test that the regression module throws an error when
+    the values isn't a Tensor
+    """
+    pass
+
+@pytest.mark.skip()
+def test_rm_values_invalid_shape():
+    """
+    Test that the regression module throws an error when
+    the values isn't the correct shape
+    """
+    pass
+
+@pytest.mark.skip()
+def test_rm_values_invalid_dim():
+    """
+    Test that the regression module throws an error when
+    the values doesn't have the correct dimensionality
+    """
+    pass
+
+@pytest.mark.skip()
+def test_rm_method_invalid_type():
+    """
+    Test that the regression module throws an error when
+    the method doesn't have the correct type
+    """
+    pass
+
+@pytest.mark.skip()
+def test_rm_method_invalid_value():
+    """
+    Test that the regression module throws an error when
+    the method doesn't match the list of valid methods
+    """
+    pass
+
+@pytest.mark.skip()
+def test_rm_call_missing_v():
+    """
+    Test that calling the regression module without a vector
+    throws an error
+    """
+    pass
+
+@pytest.mark.skip()
+def test_rm_call_v_type():
+    """
+    test that calling the regression module with a vector that
+    is Tensor throws an error
+    """
+    pass
+
+@pytest.mark.skip()
+def test_rm_call_v_shape():
+    """
+    test that calling the regression module with a vector
+    with an invalid shape throws an error
+    """
+    pass
+
+@pytest.mark.skip()
+def test_rm_call_v_dim():
+    """
+    test that the call method checks the dimensionality
+    of v
+    """
+    pass
