@@ -355,12 +355,31 @@ def test_cm_call_missing_method():
     with pytest.raises(ValueError):
         cm(v, method)
 
-@pytest.mark.skip(reason="NI")
 def test_cm_call_non_string_method():
     """
-    
+    test that the call method throws an error when the
+    requested method isn't a string
     """
-    pass
+    import torch
+    from hyperspace.backends import HRRBackend
+    from hyperspace.core import CleanupModule
+
+    D: int = 1024
+    B: int = 64
+
+    codebook = torch.rand((B, D))
+    b = HRRBackend(vector_dim=D)
+    cm = CleanupModule(
+        backend=b,
+        codebook=codebook
+    )
+
+    method = int(20)
+
+    v = torch.rand((D,))
+
+    with pytest.raises(ValueError):
+        cm(v, method)
 
 @pytest.mark.skip(reason="NI")
 def test_cm_call_single_value_predef_codebook_resonator():
