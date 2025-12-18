@@ -350,20 +350,6 @@ def test_not_implemented_regression():
     with pytest.raises(NotImplementedError):
         b.regression(dt1, method)
 
-def test_not_implemented_cleanup():
-    """
-    ensure the `cleanup` method is not implemented
-    """
-    from hyperspace.backends.base import BaseBackend
-    import torch
-
-    b = BaseBackend()
-    dt1: torch.Tensor = torch.zeros(1)
-    method: str = "resonator"
-
-    with pytest.raises(NotImplementedError):
-        b.cleanup(dt1, method)
-
 def test_not_implemented_initialize_env_basis_vectors():
     """
     ensure the `initialize_env_basis_vectors` method is not implemented
@@ -423,7 +409,7 @@ def test_not_implemented_resonator_cleanup():
     dt1: torch.Tensor = torch.zeros(0)
 
     with pytest.raises(NotImplementedError):
-        b._resonator_cleanup(dt1)
+        b._resonator_cleanup(dt1, dt1, 1)
 
 def test_not_implemented_hopfield_cleanup():
     """
@@ -436,4 +422,4 @@ def test_not_implemented_hopfield_cleanup():
     dt1: torch.Tensor = torch.zeros(0)
 
     with pytest.raises(NotImplementedError):
-        b._hopfield_cleanup(dt1)
+        b._hopfield_cleanup(dt1, dt1, 1)

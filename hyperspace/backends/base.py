@@ -1,7 +1,7 @@
 import torch
 from torch import Tensor
 import torch.nn as nn
-from typing import Tuple
+from typing import Optional, Tuple
 
 class BaseBackend(nn.Module):
     """
@@ -110,7 +110,7 @@ class BaseBackend(nn.Module):
         """
         raise NotImplementedError("value_encoding method must be implemented by subclasses.")
     
-    def bind(self, a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
+    def bind(self, a: Tensor, b: Optional[Tensor] = None) -> Tuple[Tensor, dict]:
         """
         Abstract definition of the binding operation (\\otimes)
         from the HyperSpace paper.
@@ -129,7 +129,7 @@ class BaseBackend(nn.Module):
         """
         raise NotImplementedError("binding method must be implemented by subclasses.")
     
-    def bundle(self, a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
+    def bundle(self, a: Tensor, b: Optional[Tensor] = None) -> Tuple[Tensor, dict]:
         """
         Abstract definition of the bundling operation (\\oplus)
         from the HyperSpace paper.
@@ -148,7 +148,7 @@ class BaseBackend(nn.Module):
         """
         raise NotImplementedError("bundling method must be implemented by subclasses.")
     
-    def similarity(self, a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
+    def similarity(self, a: Tensor, b: Tensor) -> Tuple[Tensor, dict]:
         """
         Abstract definition of the similarity measure
         from the HyperSpace paper.
@@ -167,7 +167,7 @@ class BaseBackend(nn.Module):
         """
         raise NotImplementedError("similarity method must be implemented by subclasses.")
     
-    def normalize(self, tensor: torch.Tensor) -> torch.Tensor:
+    def normalize(self, x: Tensor) -> Tuple[Tensor, dict]:
         """
         Abstract definition of the normalization method
         from the HyperSpace paper.
@@ -184,7 +184,7 @@ class BaseBackend(nn.Module):
         """
         raise NotImplementedError("normalize method must be implemented by subclasses.")
     
-    def invert(self, tensor: torch.Tensor) -> torch.Tensor:
+    def invert(self, x: Tensor) -> Tuple[Tensor, dict]:
         """
         Abstract definition of the inversion method
         from the HyperSpace paper.
@@ -201,7 +201,7 @@ class BaseBackend(nn.Module):
         """
         raise NotImplementedError("invert method must be implemented by subclasses.")
     
-    def weight(self, tensor: torch.Tensor, weight: float) -> torch.Tensor:
+    def weight(self, x: Tensor, w: Tensor) -> Tuple[Tensor, dict]:
         """
         Abstract definition of the weighting method
         from the HyperSpace paper.
@@ -248,39 +248,6 @@ class BaseBackend(nn.Module):
             raise ValueError(f"Unknown regression method: {method}")
 
         return values
-    
-    def cleanup(self, tensor: torch.Tensor, method: str = "resonator") -> torch.Tensor:
-        """
-        Abstract definition of the cleanup method
-        from the HyperSpace paper.
-
-        Arguments:
-        ----------
-        tensor : torch.Tensor
-            Tensor to be cleaned up. Shape should be (batch_size, self.vectorD).
-        method : str
-            Cleanup method to be used. Default is "resonator". Other options could be
-            "identity" or "hopfield".
-    
-        Returns:
-        -------
-        torch.Tensor
-            Cleaned up tensor. Shape should be (batch_size, vectorD).
-        """
-        if method == "resonator":
-            # Apply resonator cleanup
-            cleaned_vectors = self._resonator_cleanup(tensor)
-        elif method == "identity":
-            # pass through operation
-            cleaned_vectors = tensor
-        elif method == "hopfield":
-            # Apply hopfield network cleanup
-            cleaned_vectors = self._hopfield_cleanup(tensor)
-
-        else:
-            raise ValueError(f"Unknown cleanup method: {method}")
-
-        return cleaned_vectors
     
     def initialize_env_basis_vectors(self, env_dim: int) -> None:
         """
@@ -336,7 +303,7 @@ class BaseBackend(nn.Module):
         """
         raise NotImplementedError("_neural_network_regression method must be implemented by subclasses.")
     
-    def _resonator_cleanup(self, tensor: torch.Tensor) -> torch.Tensor:
+    def _resonator_cleanup(self, x: Tensor, codebook: Tensor, num_iters: int) -> Tuple[Tensor, dict]:
         """
         Private method to perform resonator cleanup.
 
@@ -352,7 +319,7 @@ class BaseBackend(nn.Module):
         """
         raise NotImplementedError("_resonator_cleanup method must be implemented by subclasses.")
     
-    def _hopfield_cleanup(self, tensor: torch.Tensor) -> torch.Tensor:
+    def _hopfield_cleanup(self, x: Tensor, codebook: Tensor, num_iters: int) -> Tuple[Tensor, dict]:
         """
         Private method to perform hopfield network cleanup.
 
