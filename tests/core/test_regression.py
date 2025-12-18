@@ -358,3 +358,4 @@ def test_rm_has_network_ready_attribute():
     rm = RegressionModule(b, c, v)
 
     assert hasattr(rm, "network_ready")
+    assert rm.network_ready == False

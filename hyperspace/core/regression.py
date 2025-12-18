@@ -13,6 +13,7 @@ class RegressionModule(BaseModule):
     """
 
     valid_methods: List[str] = ["codebook"]
+    network_needed: bool = False
     network_ready: bool = False
 
     def __init__(self, backend: BaseBackend, codebook: Tensor, values: Tensor,
@@ -63,6 +64,9 @@ class RegressionModule(BaseModule):
         
         if method not in self.valid_methods:
             raise ValueError(f"Expected method to be on of [{self.valid_methods}]; got {method}")
+        
+        if method in ["neural"]:
+            self.network_needed = True
 
     def __call__(self, v: Tensor) -> Tensor:
         """
