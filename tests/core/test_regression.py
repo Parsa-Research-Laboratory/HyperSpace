@@ -254,13 +254,30 @@ def test_rm_call_missing_v():
     with pytest.raises(TypeError):
         rm()
 
-@pytest.mark.skip()
 def test_rm_call_v_type():
     """
     test that calling the regression module with a vector that
     is Tensor throws an error
     """
-    pass
+    import numpy as np
+    import torch
+    from hyperspace.backends import HRRBackend
+    from hyperspace.core import RegressionModule
+    
+    D: int = 1024
+    B: int = 16
+    V: int = 3
+
+    b = HRRBackend(vector_dim=D, value_dim=V)
+    c = torch.rand((B, D))
+    v = torch.rand((B, V))
+
+    rm = RegressionModule(b, c, v)
+
+    inp = np.random.random((B, D))
+
+    with pytest.raises(TypeError):
+        rm(inp)
 
 @pytest.mark.skip()
 def test_rm_call_v_shape():
