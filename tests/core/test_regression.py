@@ -284,7 +284,6 @@ def test_rm_call_v_shape():
     test that calling the regression module with a vector
     with an invalid shape throws an error
     """
-    import numpy as np
     import torch
     from hyperspace.backends import HRRBackend
     from hyperspace.core import RegressionModule
