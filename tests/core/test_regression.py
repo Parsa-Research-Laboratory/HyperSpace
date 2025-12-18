@@ -57,13 +57,25 @@ def test_rm_invalid_backend():
     with pytest.raises(TypeError):
         _ = RegressionModule(5, c, v)
 
-@pytest.mark.skip()
 def test_rm_codebook_invalid_type():
     """
     Test that the regression module throws an error when
     the codebook isn't a Tensor
     """
-    pass
+    import numpy as np
+    import torch
+    from hyperspace.backends.hrr import HRRBackend
+    from hyperspace.core.regression import RegressionModule
+
+    D: int = 1024
+    B: int = 16
+
+    b = HRRBackend(vector_dim=D)
+    c = np.random.random((B, D))
+    v = torch.rand((B, 1))
+
+    with pytest.raises(TypeError):
+        _ = RegressionModule(b, c, v)
 
 @pytest.mark.skip()
 def test_rm_codebook_invalid_shape():
