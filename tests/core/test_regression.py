@@ -303,10 +303,38 @@ def test_rm_call_v_shape():
     with pytest.raises(ValueError):
         rm(inp)
 
-@pytest.mark.skip()
 def test_rm_call_v_dim():
     """
     test that the call method checks the dimensionality
     of v
     """
-    pass
+    import torch
+    from hyperspace.backends import HRRBackend
+    from hyperspace.core import RegressionModule
+    
+    D: int = 1024
+    B: int = 16
+    V: int = 3
+
+    b = HRRBackend(vector_dim=D, value_dim=V)
+    c = torch.rand((B, D))
+    v = torch.rand((B, V))
+
+    rm = RegressionModule(b, c, v)
+
+    inp_single_small = torch.rand((D - 1,))
+    inp_single_large = torch.rand((D + 1,))
+    inp_batch_small = torch.rand((B, D - 1))
+    inp_batch_large = torch.rand((B, D + 1))
+
+    with pytest.raises(ValueError):
+        rm(inp_single_small)
+
+    with pytest.raises(ValueError):
+        rm(inp_single_large)
+
+    with pytest.raises(ValueError):
+        rm(inp_batch_small)
+
+    with pytest.raises(ValueError):
+        rm(inp_batch_large)
