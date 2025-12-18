@@ -380,3 +380,25 @@ def test_rm_has_network_needed_attribute():
 
     assert hasattr(rm, "network_needed")
     assert rm.network_needed == False
+
+def test_rm_network_needed_with_neural():
+    """
+    test that the regression module shows it needs a neural network
+    when 'neural' is specified
+    """
+    import torch
+    from hyperspace.backends import HRRBackend
+    from hyperspace.core import RegressionModule
+
+    D: int = 1024
+    B: int = 16
+    V: int = 3
+
+    b = HRRBackend(vector_dim=D, value_dim=V)
+    c = torch.rand((B, D))
+    v = torch.rand((B, V))
+
+    rm = RegressionModule(b, c, v, method="neural")
+
+    assert hasattr(rm, "network_needed")
+    assert rm.network_needed == True
