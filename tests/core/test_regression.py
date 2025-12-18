@@ -402,3 +402,19 @@ def test_rm_network_needed_with_neural():
 
     assert hasattr(rm, "network_needed")
     assert rm.network_needed == True
+
+@pytest.mark.skip()
+def test_rm_call_with_no_loaded_network():
+    """
+    test that the regression module throws an error when operating
+    in neural mode and called without a loaded network
+    """
+    pass
+
+@pytest.mark.skip()
+def test_rm_call_with_unneeded_loaded_network():
+    """
+    test that the regression module throws an error when not operating
+    in neural model and a network is loaded
+    """
+    pass
