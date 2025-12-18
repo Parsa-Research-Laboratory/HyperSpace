@@ -410,55 +410,31 @@ def test_cm_call_non_string_method():
 @pytest.mark.skip(reason="NI")
 def test_cm_call_single_value_predef_codebook_resonator():
     """
-    
+    test the cleanup ability of the cleanup module with a
+    single vector, predefined codebook and a resonator
     """
     pass
 
 @pytest.mark.skip(reason="NI")
 def test_cm_call_single_value_derived_codebook_resonator():
     """
-    
+    test the cleanup ability of the cleanup module with a
+    single vectors, derived, and a resonator
     """
     pass
 
 @pytest.mark.skip(reason="NI")
 def test_cm_call_multi_value_predef_codebook_hopfield():
     """
-    
+    test the cleanup ability of the cleanup module with a
+    batch of vectors, a predefined codebook, and a hopfield
     """
     pass
 
 @pytest.mark.skip(reason="NI")
 def test_cm_call_multi_value_derived_codebook_hopfield():
     """
-    
-    """
-    pass
-
-@pytest.mark.skip(reason="NI")
-def test_cm_call_single_value_predef_codebook():
-    """
-    
-    """
-    pass
-
-@pytest.mark.skip(reason="NI")
-def test_cm_call_single_value_derived_codebook():
-    """
-    
-    """
-    pass
-
-@pytest.mark.skip(reason="NI")
-def test_cm_call_multi_value_predef_codebook():
-    """
-    
-    """
-    pass
-
-@pytest.mark.skip(reason="NI")
-def test_cm_call_multi_value_derived_codebook():
-    """
-    
+    test the cleanup ability of the cleanup module with a
+    batch of vectors, a derived codebook, and a hopfield
     """
     pass
