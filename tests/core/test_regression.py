@@ -190,13 +190,25 @@ def test_rm_values_invalid_dim():
     with pytest.raises(ValueError):
         _ = RegressionModule(b, c, v_large)
 
-@pytest.mark.skip()
 def test_rm_method_invalid_type():
     """
     Test that the regression module throws an error when
     the method doesn't have the correct type
     """
-    pass
+    import torch
+    from hyperspace.backends.hrr import HRRBackend
+    from hyperspace.core.regression import RegressionModule
+
+    D: int = 1024
+    B: int = 16
+    V: int = 3
+
+    b = HRRBackend(vector_dim=D, value_dim=V)
+    c = torch.rand((B, D))
+    v = torch.rand((B, V))
+
+    with pytest.raises(TypeError):
+        rm = RegressionModule(b, c, v, method=int(5))
 
 @pytest.mark.skip()
 def test_rm_method_invalid_value():
