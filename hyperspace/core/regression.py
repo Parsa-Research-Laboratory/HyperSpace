@@ -13,6 +13,7 @@ class RegressionModule(BaseModule):
     """
 
     valid_methods: List[str] = ["codebook"]
+    network_ready: bool = False
 
     def __init__(self, backend: BaseBackend, codebook: Tensor, values: Tensor,
                  method: str = "codebook"):

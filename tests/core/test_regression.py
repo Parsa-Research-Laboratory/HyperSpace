@@ -338,3 +338,23 @@ def test_rm_call_v_dim():
 
     with pytest.raises(ValueError):
         rm(inp_batch_large)
+
+def test_rm_has_network_ready_attribute():
+    """
+    test that the regression module has a attribute for network ready
+    """
+    import torch
+    from hyperspace.backends import HRRBackend
+    from hyperspace.core import RegressionModule
+
+    D: int = 1024
+    B: int = 16
+    V: int = 3
+
+    b = HRRBackend(vector_dim=D, value_dim=V)
+    c = torch.rand((B, D))
+    v = torch.rand((B, V))
+
+    rm = RegressionModule(b, c, v)
+
+    assert hasattr(rm, "network_ready")
