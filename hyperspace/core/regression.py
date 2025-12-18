@@ -73,6 +73,9 @@ class RegressionModule(BaseModule):
         Apply the specified regression method to the input tensor.
         """
 
+        # --------------------
+        # argument validation
+        # --------------------
         if not isinstance(v, Tensor):
             raise TypeError(f"Expected v to be a Tensor; got {type(v)}")
         
@@ -81,5 +84,14 @@ class RegressionModule(BaseModule):
         
         if v.shape[-1] != self.backend.vector_dim:
             raise ValueError(f"Expected dimensionality of v to match the backend; got {v.shape[-1]} and {self.backend.vector_dim}")
+        
+        # --------------------------------------------------------
+        # check if the appropriate modules are loaded for runtime
+        # --------------------------------------------------------
+        if self.network_needed and not self.network_ready:
+            raise AttributeError(f"Unable to perform {self.method} regression without a network; please use self.load_network() method.")
+        
+        if not self.network_needed and self.network_ready:
+            raise ValueError(f"Error: a network has been loaded when not needed.")
 
         return self.backend.regression(v, v, v)
