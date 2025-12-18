@@ -31,7 +31,7 @@ class CleanupModule(BaseModule):
     ]
 
     def __init__(self, backend: BaseBackend, values: Optional[Tensor] = None,
-                 codebook: Optional[Tensor] = None):
+                 codebook: Optional[Tensor] = None, method: str = "resonator"):
         """
         Initialize a CleanupModule for performing hypervector cleanup operations.
 
@@ -59,6 +59,12 @@ class CleanupModule(BaseModule):
             Precomputed cleanup codebook. Must be a tensor of shape
             (batch_size, vector_dim). These vectors are assumed to already reside in
             the backend’s hypervector space and will not be re-encoded.
+
+        method : str, optional
+            The cleanup rule to apply. Supported options include:
+            - `"resonator"`: Uses iterative resonator dynamics for cleanup.
+            - `"modern_hopfield"`: Uses a modern Hopfield-style update rule.
+            Defaults to `"resonator"`.
 
         Raises
         ------
@@ -89,6 +95,7 @@ class CleanupModule(BaseModule):
         self.backend: BaseBackend = backend
         self.values: Optional[Tensor] = values
         self.codebook: Union[Tensor, None] = codebook
+        self.method: str = method
 
         if self.values is not None:
             if not isinstance(self.values, Tensor):
@@ -111,11 +118,14 @@ class CleanupModule(BaseModule):
             
             if self.codebook.shape[-1] != self.backend.vector_dim:
                 raise ValueError(f"Codebook[-1] must match vector dim; got {self.codebook.shape[-1]} and {self.backend.vector_dim}")
+            
+        if method not in self.valid_methods:
+            raise ValueError(f"Expected method to be on of [{self.valid_methods}]; got {method}")
 
         # final sanity check
         assert self.codebook is not None
 
-    def __call__(self, v: Tensor, method: str = "resonator", num_iters: int = 3, **kwargs) -> Tuple[Tensor, dict]:
+    def __call__(self, v: Tensor, num_iters: int = 3, **kwargs) -> Tuple[Tensor, dict]:
         """
         Perform cleanup of an input vector using the specified cleanup method.
 
@@ -131,12 +141,6 @@ class CleanupModule(BaseModule):
             Input tensor to clean up. Must be either a 1D tensor of shape (D,) or a 
             2D tensor of shape (B, D), where D matches the backend's vector 
             dimensionality.
-        
-        method : str, optional
-            The cleanup rule to apply. Supported options include:
-            - `"resonator"`: Uses iterative resonator dynamics for cleanup.
-            - `"modern_hopfield"`: Uses a modern Hopfield-style update rule.
-            Defaults to `"resonator"`.
 
         num_iters : int, optional
             The number of times to repeat the cleanup operation
@@ -170,19 +174,16 @@ class CleanupModule(BaseModule):
         
         if v.shape[-1] != self.backend.vector_dim:
             raise ValueError(f"Expected dimensionality of v to match the backend; got {v.shape[-1]} and {self.backend.vector_dim}")
-        
-        if method not in self.valid_methods:
-            raise ValueError(f"Expected method to be on of [{self.valid_methods}]; got {method}")
-        
+
         if not isinstance(num_iters, int):
             raise TypeError(f"Expected num_iters to be an int; got {type(num_iters)}")
         
         if num_iters < 1:
             raise ValueError(f"Expected num_iters to be >= 1; got {num_iters}")
         
-        if method == "resonator":
+        if self.method == "resonator":
             out, info_dict = self.backend._resonator_cleanup(v, self.codebook, num_iters, **kwargs)
-        elif method == "modern_hopfield":
+        elif self.method == "modern_hopfield":
             out, info_dict = self.backend._hopfield_cleanup(v, self.codebook, num_iters, **kwargs)
         else:
             raise ValueError(f"received invalid cleanup method: {method}")

@@ -355,33 +355,7 @@ def test_cm_call_v_dim():
     with pytest.raises(ValueError):
         cm(v_batch_large)
 
-def test_cm_call_missing_method():
-    """
-    test that the module throws an error when
-    the requested cleanup method doesn't exist
-    """
-    import torch
-    from hyperspace.backends import HRRBackend
-    from hyperspace.core import CleanupModule
-
-    D: int = 1024
-    B: int = 64
-
-    codebook = torch.rand((B, D))
-    b = HRRBackend(vector_dim=D)
-    cm = CleanupModule(
-        backend=b,
-        codebook=codebook
-    )
-
-    method = "SomeRandomMethod"
-
-    v = torch.rand((D,))
-
-    with pytest.raises(ValueError):
-        cm(v, method)
-
-def test_cm_call_non_string_method():
+def test_cm_non_string_method():
     """
     test that the call method throws an error when the
     requested method isn't a string
@@ -395,17 +369,13 @@ def test_cm_call_non_string_method():
 
     codebook = torch.rand((B, D))
     b = HRRBackend(vector_dim=D)
-    cm = CleanupModule(
-        backend=b,
-        codebook=codebook
-    )
-
-    method = int(20)
-
-    v = torch.rand((D,))
 
     with pytest.raises(ValueError):
-        cm(v, method)
+        cm = CleanupModule(
+            backend=b,
+            codebook=codebook,
+            method=int(20)
+        )
 
 def test_cm_call_num_iters_non_int():
     """
@@ -429,7 +399,7 @@ def test_cm_call_num_iters_non_int():
     v = torch.rand((D,))
 
     with pytest.raises(TypeError):
-        cm(v, "resonator", float(0.1))
+        cm(v, float(0.1))
 
 def test_cm_call_num_iters_lt_one():
     """
@@ -453,7 +423,7 @@ def test_cm_call_num_iters_lt_one():
     v = torch.rand((D,))
 
     with pytest.raises(ValueError):
-        cm(v, "resonator", 0)
+        cm(v, 0)
 
 def test_cm_call_single_value_predef_codebook_resonator():
     """
@@ -499,7 +469,7 @@ def test_cm_call_single_value_predef_codebook_resonator():
     s_before = cosine_to_codebook(v_noisy, codebook)
     true_sim_before = s_before.gather(1, true_idx.view(-1, 1)).squeeze(1)
 
-    v_out, info = cm(v_noisy, "resonator", num_iters=num_iters)
+    v_out, info = cm(v_noisy, num_iters=num_iters)
 
     assert isinstance(v_out, torch.Tensor)
     assert v_out.shape == (B, D)
@@ -571,7 +541,8 @@ def test_cm_call_multi_value_predef_codebook_hopfield():
 
     cm = CleanupModule(
         backend=b,
-        codebook=codebook
+        codebook=codebook,
+        method="modern_hopfield"
     )
 
     # ----------------------------
@@ -601,7 +572,7 @@ def test_cm_call_multi_value_predef_codebook_hopfield():
     # ----------------------------
     # Multi-iteration cleanup
     # ----------------------------
-    v_out, info = cm(v_noisy, "modern_hopfield", num_iters=num_iters, temperature=temperature)
+    v_out, info = cm(v_noisy, num_iters=num_iters, temperature=temperature)
 
     assert isinstance(v_out, torch.Tensor)
     assert v_out.shape == (B, D)
