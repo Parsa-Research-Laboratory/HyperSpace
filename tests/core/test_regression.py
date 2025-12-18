@@ -230,13 +230,29 @@ def test_rm_method_invalid_value():
     with pytest.raises(ValueError):
         rm = RegressionModule(b, c, v, method="SomeRandomMethod")
 
-@pytest.mark.skip()
 def test_rm_call_missing_v():
     """
     Test that calling the regression module without a vector
     throws an error
     """
-    pass
+    import torch
+    from hyperspace.backends import HRRBackend
+    from hyperspace.core import RegressionModule
+    
+    D: int = 1024
+    B: int = 16
+    V: int = 3
+
+    b = HRRBackend(vector_dim=D, value_dim=V)
+    c = torch.rand((B, D))
+    v = torch.rand((B, V))
+
+    rm = RegressionModule(b, c, v)
+
+    inp = None
+
+    with pytest.raises(TypeError):
+        rm()
 
 @pytest.mark.skip()
 def test_rm_call_v_type():
