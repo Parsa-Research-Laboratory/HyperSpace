@@ -148,7 +148,6 @@ def test_rm_values_invalid_shape():
     Test that the regression module throws an error when
     the values isn't the correct shape
     """
-    import numpy as np
     import torch
     from hyperspace.backends.hrr import HRRBackend
     from hyperspace.core.regression import RegressionModule
