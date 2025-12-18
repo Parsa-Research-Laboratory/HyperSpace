@@ -17,6 +17,8 @@ class BaseRegressionModel(nn.Module):
     Attributes:
         feature_dim : int
             The dimensionality of input features (vector_dim from the backend).
+        value_dim : int
+            The dimensionality of output values (value_dim from the backend).
 
     Abstract Methods:
         forward(x: Tensor) -> Tensor
@@ -26,12 +28,12 @@ class BaseRegressionModel(nn.Module):
         Creating a custom regression model from this template::
 
             class CustomRegressionModel(BaseRegressionModel):
-                def __init__(self, feature_dim: int, output_dim: int = 1):
-                    super().__init__(feature_dim)
+                def __init__(self, feature_dim: int, value_dim: int, hidden_dim: int = 128):
+                    super().__init__(feature_dim, value_dim)
                     
                     # Define your custom layers
-                    self.fc1 = nn.Linear(feature_dim, 128)
-                    self.fc2 = nn.Linear(128, output_dim)
+                    self.fc1 = nn.Linear(feature_dim, hidden_dim)
+                    self.fc2 = nn.Linear(hidden_dim, value_dim)
                     self.activation = nn.ReLU()
                 
                 def forward(self, x: Tensor) -> Tensor:
@@ -41,17 +43,18 @@ class BaseRegressionModel(nn.Module):
                     return x
 
     Notes:
-        - Subclasses must call super().__init__(feature_dim) in their constructor
+        - Subclasses must call super().__init__(feature_dim, value_dim) in their constructor
         - The forward method must accept a Tensor and return a Tensor
         - Input tensors should have shape (..., feature_dim)
+        - Output tensors should have shape (..., value_dim)
         - This class cannot be instantiated directly; use a concrete implementation
     """
-    def __init__(self, feature_dim: int) -> None:
+    def __init__(self, feature_dim: int, value_dim: int) -> None:
         """
         Initialize the base regression model with input validation.
 
-        This constructor performs validation on the feature dimension and
-        sets up the base nn.Module. Subclasses should call this via super()
+        This constructor performs validation on the feature and value dimensions
+        and sets up the base nn.Module. Subclasses should call this via super()
         before initializing their own layers.
 
         Arguments:
@@ -59,20 +62,25 @@ class BaseRegressionModel(nn.Module):
                 The dimensionality of input features. Must be a positive integer
                 greater than or equal to 1. This typically corresponds to the
                 vector_dim of the HyperSpace backend.
+            value_dim : int
+                The dimensionality of output values. Must be a positive integer
+                greater than or equal to 1. This typically corresponds to the
+                value_dim of the HyperSpace backend.
 
         Raises:
             TypeError
-                If feature_dim is not an integer.
+                If feature_dim or value_dim is not an integer.
             ValueError
-                If feature_dim is less than 1.
+                If feature_dim or value_dim is less than 1.
 
         Example:
             In a subclass::
 
-                def __init__(self, feature_dim: int, custom_param: int):
-                    super().__init__(feature_dim)
+                def __init__(self, feature_dim: int, value_dim: int, custom_param: int):
+                    super().__init__(feature_dim, value_dim)
                     # Initialize your custom layers here
                     self.custom_layer = nn.Linear(feature_dim, custom_param)
+                    self.output_layer = nn.Linear(custom_param, value_dim)
         """
         super().__init__(BaseRegressionModel)
 
@@ -85,10 +93,17 @@ class BaseRegressionModel(nn.Module):
         if feature_dim < 1:
             raise ValueError(f"Expected feature_dim to be >= 1; got {feature_dim}")
         
+        if not isinstance(value_dim, int):
+            raise TypeError(f"Expected value_dim to be an integer; got {type(value_dim)}")
+        
+        if value_dim < 1:
+            raise ValueError(f"Expected value_dim to be >= 1; got {value_dim}")
+        
         # ---------------------
         # Set class attributes
         # ---------------------
         self.feature_dim: int = feature_dim
+        self.value_dim: int = value_dim
 
     def forward(self, x: Tensor) -> Tensor:
         """
