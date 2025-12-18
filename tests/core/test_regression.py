@@ -210,13 +210,25 @@ def test_rm_method_invalid_type():
     with pytest.raises(TypeError):
         rm = RegressionModule(b, c, v, method=int(5))
 
-@pytest.mark.skip()
 def test_rm_method_invalid_value():
     """
     Test that the regression module throws an error when
     the method doesn't match the list of valid methods
     """
-    pass
+    import torch
+    from hyperspace.backends.hrr import HRRBackend
+    from hyperspace.core.regression import RegressionModule
+
+    D: int = 1024
+    B: int = 16
+    V: int = 3
+
+    b = HRRBackend(vector_dim=D, value_dim=V)
+    c = torch.rand((B, D))
+    v = torch.rand((B, V))
+
+    with pytest.raises(ValueError):
+        rm = RegressionModule(b, c, v, method="SomeRandomMethod")
 
 @pytest.mark.skip()
 def test_rm_call_missing_v():
