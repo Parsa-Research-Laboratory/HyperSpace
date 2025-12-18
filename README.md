@@ -53,6 +53,11 @@ pytest
 
 You are now ready to begin leveraging the HyperSpace framework. If you have any questions or concerns, please reach out the maintainer listed in `setup.py`.
 
+## Future Works and Features
+
+- multi-factor resonator support
+- Fourier Holographic Reduced Representations backend
+
 ## Credits
 
 ```latex
