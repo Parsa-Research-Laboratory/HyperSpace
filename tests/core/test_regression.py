@@ -143,13 +143,29 @@ def test_rm_values_invalid_type():
     with pytest.raises(TypeError):
         _ = RegressionModule(b, c, v)
 
-@pytest.mark.skip()
 def test_rm_values_invalid_shape():
     """
     Test that the regression module throws an error when
     the values isn't the correct shape
     """
-    pass
+    import numpy as np
+    import torch
+    from hyperspace.backends.hrr import HRRBackend
+    from hyperspace.core.regression import RegressionModule
+
+    D: int = 1024
+    B: int = 16
+
+    b = HRRBackend(vector_dim=D)
+    c = torch.rand((B, D))
+    v_small = torch.rand((B,))
+    v_large = torch.rand((B, D, D))
+
+    with pytest.raises(ValueError):
+        _ = RegressionModule(b, c, v_small)
+
+    with pytest.raises(ValueError):
+        _ = RegressionModule(b, c, v_large)
 
 @pytest.mark.skip()
 def test_rm_values_invalid_dim():
