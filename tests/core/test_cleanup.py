@@ -147,12 +147,38 @@ def test_cm_constructor_values_dim():
     with pytest.raises(ValueError):
         CleanupModule(b, values_large, codebook)
 
-@pytest.mark.skip(reason="NI")
 def test_cm_constructor_values_generated_codebook():
     """
     Test the fidelity of the generated codebook
     """
-    pass
+    import torch
+    from torch import Tensor
+    from hyperspace.backends import HRRBackend
+    from hyperspace.core import CleanupModule
+
+    D: int = 1024
+    V: int = 3
+    B: int = 64
+
+    b = HRRBackend(
+        vector_dim=D,
+        value_dim=V
+    )
+
+    values = torch.rand((B, V))
+    value_vectors_gt, _ = b.value_encoding(values)
+    
+    cm = CleanupModule(
+        backend=b,
+        values=values
+    )
+
+    assert isinstance(cm.codebook, Tensor)
+
+    assert torch.allclose(
+        value_vectors_gt,
+        cm.codebook
+    )
 
 def test_cm_constructor_codebook_type():
     """
