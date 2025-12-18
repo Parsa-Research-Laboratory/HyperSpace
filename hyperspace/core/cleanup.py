@@ -115,7 +115,7 @@ class CleanupModule(BaseModule):
         # final sanity check
         assert self.codebook is not None
 
-    def __call__(self, v: Tensor, method: str = "resonator") -> Tuple[Tensor, dict]:
+    def __call__(self, v: Tensor, method: str = "resonator", num_iters: int = 3) -> Tuple[Tensor, dict]:
         """
         Perform cleanup of an input vector using the specified cleanup method.
 
@@ -137,6 +137,9 @@ class CleanupModule(BaseModule):
             - `"resonator"`: Uses iterative resonator dynamics for cleanup.
             - `"modern_hopfield"`: Uses a modern Hopfield-style update rule.
             Defaults to `"resonator"`.
+
+        num_iters : int, optional
+            The number of times to repeat the cleanup operation
 
         Returns
         -------
@@ -168,10 +171,16 @@ class CleanupModule(BaseModule):
         if method not in self.valid_methods:
             raise ValueError(f"Expected method to be on of [{self.valid_methods}]; got {method}")
         
+        if not isinstance(num_iters, int):
+            raise TypeError(f"Expected num_iters to be an int; got {type(num_iters)}")
+        
+        if num_iters < 1:
+            raise ValueError(f"Expected num_iters to be >= 1; got {num_iters}")
+        
         if method == "resonator":
-            out, info_dict = self.backend._resonator_cleanup(v, self.codebook)
+            out, info_dict = self.backend._resonator_cleanup(v, self.codebook, num_iters)
         elif method == "modern_hopfield":
-            out, info_dict = self.backend._hopfield_cleanup(v, self.codebook)
+            out, info_dict = self.backend._hopfield_cleanup(v, self.codebook, num_iters)
         else:
             raise ValueError(f"received invalid cleanup method: {method}")
 

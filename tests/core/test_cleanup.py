@@ -407,13 +407,139 @@ def test_cm_call_non_string_method():
     with pytest.raises(ValueError):
         cm(v, method)
 
-@pytest.mark.skip(reason="NI")
+def test_cm_call_num_iters_non_int():
+    """
+    test that the cleanup modules call method throws
+    an error with num_iters isn't an int
+    """
+    import torch
+    from hyperspace.backends import HRRBackend
+    from hyperspace.core import CleanupModule
+
+    D: int = 1024
+    B: int = 64
+
+    codebook = torch.rand((B, D))
+    b = HRRBackend(vector_dim=D)
+    cm = CleanupModule(
+        backend=b,
+        codebook=codebook
+    )
+
+    v = torch.rand((D,))
+
+    with pytest.raises(TypeError):
+        cm(v, "resonator", float(0.1))
+
+def test_cm_call_num_iters_lt_one():
+    """
+    test that the cleanup modules call method throws
+    an error with num_iters is less than 1
+    """
+    import torch
+    from hyperspace.backends import HRRBackend
+    from hyperspace.core import CleanupModule
+
+    D: int = 1024
+    B: int = 64
+
+    codebook = torch.rand((B, D))
+    b = HRRBackend(vector_dim=D)
+    cm = CleanupModule(
+        backend=b,
+        codebook=codebook
+    )
+
+    v = torch.rand((D,))
+
+    with pytest.raises(ValueError):
+        cm(v, "resonator", 0)
+
 def test_cm_call_single_value_predef_codebook_resonator():
     """
     test the cleanup ability of the cleanup module with a
     single vector, predefined codebook and a resonator
     """
-    pass
+    import torch
+    from hyperspace.backends import HRRBackend
+    from hyperspace.core import CleanupModule
+
+    D: int = 1024
+    C: int = 3
+
+    torch.manual_seed(0)
+
+    D: int = 1024
+    C: int = 8
+    B: int = 16
+
+    num_iters: int = 8
+    noise_scale: float = 0.20
+
+    b = HRRBackend(vector_dim=D)
+
+    codebook_list = [b.create_random_vector() for _ in range(C)]
+    codebook = torch.stack(codebook_list, dim=0)
+    assert codebook.shape == (C, D)
+
+    cm = CleanupModule(b, codebook=codebook)
+
+    true_idx = torch.randint(low=0, high=C, size=(B,))
+    v_true = codebook[true_idx]
+    v_noisy = v_true + noise_scale * torch.randn_like(v_true)
+    assert v_noisy.shape == (B, D)
+
+    eps = 1e-12
+
+    def cosine_to_codebook(x: torch.Tensor, cb: torch.Tensor) -> torch.Tensor:
+        x = x / (x.norm(dim=-1, keepdim=True) + eps)
+        cbn = cb / (cb.norm(dim=-1, keepdim=True) + eps)
+        return x @ cbn.T  # (B, C)
+
+    s_before = cosine_to_codebook(v_noisy, codebook)
+    true_sim_before = s_before.gather(1, true_idx.view(-1, 1)).squeeze(1)
+
+    v_out, info = cm(v_noisy, "resonator", num_iters=num_iters)
+
+    assert isinstance(v_out, torch.Tensor)
+    assert v_out.shape == (B, D)
+    assert torch.isfinite(v_out).all()
+
+    s_after = cosine_to_codebook(v_out, codebook)
+    pred_after = torch.argmax(s_after, dim=-1)
+    true_sim_after = s_after.gather(1, true_idx.view(-1, 1)).squeeze(1)
+
+    correct = (pred_after == true_idx)
+    assert bool(correct.all().item()), (
+        "Some batch elements retrieved the wrong index after resonator convergence.\n"
+        f"true_idx={true_idx.tolist()}\n"
+        f"pred_after={pred_after.tolist()}\n"
+    )
+
+    improved = true_sim_after > true_sim_before + 1e-4
+    assert bool(improved.all().item()), (
+        "Some batch elements did not improve true similarity after resonator convergence.\n"
+        f"true_sim_before={true_sim_before.tolist()}\n"
+        f"true_sim_after ={true_sim_after.tolist()}\n"
+    )
+
+    # Optional: sims trajectory sanity (true sims should not decrease from first to last iter)
+    if isinstance(info, dict) and "sims_history" in info:
+        sims_hist = info["sims_history"]
+        if isinstance(sims_hist, list) and len(sims_hist) >= 2:
+            s0, sT = sims_hist[0], sims_hist[-1]
+            if (
+                isinstance(s0, torch.Tensor) and isinstance(sT, torch.Tensor)
+                and s0.ndim == 2 and sT.ndim == 2
+                and s0.shape == (B, C) and sT.shape == (B, C)
+            ):
+                true_mass_0 = s0.gather(1, true_idx.view(-1, 1)).squeeze(1)
+                true_mass_T = sT.gather(1, true_idx.view(-1, 1)).squeeze(1)
+                assert bool((true_mass_T >= true_mass_0 - 1e-4).all().item()), (
+                    "Some batch elements did not increase (or maintain) sims on the true index.\n"
+                    f"true_mass_0={true_mass_0.tolist()}\n"
+                    f"true_mass_T={true_mass_T.tolist()}\n"
+                )
 
 @pytest.mark.skip(reason="NI")
 def test_cm_call_single_value_derived_codebook_resonator():
