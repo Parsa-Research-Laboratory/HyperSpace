@@ -12,7 +12,7 @@ class RegressionModule(BaseModule):
     such as pseudo-inverse and ridge regression.
     """
 
-    valid_methods: List[str] = ["codebook"]
+    valid_methods: List[str] = ["codebook", "neural"]
     network_needed: bool = False
     network_ready: bool = False
 
