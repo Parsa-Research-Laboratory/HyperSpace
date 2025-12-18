@@ -100,13 +100,28 @@ def test_rm_codebook_invalid_shape():
     with pytest.raises(ValueError):
         _ = RegressionModule(b, c_large, v)
 
-@pytest.mark.skip()
 def test_rm_codebook_invalid_dim():
     """
     Test that the regression module throws an error when
     the codebook doesn't have the correct dimensionality
     """
-    pass
+    import torch
+    from hyperspace.backends.hrr import HRRBackend
+    from hyperspace.core.regression import RegressionModule
+
+    D: int = 1024
+    B: int = 16
+
+    b = HRRBackend(vector_dim=D)
+    c_small = torch.rand((B, D - 1))
+    c_large = torch.rand((B, D + 1))
+    v = torch.rand((B, 1))
+
+    with pytest.raises(ValueError):
+        _ = RegressionModule(b, c_small, v)
+
+    with pytest.raises(ValueError):
+        _ = RegressionModule(b, c_large, v)
 
 @pytest.mark.skip()
 def test_rm_values_invalid_type():
