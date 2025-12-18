@@ -541,26 +541,118 @@ def test_cm_call_single_value_predef_codebook_resonator():
                     f"true_mass_T={true_mass_T.tolist()}\n"
                 )
 
-@pytest.mark.skip(reason="NI")
-def test_cm_call_single_value_derived_codebook_resonator():
-    """
-    test the cleanup ability of the cleanup module with a
-    single vectors, derived, and a resonator
-    """
-    pass
-
-@pytest.mark.skip(reason="NI")
 def test_cm_call_multi_value_predef_codebook_hopfield():
     """
     test the cleanup ability of the cleanup module with a
     batch of vectors, a predefined codebook, and a hopfield
     """
-    pass
+    import torch
+    from hyperspace.backends import HRRBackend
+    from hyperspace.core import CleanupModule
 
-@pytest.mark.skip(reason="NI")
-def test_cm_call_multi_value_derived_codebook_hopfield():
-    """
-    test the cleanup ability of the cleanup module with a
-    batch of vectors, a derived codebook, and a hopfield
-    """
-    pass
+    torch.manual_seed(0)
+
+    D: int = 1024
+    C: int = 8
+    B: int = 16
+
+    num_iters: int = 8
+    temperature: float = 0.08
+    noise_scale: float = 0.20
+
+    b = HRRBackend(vector_dim=D)
+
+    # ----------------------------
+    # Build codebook
+    # ----------------------------
+    codebook_list = [b.create_random_vector() for _ in range(C)]
+    codebook = torch.stack(codebook_list, dim=0)
+    assert codebook.shape == (C, D)
+
+    cm = CleanupModule(
+        backend=b,
+        codebook=codebook
+    )
+
+    # ----------------------------
+    # Build batch of queries with known targets
+    # ----------------------------
+    true_idx = torch.randint(low=0, high=C, size=(B,))
+    v_true = codebook[true_idx]  # (B, D)
+    v_noisy = v_true + noise_scale * torch.randn_like(v_true)
+    assert v_noisy.shape == (B, D)
+
+    # ----------------------------
+    # Helpers
+    # ----------------------------
+    eps = 1e-12
+
+    def cosine_to_codebook(x: torch.Tensor, cb: torch.Tensor) -> torch.Tensor:
+        x = x / (x.norm(dim=-1, keepdim=True) + eps)
+        cbn = cb / (cb.norm(dim=-1, keepdim=True) + eps)
+        return x @ cbn.T  # (B, C)
+
+    # ----------------------------
+    # Before metrics
+    # ----------------------------
+    s_before = cosine_to_codebook(v_noisy, codebook)
+    true_sim_before = s_before.gather(1, true_idx.view(-1, 1)).squeeze(1)  # (B,)
+
+    # ----------------------------
+    # Multi-iteration cleanup
+    # ----------------------------
+    v_out, info = cm(v_noisy, "modern_hopfield", num_iters=num_iters, temperature=temperature)
+
+    assert isinstance(v_out, torch.Tensor)
+    assert v_out.shape == (B, D)
+    assert torch.isfinite(v_out).all()
+
+    # ----------------------------
+    # After metrics
+    # ----------------------------
+    s_after = cosine_to_codebook(v_out, codebook)  # (B, C)
+    pred_after = torch.argmax(s_after, dim=-1)     # (B,)
+    true_sim_after = s_after.gather(1, true_idx.view(-1, 1)).squeeze(1)
+
+    # ----------------------------
+    # Core batched assertions
+    # ----------------------------
+    k = 3  # or 2
+    topk = torch.topk(s_after, k=k, dim=-1).indices           # (B, k)
+    correct_topk = (topk == true_idx.unsqueeze(-1)).any(dim=-1)
+    assert bool(correct_topk.all().item()), (
+        f"Some batch elements did not have true_idx in top-{k} after convergence.\n"
+        f"true_idx={true_idx.tolist()}\n"
+        f"topk={topk.tolist()}\n"
+        f"s_after={s_after.tolist()}\n"
+    )
+
+    improved = true_sim_after > true_sim_before + 1e-4
+    assert bool(improved.all().item()), (
+        "Some batch elements did not improve true similarity after convergence.\n"
+        f"true_idx={true_idx.tolist()}\n"
+        f"true_sim_before={true_sim_before.tolist()}\n"
+        f"true_sim_after ={true_sim_after.tolist()}\n"
+    )
+
+    # ----------------------------
+    # Optional: attention trajectory sanity
+    # ----------------------------
+    if isinstance(info, dict) and "attn_history" in info:
+        attn_hist = info["attn_history"]
+        if isinstance(attn_hist, list) and len(attn_hist) >= 2:
+            a0 = attn_hist[0]
+            aT = attn_hist[-1]
+            if (
+                isinstance(a0, torch.Tensor) and isinstance(aT, torch.Tensor)
+                and a0.ndim == 2 and aT.ndim == 2
+                and a0.shape == (B, C) and aT.shape == (B, C)
+            ):
+                true_mass_0 = a0.gather(1, true_idx.view(-1, 1)).squeeze(1)
+                true_mass_T = aT.gather(1, true_idx.view(-1, 1)).squeeze(1)
+
+                assert bool((true_mass_T >= true_mass_0 - 1e-4).all().item()), (
+                    "Some batch elements did not increase attention mass on the true index.\n"
+                    f"true_mass_0={true_mass_0.tolist()}\n"
+                    f"true_mass_T={true_mass_T.tolist()}\n"
+                )

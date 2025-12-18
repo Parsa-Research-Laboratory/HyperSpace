@@ -115,7 +115,7 @@ class CleanupModule(BaseModule):
         # final sanity check
         assert self.codebook is not None
 
-    def __call__(self, v: Tensor, method: str = "resonator", num_iters: int = 3) -> Tuple[Tensor, dict]:
+    def __call__(self, v: Tensor, method: str = "resonator", num_iters: int = 3, **kwargs) -> Tuple[Tensor, dict]:
         """
         Perform cleanup of an input vector using the specified cleanup method.
 
@@ -140,6 +140,9 @@ class CleanupModule(BaseModule):
 
         num_iters : int, optional
             The number of times to repeat the cleanup operation
+
+        **kwargs : Optional
+            Any other method specific keyword arguments
 
         Returns
         -------
@@ -178,9 +181,9 @@ class CleanupModule(BaseModule):
             raise ValueError(f"Expected num_iters to be >= 1; got {num_iters}")
         
         if method == "resonator":
-            out, info_dict = self.backend._resonator_cleanup(v, self.codebook, num_iters)
+            out, info_dict = self.backend._resonator_cleanup(v, self.codebook, num_iters, **kwargs)
         elif method == "modern_hopfield":
-            out, info_dict = self.backend._hopfield_cleanup(v, self.codebook, num_iters)
+            out, info_dict = self.backend._hopfield_cleanup(v, self.codebook, num_iters, **kwargs)
         else:
             raise ValueError(f"received invalid cleanup method: {method}")
 
