@@ -2,8 +2,8 @@ from typing import Tuple, Optional
 
 from torch import Tensor
 
-from ..backends.base import BaseBackend
-from .base_module import BaseModule
+from ...backends.base import BaseBackend
+from ..base.base_module import BaseModule
 
 
 class MemoryStorageModule(BaseModule):

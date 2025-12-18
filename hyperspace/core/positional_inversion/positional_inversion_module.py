@@ -1,8 +1,8 @@
 from torch import Tensor
 from typing import Tuple
 
-from ..backends.base import BaseBackend
-from .base_module import BaseModule
+from ...backends.base import BaseBackend
+from ..base.base_module import BaseModule
 
 
 class PositionalInversionModule(BaseModule):

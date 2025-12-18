@@ -4,7 +4,7 @@ def test_cm_no_backend():
     """
     Test that the cleanup module doesn't assume a default backend.
     """
-    from hyperspace.core.cleanup import CleanupModule
+    from hyperspace.core import CleanupModule
 
     with pytest.raises(TypeError):
         CleanupModule()
@@ -15,7 +15,7 @@ def test_cm_true_backend():
     """
     import torch
     from hyperspace.backends.hrr import HRRBackend
-    from hyperspace.core.cleanup import CleanupModule
+    from hyperspace.core import CleanupModule
 
     B: int = 64
     D: int = 1024
@@ -31,7 +31,7 @@ def test_cm_invalid_backend():
     backend is passed
     """
     import torch
-    from hyperspace.core.cleanup import CleanupModule
+    from hyperspace.core import CleanupModule
 
     B: int = 64
     D: int = 1024

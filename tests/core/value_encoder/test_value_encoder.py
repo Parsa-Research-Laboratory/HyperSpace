@@ -4,7 +4,7 @@ def test_ve_no_backend():
     """
     Test that the value encoder module doesn't assume a default backend.
     """
-    from hyperspace.core.value_encoder import ValueEncoderModule
+    from hyperspace.core.value_encoder.value_encoder_module import ValueEncoderModule
 
     with pytest.raises(TypeError):
         ValueEncoderModule()
@@ -14,7 +14,7 @@ def test_ve_true_backend():
     Test that the ve module initializes with a value backend
     """
     from hyperspace.backends.hrr import HRRBackend
-    from hyperspace.core.value_encoder import ValueEncoderModule
+    from hyperspace.core.value_encoder.value_encoder_module import ValueEncoderModule
 
     b = HRRBackend(vector_dim=128)
     _ = ValueEncoderModule(b)
@@ -24,7 +24,7 @@ def test_ve_invalid_backend():
     Test that the pe module throws and error when an invalid
     backend is passed
     """
-    from hyperspace.core.value_encoder import ValueEncoderModule
+    from hyperspace.core.value_encoder.value_encoder_module import ValueEncoderModule
 
     with pytest.raises(TypeError):
         _ = ValueEncoderModule(5)
@@ -36,7 +36,7 @@ def test_value_encoding_module_invalid_x_type():
     """
     import numpy as np
     from hyperspace.backends.hrr import HRRBackend
-    from hyperspace.core.value_encoder import ValueEncoderModule
+    from hyperspace.core.value_encoder.value_encoder_module import ValueEncoderModule
 
     B: int = 16
     E: int = 3
@@ -60,7 +60,7 @@ def test_value_encoding_module_invalid_x_dim():
     """
     import torch
     from hyperspace.backends.hrr import HRRBackend
-    from hyperspace.core.value_encoder import ValueEncoderModule
+    from hyperspace.core.value_encoder.value_encoder_module import ValueEncoderModule
 
     b = HRRBackend(vector_dim=128)
     vem = ValueEncoderModule(b)
@@ -78,7 +78,7 @@ def test_value_encoding_single_x():
     import numpy as np
     import torch
     from hyperspace.backends.hrr import HRRBackend
-    from hyperspace.core.value_encoder import ValueEncoderModule
+    from hyperspace.core.value_encoder.value_encoder_module import ValueEncoderModule
 
     value_dim: int = 3
     vector_dim: int = 1280
@@ -118,7 +118,7 @@ def test_value_encoding_batched_x():
     import numpy as np
     import torch
     from hyperspace.backends.hrr import HRRBackend
-    from hyperspace.core.value_encoder import ValueEncoderModule
+    from hyperspace.core.value_encoder.value_encoder_module import ValueEncoderModule
 
     batch_size: int = 3
     value_dim: int = 2

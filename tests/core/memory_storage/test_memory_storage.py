@@ -4,7 +4,7 @@ def test_msm_no_backend():
     """
     Test that the memory storage module doesn't assume a default backend.
     """
-    from hyperspace.core.memory_storage import MemoryStorageModule
+    from hyperspace.core.memory_storage.memory_storage_module import MemoryStorageModule
 
     with pytest.raises(TypeError):
         MemoryStorageModule()
@@ -14,7 +14,7 @@ def test_msm_true_backend():
     Test that the memory storage module initializes with a value backend
     """
     from hyperspace.backends.hrr import HRRBackend
-    from hyperspace.core.memory_storage import MemoryStorageModule
+    from hyperspace.core.memory_storage.memory_storage_module import MemoryStorageModule
 
     b = HRRBackend(vector_dim=128)
     _ = MemoryStorageModule(b)
@@ -24,7 +24,7 @@ def test_msm_invalid_backend():
     Test that the memory storage module throws and error when an invalid
     backend is passed
     """
-    from hyperspace.core.memory_storage import MemoryStorageModule
+    from hyperspace.core.memory_storage.memory_storage_module import MemoryStorageModule
 
     with pytest.raises(TypeError):
         _ = MemoryStorageModule(5)
@@ -37,7 +37,7 @@ def test_msm_invalid_p_vector_type():
     import numpy as np
     import torch
     from hyperspace.backends.hrr import HRRBackend
-    from hyperspace.core.memory_storage import MemoryStorageModule
+    from hyperspace.core.memory_storage.memory_storage_module import MemoryStorageModule
     
     b = HRRBackend(vector_dim=128)
     msm = MemoryStorageModule(b)
@@ -61,7 +61,7 @@ def test_msm_invalid_v_vector_type():
     import numpy as np
     import torch
     from hyperspace.backends.hrr import HRRBackend
-    from hyperspace.core.memory_storage import MemoryStorageModule
+    from hyperspace.core.memory_storage.memory_storage_module import MemoryStorageModule
     
     b = HRRBackend(vector_dim=128)
     msm = MemoryStorageModule(b)
@@ -85,7 +85,7 @@ def test_msm_invalid_prev_memory_type():
     import numpy as np
     import torch
     from hyperspace.backends.hrr import HRRBackend
-    from hyperspace.core.memory_storage import MemoryStorageModule
+    from hyperspace.core.memory_storage.memory_storage_module import MemoryStorageModule
     
     b = HRRBackend(vector_dim=128)
     msm = MemoryStorageModule(b)
@@ -109,7 +109,7 @@ def test_msm_invalid_p_vector_shape():
     import numpy as np
     import torch
     from hyperspace.backends.hrr import HRRBackend
-    from hyperspace.core.memory_storage import MemoryStorageModule
+    from hyperspace.core.memory_storage.memory_storage_module import MemoryStorageModule
 
     D: int = 128
 
@@ -131,7 +131,7 @@ def test_msm_invalid_v_vector_shape():
     import numpy as np
     import torch
     from hyperspace.backends.hrr import HRRBackend
-    from hyperspace.core.memory_storage import MemoryStorageModule
+    from hyperspace.core.memory_storage.memory_storage_module import MemoryStorageModule
 
     D: int = 128
 
@@ -153,7 +153,7 @@ def test_msm_invalid_prev_memory_shape():
     import numpy as np
     import torch
     from hyperspace.backends.hrr import HRRBackend
-    from hyperspace.core.memory_storage import MemoryStorageModule
+    from hyperspace.core.memory_storage.memory_storage_module import MemoryStorageModule
 
     D: int = 128
 
@@ -175,7 +175,7 @@ def test_msm_p_h_shape_mismatch():
     import numpy as np
     import torch
     from hyperspace.backends.hrr import HRRBackend
-    from hyperspace.core.memory_storage import MemoryStorageModule
+    from hyperspace.core.memory_storage.memory_storage_module import MemoryStorageModule
 
     D: int = 128
 
@@ -198,7 +198,7 @@ def test_msm_p_prev_mismatch():
     import numpy as np
     import torch
     from hyperspace.backends.hrr import HRRBackend
-    from hyperspace.core.memory_storage import MemoryStorageModule
+    from hyperspace.core.memory_storage.memory_storage_module import MemoryStorageModule
 
     D: int = 128
 
@@ -223,7 +223,7 @@ def test_msm_initialize_memory():
     """
     import torch
     from hyperspace.backends.hrr import HRRBackend
-    from hyperspace.core.memory_storage import MemoryStorageModule
+    from hyperspace.core.memory_storage.memory_storage_module import MemoryStorageModule
 
     D: int = 128
 
@@ -242,7 +242,7 @@ def test_msm_single_storage_no_prev():
     """
     import torch
     from hyperspace.backends.hrr import HRRBackend
-    from hyperspace.core.memory_storage import MemoryStorageModule
+    from hyperspace.core.memory_storage.memory_storage_module import MemoryStorageModule
 
     D: int = 128
 
@@ -274,7 +274,7 @@ def test_msm_single_storage_with_prev():
     """
     import torch
     from hyperspace.backends.hrr import HRRBackend
-    from hyperspace.core.memory_storage import MemoryStorageModule
+    from hyperspace.core.memory_storage.memory_storage_module import MemoryStorageModule
 
     D: int = 128
 
@@ -307,7 +307,7 @@ def test_msm_batched_storage_no_prev():
     """
     import torch
     from hyperspace.backends.hrr import HRRBackend
-    from hyperspace.core.memory_storage import MemoryStorageModule
+    from hyperspace.core.memory_storage.memory_storage_module import MemoryStorageModule
 
     B: int = 2
     D: int = 128
@@ -344,7 +344,7 @@ def test_msm_batched_storage_with_prev():
     """
     import torch
     from hyperspace.backends.hrr import HRRBackend
-    from hyperspace.core.memory_storage import MemoryStorageModule
+    from hyperspace.core.memory_storage.memory_storage_module import MemoryStorageModule
 
     B: int = 2
     D: int = 128

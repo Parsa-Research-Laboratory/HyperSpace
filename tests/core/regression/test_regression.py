@@ -6,7 +6,7 @@ def test_rm_no_backend():
     """
     import torch
     from hyperspace.backends import HRRBackend
-    from hyperspace.core.regression import RegressionModule
+    from hyperspace.core.regression.regression_module import RegressionModule
 
     D: int = 1024
     B: int = 16
@@ -27,7 +27,7 @@ def test_rm_true_backend():
     """
     import torch
     from hyperspace.backends.hrr import HRRBackend
-    from hyperspace.core.regression import RegressionModule
+    from hyperspace.core.regression.regression_module import RegressionModule
 
     D: int = 1024
     B: int = 16
@@ -45,7 +45,7 @@ def test_rm_invalid_backend():
     """
     import torch
     from hyperspace.backends.hrr import HRRBackend
-    from hyperspace.core.regression import RegressionModule
+    from hyperspace.core.regression.regression_module import RegressionModule
 
     D: int = 1024
     B: int = 16
@@ -65,7 +65,7 @@ def test_rm_codebook_invalid_type():
     import numpy as np
     import torch
     from hyperspace.backends.hrr import HRRBackend
-    from hyperspace.core.regression import RegressionModule
+    from hyperspace.core.regression.regression_module import RegressionModule
 
     D: int = 1024
     B: int = 16
@@ -84,7 +84,7 @@ def test_rm_codebook_invalid_shape():
     """
     import torch
     from hyperspace.backends.hrr import HRRBackend
-    from hyperspace.core.regression import RegressionModule
+    from hyperspace.core.regression.regression_module import RegressionModule
 
     D: int = 1024
     B: int = 16
@@ -107,7 +107,7 @@ def test_rm_codebook_invalid_dim():
     """
     import torch
     from hyperspace.backends.hrr import HRRBackend
-    from hyperspace.core.regression import RegressionModule
+    from hyperspace.core.regression.regression_module import RegressionModule
 
     D: int = 1024
     B: int = 16
@@ -131,7 +131,7 @@ def test_rm_values_invalid_type():
     import numpy as np
     import torch
     from hyperspace.backends.hrr import HRRBackend
-    from hyperspace.core.regression import RegressionModule
+    from hyperspace.core.regression.regression_module import RegressionModule
 
     D: int = 1024
     B: int = 16
@@ -150,7 +150,7 @@ def test_rm_values_invalid_shape():
     """
     import torch
     from hyperspace.backends.hrr import HRRBackend
-    from hyperspace.core.regression import RegressionModule
+    from hyperspace.core.regression.regression_module import RegressionModule
 
     D: int = 1024
     B: int = 16
@@ -173,7 +173,7 @@ def test_rm_values_invalid_dim():
     """
     import torch
     from hyperspace.backends.hrr import HRRBackend
-    from hyperspace.core.regression import RegressionModule
+    from hyperspace.core.regression.regression_module import RegressionModule
 
     D: int = 1024
     B: int = 16
@@ -197,7 +197,7 @@ def test_rm_method_invalid_type():
     """
     import torch
     from hyperspace.backends.hrr import HRRBackend
-    from hyperspace.core.regression import RegressionModule
+    from hyperspace.core.regression.regression_module import RegressionModule
 
     D: int = 1024
     B: int = 16
@@ -217,7 +217,7 @@ def test_rm_method_invalid_value():
     """
     import torch
     from hyperspace.backends.hrr import HRRBackend
-    from hyperspace.core.regression import RegressionModule
+    from hyperspace.core.regression.regression_module import RegressionModule
 
     D: int = 1024
     B: int = 16

@@ -5,7 +5,7 @@ def test_pi_no_backend():
     Test that the positional inversion module doesn't assume a default backend.
     """
     import torch
-    from hyperspace.core.positional_inversion import PositionalInversionModule
+    from hyperspace.core.positional_inversion.positional_inversion_module import PositionalInversionModule
 
     B: int = 64
     E: int = 3
@@ -21,7 +21,7 @@ def test_pi_true_backend():
     """
     import torch
     from hyperspace.backends.hrr import HRRBackend
-    from hyperspace.core.positional_inversion import PositionalInversionModule
+    from hyperspace.core.positional_inversion.positional_inversion_module import PositionalInversionModule
 
     B: int = 64
     D: int = 128
@@ -38,7 +38,7 @@ def test_pi_invalid_backend():
     backend is passed
     """
     import torch
-    from hyperspace.core.positional_inversion import PositionalInversionModule
+    from hyperspace.core.positional_inversion.positional_inversion_module import PositionalInversionModule
 
     B: int = 64
     E: int = 3
@@ -54,7 +54,7 @@ def test_pi_no_positions():
     positions aren't provided
     """
     from hyperspace.backends.hrr import HRRBackend
-    from hyperspace.core.positional_inversion import PositionalInversionModule
+    from hyperspace.core.positional_inversion.positional_inversion_module import PositionalInversionModule
 
     D: int = 128
     E: int = 3
@@ -71,7 +71,7 @@ def test_pi_invalid_positions_type():
     """
     import numpy as np
     from hyperspace.backends.hrr import HRRBackend
-    from hyperspace.core.positional_inversion import PositionalInversionModule
+    from hyperspace.core.positional_inversion.positional_inversion_module import PositionalInversionModule
 
     B: int = 64
     D: int = 128
@@ -90,7 +90,7 @@ def test_pi_invalid_positions_shape():
     """
     import torch
     from hyperspace.backends.hrr import HRRBackend
-    from hyperspace.core.positional_inversion import PositionalInversionModule
+    from hyperspace.core.positional_inversion.positional_inversion_module import PositionalInversionModule
 
     B: int = 64
     D: int = 128
@@ -120,7 +120,7 @@ def test_pi_valid_position_generation():
     """
     import torch
     from hyperspace.backends.hrr import HRRBackend
-    from hyperspace.core.positional_inversion import PositionalInversionModule
+    from hyperspace.core.positional_inversion.positional_inversion_module import PositionalInversionModule
 
     B: int = 2
     D: int = 128
@@ -148,7 +148,7 @@ def test_pi_call_memory_type():
     import numpy as np
     import torch
     from hyperspace.backends.hrr import HRRBackend
-    from hyperspace.core.positional_inversion import PositionalInversionModule
+    from hyperspace.core.positional_inversion.positional_inversion_module import PositionalInversionModule
 
     B: int = 2
     D: int = 128
@@ -172,7 +172,7 @@ def test_pi_call_memory_shape():
     import numpy as np
     import torch
     from hyperspace.backends.hrr import HRRBackend
-    from hyperspace.core.positional_inversion import PositionalInversionModule
+    from hyperspace.core.positional_inversion.positional_inversion_module import PositionalInversionModule
 
     B: int = 2
     D: int = 128
@@ -211,8 +211,8 @@ def test_pi_call_single_pos_1D_orth():
     """
     import torch
     from hyperspace.backends.hrr import HRRBackend
-    from hyperspace.core.memory_storage import MemoryStorageModule
-    from hyperspace.core.positional_inversion import PositionalInversionModule
+    from hyperspace.core.memory_storage.memory_storage_module import MemoryStorageModule
+    from hyperspace.core.positional_inversion.positional_inversion_module import PositionalInversionModule
 
     D: int = 1024
     E: int = 1
@@ -263,8 +263,8 @@ def test_pi_call_single_pos_2D_orth():
     """
     import torch
     from hyperspace.backends.hrr import HRRBackend
-    from hyperspace.core.memory_storage import MemoryStorageModule
-    from hyperspace.core.positional_inversion import PositionalInversionModule
+    from hyperspace.core.memory_storage.memory_storage_module import MemoryStorageModule
+    from hyperspace.core.positional_inversion.positional_inversion_module import PositionalInversionModule
 
     D: int = 1024
     E: int = 2
@@ -333,8 +333,8 @@ def test_pi_call_single_pos_3D_orth():
     """
     import torch
     from hyperspace.backends.hrr import HRRBackend
-    from hyperspace.core.memory_storage import MemoryStorageModule
-    from hyperspace.core.positional_inversion import PositionalInversionModule
+    from hyperspace.core.memory_storage.memory_storage_module import MemoryStorageModule
+    from hyperspace.core.positional_inversion.positional_inversion_module import PositionalInversionModule
 
     D: int = 1024
     E: int = 3

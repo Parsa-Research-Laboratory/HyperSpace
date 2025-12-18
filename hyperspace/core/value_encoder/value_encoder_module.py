@@ -1,31 +1,30 @@
-import torch
 from torch import Tensor
 from typing import Tuple
 
-from ..backends.base import BaseBackend
-from .base_module import BaseModule
+from ...backends.base import BaseBackend
+from ..base.base_module import BaseModule
 
 
-class PositionalEncoderModule(BaseModule):
+class ValueEncoderModule(BaseModule):
     """
-    PositionalEncoderModule maps Euclidean input coordinates into
-    high-dimensional hypervectors using the backend's positional encoding.
+    ValueEncoderModule maps raw values into high-dimensional hypervectors
+    using the backend's value-encoding mechanism.
 
     This module is a thin wrapper around the backend's
-    :meth:`positional_encoding` implementation, providing a consistent
-    interface for turning positions (e.g., spatial coordinates) into
-    hypervectors that can be used in downstream HyperSpace components.
+    :meth:`value_encoding` implementation, providing a consistent interface for
+    turning scalar, categorical, or vector-valued inputs into hypervectors
+    that can be used in downstream HyperSpace components.
     """
 
     def __init__(self, backend: BaseBackend):
         """
-        Initialize a PositionalEncoderModule.
+        Initialize a ValueEncoderModule.
 
         Parameters
         ----------
         backend : BaseBackend
             Backend instance that defines the hypervector dimensionality and
-            provides the :meth:`positional_encoding` operation.
+            provides the :meth:`value_encoding` operation.
 
         Raises
         ------
@@ -43,24 +42,24 @@ class PositionalEncoderModule(BaseModule):
 
     def __call__(self, x: Tensor) -> Tuple[Tensor, dict]:
         """
-        Encode input positions into high-dimensional hypervectors.
+        Encode input values into high-dimensional hypervectors.
 
         This method forwards the input tensor `x` to the backend's
-        positional encoding implementation. Inputs may be either a 
-        single position vector or a batch of positions.
+        :meth:`value_encoding` implementation. Inputs may be provided either
+        as a single value vector or as a batch of value vectors.
 
         Parameters
         ----------
         x : Tensor
-            Input tensor of positions. Must be:
-            - shape ``(D,)`` for a single position, or
-            - shape ``(N, D)`` for a batch of N positions,
+            Input tensor of values. Must be either:
+            - shape ``(D,)`` for a single value vector, or
+            - shape ``(N, D)`` for a batch of N value vectors,
             where ``D`` *must equal* ``backend.value_dim``.
 
         Returns
         -------
         Tensor
-            Encoded hypervectors corresponding to the input positions.
+            Encoded hypervectors corresponding to the input values.
             Shape mirrors the input:
             - ``(vector_dim,)`` for a single input
             - ``(N, vector_dim)`` for a batch
@@ -71,34 +70,30 @@ class PositionalEncoderModule(BaseModule):
         ------
         TypeError
             If `x` is not a :class:`torch.Tensor`.
-
         ValueError
-            If `x` is not 1D or 2D,
-            or if the trailing dimension does not match ``backend.env_dim``.
+            If `x` is not 1D or 2D, or if the trailing dimension does not
+            match ``backend.value_dim``.
         """
         # --------------------------------
-        # validate input types
+        # validate input types and shapes
         # --------------------------------
         if not isinstance(x, Tensor):
             raise TypeError(f"Input x should be a Tensor; got {type(x)}")
 
         if x.dim() not in (1, 2):
             raise ValueError(
-                "Input x must be a 1D or 2D tensor of shape (env_dim) or "
-                f"(batch_size, env_dim); got {x.dim()}"
+                "Input x must be a 1D or 2D tensor of shape (value_dim) or "
+                f"(batch_size, value_dim); got {x.dim()}"
             )
 
-        # --------------------------------
-        # validate spatial / Euclidean dimensionality
-        # --------------------------------
-        if x.shape[-1] != self.backend.env_dim:
+        if x.shape[-1] != self.backend.value_dim:
             raise ValueError(
-                f"Expected input dimensionality {self.backend.env_dim}; "
+                f"Expected input value_dim {self.backend.value_dim}; "
                 f"got {x.shape[-1]}"
             )
 
-        # TODO: Add batched processing for embedded / smaller devices
+        # TODO: Add additional batched processing optimizations for small devices
 
-        out, info = self.backend.positional_encoding(x)
+        out, info = self.backend.value_encoding(x)
 
         return out, info

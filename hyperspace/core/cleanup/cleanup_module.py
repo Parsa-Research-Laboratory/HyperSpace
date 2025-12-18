@@ -1,8 +1,8 @@
 from torch import Tensor
 from typing import List, Optional, Tuple, Union
 
-from ..backends.base import BaseBackend
-from .base_module import BaseModule
+from ...backends.base import BaseBackend
+from ..base.base_module import BaseModule
 
 class CleanupModule(BaseModule):
     """
