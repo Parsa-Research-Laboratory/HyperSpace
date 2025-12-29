@@ -12,7 +12,11 @@ def test_base_import():
 
 def test_base_init_no_arg():
     """
-    TODO Finish Documentation
+    Verify that BaseRegressionModel cannot be instantiated without arguments.
+
+    This test ensures that the base regression model enforces its constructor
+    contract and raises a TypeError when required initialization parameters
+    are omitted.
     """
     from hyperspace.core.regression.models.base_model import BaseRegressionModel
 
