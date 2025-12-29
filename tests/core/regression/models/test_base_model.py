@@ -111,3 +111,17 @@ def test_base_init_invalid_too_many_args():
     TODO Finish Documentation
     """
     pass
+
+def test_base_forward_not_implemented():
+    """
+    TODO Finish Documentation
+    """
+    from hyperspace.core.regression.models.base_model import BaseRegressionModel
+
+    m = BaseRegressionModel(
+        feature_dim=256,
+        value_dim=1
+    )
+
+    with pytest.raises(NotImplementedError):
+        m.forward(None)
