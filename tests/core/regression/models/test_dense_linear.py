@@ -130,12 +130,22 @@ def test_init_extra_args():
 
     assert m.num_layers == 1
 
-@pytest.mark.skip()
 def test_init_num_layer_invalid_type():
     """
-    TODO Finish Documentation
+    Verify that DenseLinearModel enforces the type of num_layers.
+
+    This test ensures that providing a non-integer value for the num_layers
+    argument (e.g., a float) raises a TypeError, enforcing strict type
+    requirements for layer configuration.
     """
-    pass
+    from hyperspace.core.regression.models import DenseLinearModel
+
+    f: int = 2048
+    v: int = 10
+    nl: float = 10.0
+
+    with pytest.raises(TypeError):
+        m = DenseLinearModel(f, v, num_layers=nl)
 
 @pytest.mark.skip()
 def test_init_num_layer_invalid_value():
