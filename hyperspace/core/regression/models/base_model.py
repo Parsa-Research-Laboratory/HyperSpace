@@ -82,7 +82,7 @@ class BaseRegressionModel(nn.Module):
                     self.custom_layer = nn.Linear(feature_dim, custom_param)
                     self.output_layer = nn.Linear(custom_param, value_dim)
         """
-        super().__init__(BaseRegressionModel)
+        super(BaseRegressionModel, self).__init__()
 
         # -------------------
         # Validate Arguments
