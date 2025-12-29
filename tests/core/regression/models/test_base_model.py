@@ -117,7 +117,11 @@ def test_base_init_invalid_feature_dim_value():
 
 def test_base_init_invalid_value_dim_value():
     """
-    TODO Finish Documentation
+    Verify that BaseRegressionModel enforces valid value_dim values.
+
+    This test ensures that the value_dim argument must be a positive integer
+    and that zero or negative values result in a ValueError, preventing
+    invalid model configurations.
     """
     from hyperspace.core.regression.models.base_model import BaseRegressionModel
 
