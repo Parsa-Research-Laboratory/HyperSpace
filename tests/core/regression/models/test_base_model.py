@@ -35,3 +35,12 @@ def test_base_init_missing_feature_dim():
 
     with pytest.raises(TypeError):
         BaseRegressionModel(value_dim=10)
+
+def test_base_init_missing_value_dim():
+    """
+    TODO Finish Documentation
+    """
+    from hyperspace.core.regression.models.base_model import BaseRegressionModel
+
+    with pytest.raises(TypeError):
+        BaseRegressionModel(feature_dim=10)
