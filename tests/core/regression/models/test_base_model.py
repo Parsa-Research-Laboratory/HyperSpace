@@ -126,7 +126,11 @@ def test_base_init_invalid_too_many_args():
 
 def test_base_forward_not_implemented():
     """
-    TODO Finish Documentation
+    Verify that BaseRegressionModel.forward is not implemented.
+
+    This test ensures that calling the forward method on the base regression
+    model raises a NotImplementedError, enforcing that subclasses must provide
+    a concrete implementation.
     """
     from hyperspace.core.regression.models.base_model import BaseRegressionModel
 
