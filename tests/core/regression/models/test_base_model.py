@@ -201,12 +201,28 @@ def test_base_init_valid_value_dim_value_keyword():
 
     assert m.value_dim == v
 
-@pytest.mark.skip()
 def test_base_init_valid_feature_dim_value_positional():
     """
-    TODO Finish Documentation
+    Verify successful initialization of BaseRegressionModel using positional arguments.
+
+    This test ensures that valid feature_dim values provided via positional arguments
+    are accepted and correctly stored on the model instance.
     """
-    pass
+    from hyperspace.core.regression.models.base_model import BaseRegressionModel
+
+    f: int = 2048
+    v: int = 10
+
+    m = BaseRegressionModel(f, v)
+
+    assert m.feature_dim == f
+
+    f: int = 2048 * 3
+    v: int = 10
+
+    m = BaseRegressionModel(f, v)
+
+    assert m.feature_dim == f
 
 @pytest.mark.skip()
 def test_base_init_valid_value_dim_value_positional():
