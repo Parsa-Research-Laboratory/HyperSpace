@@ -145,7 +145,10 @@ def test_base_init_invalid_value_dim_value():
 
 def test_base_init_valid_feature_dim_value_keyword():
     """
-    TODO Finish Documentation
+    Verify successful initialization of BaseRegressionModel using keyword arguments.
+
+    This test ensures that valid feature_dim values provided via keyword arguments
+    are accepted and correctly stored on the model instance.
     """
     from hyperspace.core.regression.models.base_model import BaseRegressionModel
 
