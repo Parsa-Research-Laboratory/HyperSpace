@@ -9,3 +9,12 @@ def test_base_import():
     circular imports.
     """
     from hyperspace.core.regression.models.base_model import BaseRegressionModel
+
+def test_base_init_no_arg():
+    """
+    TODO Finish Documentation
+    """
+    from hyperspace.core.regression.models.base_model import BaseRegressionModel
+
+    with pytest.raises(TypeError):
+        BaseRegressionModel()
