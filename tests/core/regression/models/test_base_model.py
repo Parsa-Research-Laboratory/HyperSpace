@@ -51,7 +51,11 @@ def test_base_init_missing_value_dim():
 
 def test_base_init_invalid_feature_dim_type():
     """
-    TODO Finish Documentation
+    Verify that BaseRegressionModel enforces the type of feature_dim.
+
+    This test ensures that providing a non-integer feature_dim (e.g., a float)
+    results in a TypeError, enforcing strict type requirements for model
+    dimensionality parameters.
     """
     from hyperspace.core.regression.models.base_model import BaseRegressionModel
 
