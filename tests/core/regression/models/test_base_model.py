@@ -172,12 +172,31 @@ def test_base_init_valid_feature_dim_value_keyword():
 
     assert m.feature_dim == f
 
-@pytest.mark.skip()
 def test_base_init_valid_value_dim_value_keyword():
     """
     TODO Finish Documentation
     """
-    pass
+    from hyperspace.core.regression.models.base_model import BaseRegressionModel
+
+    f: int = 2048
+    v: int = 10
+
+    m = BaseRegressionModel(
+        feature_dim=f,
+        value_dim=v
+    )
+
+    assert m.value_dim == v
+
+    f: int = 2048
+    v: int = 10 * 100
+
+    m = BaseRegressionModel(
+        feature_dim=f,
+        value_dim=v
+    )
+
+    assert m.value_dim == v
 
 @pytest.mark.skip()
 def test_base_init_valid_feature_dim_value_positional():
