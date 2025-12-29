@@ -273,21 +273,7 @@ def test_init_hidden_act_invalid_type():
         DenseLinearModel(f, v, nl, hs, ha)
 
 @pytest.mark.skip()
-def test_init_hidden_act_invalid_value():
-    """
-    TODO Finish Documentation
-    """
-    pass
-
-@pytest.mark.skip()
 def test_init_output_act_invalid_type():
-    """
-    TODO Finish Documentation
-    """
-    pass
-
-@pytest.mark.skip()
-def test_init_output_act_invalid_value():
     """
     TODO Finish Documentation
     """
