@@ -113,3 +113,82 @@ def test_passthrough_init_valid_value_dim_value_keyword():
     )
 
     assert m.value_dim == v
+
+def test_init_extra_args():
+    """
+    Verify that DenseLinearModel supports positional initialization arguments.
+
+    This test ensures that the model can be instantiated using positional
+    arguments for feature and value dimensions without raising an error.
+    """
+    from hyperspace.core.regression.models import DenseLinearModel
+
+    f: int = 2048
+    v: int = 10
+
+    m = DenseLinearModel(f, v)
+
+    assert m.num_layers == 1
+
+@pytest.mark.skip()
+def test_init_num_layer_invalid_type():
+    """
+    TODO Finish Documentation
+    """
+    pass
+
+@pytest.mark.skip()
+def test_init_num_layer_invalid_value():
+    """
+    TODO Finish Documentation
+    """
+    pass
+
+@pytest.mark.skip()
+def test_init_hidden_size_invalid_type():
+    """
+    TODO Finish Documentation
+    """
+    pass
+
+@pytest.mark.skip()
+def test_init_hidden_size_invalid_int_value():
+    """
+    TODO Finish Documentation
+    """
+    pass
+
+@pytest.mark.skip()
+def test_init_hidden_size_invalid_list_value():
+    """
+    TODO Finish Documentation
+    """
+    pass
+
+@pytest.mark.skip()
+def test_init_hidden_act_invalid_type():
+    """
+    TODO Finish Documentation
+    """
+    pass
+
+@pytest.mark.skip()
+def test_init_hidden_act_invalid_value():
+    """
+    TODO Finish Documentation
+    """
+    pass
+
+@pytest.mark.skip()
+def test_init_output_act_invalid_type():
+    """
+    TODO Finish Documentation
+    """
+    pass
+
+@pytest.mark.skip()
+def test_init_output_act_invalid_value():
+    """
+    TODO Finish Documentation
+    """
+    pass
