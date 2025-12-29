@@ -36,6 +36,16 @@ class DenseLinearModel(BaseRegressionModel):
         if isinstance(hidden_size, int) and hidden_size < 1:
             raise ValueError(f"Expected hidden_size to be greater than zero; got {hidden_size}")
         
+        if isinstance(hidden_size, list):
+            # check the types of all elements
+            if not all([isinstance(x, int) for x in hidden_size]):
+                types = [type(x) for x in hidden_size]
+                raise TypeError(f"Expected all elements to be integers; got {types}")
+
+            # check the values of all elements
+            if not all([x > 0 for x in hidden_size]):
+                raise ValueError(f"Expected all elements to be greater than zero; got {hidden_size}")
+
         if hidden_act is not None and not isinstance(hidden_act, nn.Module):
             raise TypeError(f"Expected hidden_act to be nn.Module; got {type(hidden_act)}")
         
