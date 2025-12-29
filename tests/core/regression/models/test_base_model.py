@@ -38,9 +38,15 @@ def test_base_init_missing_feature_dim():
 
 def test_base_init_missing_value_dim():
     """
-    TODO Finish Documentation
+    Verify that BaseRegressionModel requires a value dimension at initialization.
+
+    This test ensures that providing only a feature dimension is insufficient
+    and that omitting the required value_dim argument results in a TypeError,
+    enforcing the constructor contract of the base model.
     """
     from hyperspace.core.regression.models.base_model import BaseRegressionModel
 
     with pytest.raises(TypeError):
         BaseRegressionModel(feature_dim=10)
+
+       
