@@ -25,7 +25,11 @@ def test_base_init_no_arg():
 
 def test_base_init_missing_feature_dim():
     """
-    TODO Finish Documentation
+    Verify that BaseRegressionModel requires a feature dimension at initialization.
+
+    This test ensures that providing only a value dimension is insufficient
+    and that omitting the required feature_dim argument results in a TypeError,
+    enforcing the constructor contract of the base model.
     """
     from hyperspace.core.regression.models.base_model import BaseRegressionModel
 
