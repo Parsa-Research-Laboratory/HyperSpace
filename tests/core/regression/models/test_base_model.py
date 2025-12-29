@@ -115,12 +115,29 @@ def test_base_init_invalid_feature_dim_value():
             value_dim=v
         )
 
-@pytest.mark.skip()
 def test_base_init_invalid_value_dim_value():
     """
     TODO Finish Documentation
     """
-    pass
+    from hyperspace.core.regression.models.base_model import BaseRegressionModel
+
+    f: int = 2048
+    v: int = 0
+
+    with pytest.raises(ValueError):
+        BaseRegressionModel(
+            feature_dim=f,
+            value_dim=v
+        )
+
+    f: int = 2048
+    v: int = -1
+
+    with pytest.raises(ValueError):
+        BaseRegressionModel(
+            feature_dim=f,
+            value_dim=v
+        )
 
 @pytest.mark.skip()
 def test_base_init_valid_feature_dim_value_keyword():
