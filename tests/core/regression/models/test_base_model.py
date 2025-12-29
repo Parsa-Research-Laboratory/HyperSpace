@@ -49,4 +49,65 @@ def test_base_init_missing_value_dim():
     with pytest.raises(TypeError):
         BaseRegressionModel(feature_dim=10)
 
-       
+@pytest.mark.skip()
+def test_base_init_invalid_feature_dim_type():
+    """
+    TODO Finish Documentation
+    """
+    pass
+
+@pytest.mark.skip()
+def test_base_init_invalid_value_dim_type():
+    """
+    TODO Finish Documentation
+    """
+    pass
+
+@pytest.mark.skip()
+def test_base_init_invalid_feature_dim_value():
+    """
+    TODO Finish Documentation
+    """
+    pass
+
+@pytest.mark.skip()
+def test_base_init_invalid_value_dim_value():
+    """
+    TODO Finish Documentation
+    """
+    pass
+
+@pytest.mark.skip()
+def test_base_init_valid_feature_dim_value_keyword():
+    """
+    TODO Finish Documentation
+    """
+    pass
+
+@pytest.mark.skip()
+def test_base_init_valid_value_dim_value_keyword():
+    """
+    TODO Finish Documentation
+    """
+    pass
+
+@pytest.mark.skip()
+def test_base_init_valid_feature_dim_value_positional():
+    """
+    TODO Finish Documentation
+    """
+    pass
+
+@pytest.mark.skip()
+def test_base_init_valid_value_dim_value_positional():
+    """
+    TODO Finish Documentation
+    """
+    pass
+
+@pytest.mark.skip()
+def test_base_init_invalid_too_many_args():
+    """
+    TODO Finish Documentation
+    """
+    pass
