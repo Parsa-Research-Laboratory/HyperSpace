@@ -247,12 +247,18 @@ def test_base_init_valid_value_dim_value_positional():
 
     assert m.value_dim == v
 
-@pytest.mark.skip()
 def test_base_init_invalid_too_many_args():
     """
-    TODO Finish Documentation
+    Verify that BaseRegressionModel rejects excess positional arguments.
+
+    This test ensures that passing more positional arguments than supported
+    by the constructor raises a TypeError, enforcing strict initialization
+    arity and preventing ambiguous model configuration.
     """
-    pass
+    from hyperspace.core.regression.models.base_model import BaseRegressionModel
+
+    with pytest.raises(TypeError):
+        BaseRegressionModel(10, 10, 10)
 
 def test_base_forward_not_implemented():
     """
