@@ -33,6 +33,9 @@ class DenseLinearModel(BaseRegressionModel):
         if hidden_size is not None and not isinstance(hidden_size, (int, list)):
             raise TypeError(f"Expected hidden_size to be one of [int, or List[int]]; got {type(hidden_size)}")
         
+        if isinstance(hidden_size, int) and hidden_size < 1:
+            raise ValueError(f"Expected hidden_size to be greater than zero; got {hidden_size}")
+        
         if hidden_act is not None and not isinstance(hidden_act, nn.Module):
             raise TypeError(f"Expected hidden_act to be nn.Module; got {type(hidden_act)}")
         
