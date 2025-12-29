@@ -291,3 +291,180 @@ def test_init_output_act_invalid_type():
 
     with pytest.raises(TypeError):
         DenseLinearModel(f, v, nl, hs, ha, oa)
+
+def test_init_num_layers_one_rejects_hidden_size_provided():
+    """
+    Verify DenseLinearModel rejects hidden_size when num_layers == 1.
+
+    This test ensures that if the model is configured with a single layer
+    (i.e., no hidden layers), the user cannot also provide a hidden_size.
+    """
+    from hyperspace.core.regression.models import DenseLinearModel
+
+    f: int = 2048
+    v: int = 10
+    nl: int = 1
+    hs: int = 64
+
+    with pytest.raises(TypeError, match=r"hidden_size.*num_layers\s*==\s*1|num_layers\s*==\s*1.*hidden_size"):
+        DenseLinearModel(f, v, num_layers=nl, hidden_size=hs)
+
+
+def test_init_num_layers_one_rejects_hidden_act_provided():
+    """
+    Verify DenseLinearModel rejects hidden_act when num_layers == 1.
+
+    This test ensures that if the model is configured with a single layer
+    (i.e., no hidden layers), the user cannot also provide a hidden activation.
+    """
+    import torch
+    from hyperspace.core.regression.models import DenseLinearModel
+
+    f: int = 2048
+    v: int = 10
+    nl: int = 1
+    ha: torch.nn.Module = torch.nn.ReLU()
+
+    with pytest.raises(TypeError, match=r"hidden_act.*num_layers\s*==\s*1|num_layers\s*==\s*1.*hidden_act"):
+        DenseLinearModel(f, v, num_layers=nl, hidden_act=ha)
+
+
+def test_init_num_layers_one_allows_hidden_args_omitted():
+    """
+    Verify DenseLinearModel initializes when num_layers == 1 and hidden args omitted.
+
+    This test ensures the "single-layer" configuration is supported and does not
+    require hidden_size or hidden_act.
+    """
+    from hyperspace.core.regression.models import DenseLinearModel
+
+    f: int = 2048
+    v: int = 10
+    nl: int = 1
+
+    m = DenseLinearModel(f, v, num_layers=nl)
+
+    assert m.num_layers == nl
+    # Optional: only assert these exist if they are attributes on the class.
+    # assert m.hidden_size is None
+    # assert m.hidden_act is None
+
+
+def test_init_num_layers_gt_one_requires_hidden_size():
+    """
+    Verify DenseLinearModel requires hidden_size when num_layers > 1.
+
+    This test ensures that when hidden layers are present, a hidden_size must
+    be provided.
+    """
+    import torch
+    from hyperspace.core.regression.models import DenseLinearModel
+
+    f: int = 2048
+    v: int = 10
+    nl: int = 2
+    ha: torch.nn.Module = torch.nn.ReLU()
+
+    with pytest.raises(TypeError, match=r"hidden_size.*required|required.*hidden_size"):
+        DenseLinearModel(f, v, num_layers=nl, hidden_size=None, hidden_act=ha)
+
+
+def test_init_num_layers_gt_one_requires_hidden_act():
+    """
+    Verify DenseLinearModel requires hidden_act when num_layers > 1.
+
+    This test ensures that when hidden layers are present, a hidden activation
+    must be provided.
+    """
+    from hyperspace.core.regression.models import DenseLinearModel
+
+    f: int = 2048
+    v: int = 10
+    nl: int = 2
+    hs: int = 64
+
+    with pytest.raises(TypeError, match=r"hidden_act.*required|required.*hidden_act"):
+        DenseLinearModel(f, v, num_layers=nl, hidden_size=hs, hidden_act=None)
+
+
+def test_init_num_layers_gt_one_allows_hidden_args_provided():
+    """
+    Verify DenseLinearModel initializes when num_layers > 1 and hidden args provided.
+
+    This test ensures that a valid multi-layer configuration is accepted when both
+    hidden_size and hidden_act are provided.
+    """
+    import torch
+    from hyperspace.core.regression.models import DenseLinearModel
+
+    f: int = 2048
+    v: int = 10
+    nl: int = 2
+    hs: int = 64
+    ha: torch.nn.Module = torch.nn.ReLU()
+
+    m = DenseLinearModel(f, v, num_layers=nl, hidden_size=hs, hidden_act=ha)
+
+    assert m.num_layers == nl
+
+
+def test_init_hidden_size_list_length_must_match_num_layers_minus_one():
+    """
+    Verify DenseLinearModel validates list-based hidden_size length.
+
+    This test ensures that when hidden_size is provided as a list, it contains one
+    entry per hidden layer, i.e., length == num_layers - 1.
+    """
+    import torch
+    from hyperspace.core.regression.models import DenseLinearModel
+
+    f: int = 2048
+    v: int = 10
+    ha: torch.nn.Module = torch.nn.ReLU()
+
+    nl: int = 3
+    hs_bad = [64]  # should be length 2
+
+    with pytest.raises(ValueError, match=r"length.*num_layers\s*-\s*1|num_layers\s*-\s*1.*length"):
+        DenseLinearModel(f, v, num_layers=nl, hidden_size=hs_bad, hidden_act=ha)
+
+    nl = 4
+    hs_bad = [64, 64]  # should be length 3
+
+    with pytest.raises(ValueError, match=r"length.*num_layers\s*-\s*1|num_layers\s*-\s*1.*length"):
+        DenseLinearModel(f, v, num_layers=nl, hidden_size=hs_bad, hidden_act=ha)
+
+
+def test_init_hidden_size_list_valid_length_is_accepted():
+    """
+    Verify DenseLinearModel accepts list-based hidden_size with correct length.
+
+    This test ensures that providing a hidden_size list with one entry per hidden
+    layer is accepted.
+    """
+    import torch
+    from hyperspace.core.regression.models import DenseLinearModel
+
+    f: int = 2048
+    v: int = 10
+    nl: int = 3
+    hs = [64, 64]  # num_layers - 1
+    ha: torch.nn.Module = torch.nn.ReLU()
+
+    m = DenseLinearModel(f, v, num_layers=nl, hidden_size=hs, hidden_act=ha)
+
+    assert m.num_layers == nl
+
+def test_init_num_layers_one_rejects_hidden_size_list():
+    """
+    Verify DenseLinearModel rejects list hidden_size when num_layers == 1.
+    """
+    from hyperspace.core.regression.models import DenseLinearModel
+
+    f: int = 2048
+    v: int = 10
+    nl: int = 1
+    hs = [64]  # still "provided"
+
+    with pytest.raises(TypeError):
+        DenseLinearModel(f, v, num_layers=nl, hidden_size=hs)
