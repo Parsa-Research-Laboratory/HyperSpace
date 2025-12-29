@@ -70,7 +70,11 @@ def test_base_init_invalid_feature_dim_type():
 
 def test_base_init_invalid_value_dim_type():
     """
-    TODO Finish Documentation
+    Verify that BaseRegressionModel enforces the type of value_dim.
+
+    This test ensures that providing a non-integer value_dim (e.g., a float)
+    results in a TypeError, enforcing strict type requirements for output
+    dimensionality parameters.
     """
     from hyperspace.core.regression.models.base_model import BaseRegressionModel
 
