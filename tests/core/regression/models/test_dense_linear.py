@@ -253,12 +253,24 @@ def test_init_hidden_size_invalid_list_value():
     with pytest.raises(ValueError):
         m = DenseLinearModel(f, v, num_layers=nl, hidden_size=hs)
 
-@pytest.mark.skip()
 def test_init_hidden_act_invalid_type():
     """
-    TODO Finish Documentation
+    Verify DenseLinearModel requires hidden_act to be an nn.Module.
+
+    This test ensures that providing a non-module activation specification
+    (e.g., a Tensor) raises a TypeError.
     """
-    pass
+    import torch
+    from hyperspace.core.regression.models import DenseLinearModel
+
+    f: int = 2048
+    v: int = 10
+    nl: int = 2
+    hs: int = 64
+    ha = torch.zeros((10))
+
+    with pytest.raises(TypeError):
+        DenseLinearModel(f, v, nl, hs, ha)
 
 @pytest.mark.skip()
 def test_init_hidden_act_invalid_value():
