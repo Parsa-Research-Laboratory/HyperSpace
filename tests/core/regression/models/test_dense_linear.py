@@ -189,12 +189,31 @@ def test_init_hidden_size_invalid_type():
     with pytest.raises(TypeError):
         m = DenseLinearModel(f, v, num_layers=nl, hidden_size=hs)
 
-@pytest.mark.skip()
 def test_init_hidden_size_invalid_int_value():
     """
-    TODO Finish Documentation
+    Verify that DenseLinearModel enforces valid hidden_size values.
+
+    This test ensures that the hidden_size argument must be a positive integer
+    and that zero or negative values raise a ValueError, preventing invalid
+    hidden layer configurations.
     """
-    pass
+    from hyperspace.core.regression.models import DenseLinearModel
+
+    f: int = 2048
+    v: int = 10
+    nl: int = 2
+    hs: int = 0
+
+    with pytest.raises(ValueError):
+        m = DenseLinearModel(f, v, num_layers=nl, hidden_size=hs)
+
+    f: int = 2048
+    v: int = 10
+    nl: int = 2
+    hs: int = -1
+
+    with pytest.raises(ValueError):
+        m = DenseLinearModel(f, v, num_layers=nl, hidden_size=hs)
 
 @pytest.mark.skip()
 def test_init_hidden_size_invalid_list_value():
