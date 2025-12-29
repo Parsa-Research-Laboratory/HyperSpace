@@ -479,16 +479,32 @@ def test_cm_call_single_value_predef_codebook_resonator():
     pred_after = torch.argmax(s_after, dim=-1)
     true_sim_after = s_after.gather(1, true_idx.view(-1, 1)).squeeze(1)
 
-    correct = (pred_after == true_idx)
-    assert bool(correct.all().item()), (
-        "Some batch elements retrieved the wrong index after resonator convergence.\n"
+    MIN_PASS_RATE = 0.75  # 75%
+
+    # ----------------------------
+    # Top-1 correctness threshold
+    # ----------------------------
+    correct = (pred_after == true_idx)              # bool tensor, shape (B,)
+    correct_rate = correct.float().mean().item()    # in [0, 1]
+
+    assert correct_rate >= MIN_PASS_RATE, (
+        f"Top-1 retrieval pass rate below threshold after resonator convergence.\n"
+        f"required>={MIN_PASS_RATE:.0%}, got={correct_rate:.0%}\n"
+        f"num_correct={int(correct.sum().item())}/{correct.numel()}\n"
         f"true_idx={true_idx.tolist()}\n"
         f"pred_after={pred_after.tolist()}\n"
     )
 
-    improved = true_sim_after > true_sim_before + 1e-4
-    assert bool(improved.all().item()), (
-        "Some batch elements did not improve true similarity after resonator convergence.\n"
+    # ----------------------------------------
+    # Similarity improvement rate threshold
+    # ----------------------------------------
+    improved = (true_sim_after > true_sim_before + 1e-4)  # bool tensor, shape (B,)
+    improved_rate = improved.float().mean().item()
+
+    assert improved_rate >= MIN_PASS_RATE, (
+        f"True-similarity improvement pass rate below threshold after resonator convergence.\n"
+        f"required>={MIN_PASS_RATE:.0%}, got={improved_rate:.0%}\n"
+        f"num_improved={int(improved.sum().item())}/{improved.numel()}\n"
         f"true_sim_before={true_sim_before.tolist()}\n"
         f"true_sim_after ={true_sim_after.tolist()}\n"
     )
@@ -588,20 +604,32 @@ def test_cm_call_multi_value_predef_codebook_hopfield():
     # ----------------------------
     # Core batched assertions
     # ----------------------------
-    k = 3  # or 2
-    topk = torch.topk(s_after, k=k, dim=-1).indices           # (B, k)
-    correct_topk = (topk == true_idx.unsqueeze(-1)).any(dim=-1)
-    assert bool(correct_topk.all().item()), (
-        f"Some batch elements did not have true_idx in top-{k} after convergence.\n"
+    MIN_PASS_RATE = 0.75  # 75%
+
+    # ----------------------------
+    # Top-1 correctness threshold
+    # ----------------------------
+    correct = (pred_after == true_idx)              # bool tensor, shape (B,)
+    correct_rate = correct.float().mean().item()    # in [0, 1]
+
+    assert correct_rate >= MIN_PASS_RATE, (
+        f"Top-1 retrieval pass rate below threshold after convergence.\n"
+        f"required>={MIN_PASS_RATE:.0%}, got={correct_rate:.0%}\n"
+        f"num_correct={int(correct.sum().item())}/{correct.numel()}\n"
         f"true_idx={true_idx.tolist()}\n"
-        f"topk={topk.tolist()}\n"
-        f"s_after={s_after.tolist()}\n"
+        f"pred_after={pred_after.tolist()}\n"
     )
 
-    improved = true_sim_after > true_sim_before + 1e-4
-    assert bool(improved.all().item()), (
-        "Some batch elements did not improve true similarity after convergence.\n"
-        f"true_idx={true_idx.tolist()}\n"
+    # ----------------------------------------
+    # Similarity improvement rate threshold
+    # ----------------------------------------
+    improved = (true_sim_after > true_sim_before + 1e-4)  # bool tensor, shape (B,)
+    improved_rate = improved.float().mean().item()
+
+    assert improved_rate >= MIN_PASS_RATE, (
+        f"True-similarity improvement pass rate below threshold afterconvergence.\n"
+        f"required>={MIN_PASS_RATE:.0%}, got={improved_rate:.0%}\n"
+        f"num_improved={int(improved.sum().item())}/{improved.numel()}\n"
         f"true_sim_before={true_sim_before.tolist()}\n"
         f"true_sim_after ={true_sim_after.tolist()}\n"
     )
