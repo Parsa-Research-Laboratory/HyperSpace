@@ -49,12 +49,20 @@ def test_base_init_missing_value_dim():
     with pytest.raises(TypeError):
         BaseRegressionModel(feature_dim=10)
 
-@pytest.mark.skip()
 def test_base_init_invalid_feature_dim_type():
     """
     TODO Finish Documentation
     """
-    pass
+    from hyperspace.core.regression.models.base_model import BaseRegressionModel
+
+    f: float = 0.1
+    v: int = 10
+
+    with pytest.raises(TypeError):
+        BaseRegressionModel(
+            feature_dim=f,
+            value_dim=v
+        )
 
 @pytest.mark.skip()
 def test_base_init_invalid_value_dim_type():
