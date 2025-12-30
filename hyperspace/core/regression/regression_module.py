@@ -62,9 +62,9 @@ def _create_dummy_input(feature_dim: int, device: device, batched: bool = False)
     i = None
 
     if batched:
-        i = torch.rand((feature_dim,))
+        i = torch.rand((16, feature_dim,))
     else:
-        i = torch.rand((16, feature_dim))
+        i = torch.rand((feature_dim,))
 
     i = i.to(device)
 
