@@ -1,4 +1,4 @@
-# tests/core/regression/test_regression_module.py
+# tests/core/regression/test_regression.py
 
 import pytest
 import torch
@@ -31,7 +31,7 @@ def device(request):
 
 @pytest.fixture
 def backend(dims, device):
-    return HRRBackend(vector_dim=dims["D"], value_dim=dims["V"])
+    return HRRBackend(vector_dim=dims["D"], value_dim=dims["V"], device=device)
 
 
 @pytest.fixture
@@ -54,11 +54,17 @@ def rm(backend, codebook, values):
 # -----------------------------------------------------------------------------
 
 def test_util_module_device_parameter_module(device):
+    """
+    Test that _module_device correctly identifies device from module parameters.
+    """
     m = nn.Linear(8, 4).to(device)
     assert _module_device(m) == device
 
 
 def test_util_module_device_buffer_only(device):
+    """
+    Test that _module_device correctly identifies device from module buffers.
+    """
     class BufferOnly(nn.Module):
         def __init__(self):
             super().__init__()
@@ -69,6 +75,9 @@ def test_util_module_device_buffer_only(device):
 
 
 def test_util_module_device_no_params_no_buffers_defaults_cpu():
+    """
+    Test that _module_device defaults to CPU when module has no parameters or buffers.
+    """
     class Empty(nn.Module):
         def __init__(self):
             super().__init__()
@@ -77,24 +86,27 @@ def test_util_module_device_no_params_no_buffers_defaults_cpu():
     assert _module_device(m) == torch.device("cpu")
 
 
-@pytest.mark.parametrize(
-    "batched,expected_shape",
-    [
-        # NOTE: This reflects the CURRENT implementation in regression_module.py:
-        # batched=True -> (16, feature_dim)
-        # batched=False  -> (feature_dim,)
-        (False, (1024,)),
-        (True, (16, 1024)),
-    ],
-)
-def test_util_create_dummy_input_shapes_and_device(device, batched, expected_shape):
-    x = _create_dummy_input(feature_dim=1024, device=device, batched=batched)
-    assert x.shape == expected_shape
-    assert x.device == device
-    assert x.dtype == torch.float32
+def test_util_create_dummy_input_shapes_and_device(device):
+    """
+    Test that _create_dummy_input creates tensors with correct shape and device.
+    """
+    # Test unbatched input
+    x_unbatched = _create_dummy_input(feature_dim=1024, device=device, batched=False)
+    assert x_unbatched.shape == (1024,)
+    assert x_unbatched.device == device
+    assert x_unbatched.dtype == torch.float32
+
+    # Test batched input
+    x_batched = _create_dummy_input(feature_dim=1024, device=device, batched=True)
+    assert x_batched.shape == (16, 1024)
+    assert x_batched.device == device
+    assert x_batched.dtype == torch.float32
 
 
 def test_util_validate_model_accepts_linear(device):
+    """
+    Test that _validate_model accepts a valid linear model.
+    """
     feature_dim = 32
     value_dim = 5
     m = nn.Linear(feature_dim, value_dim).to(device)
@@ -104,6 +116,9 @@ def test_util_validate_model_accepts_linear(device):
 
 
 def test_util_validate_model_raises_on_wrong_output_dim(device):
+    """
+    Test that _validate_model raises ValueError when model output dimension is incorrect.
+    """
     feature_dim = 32
     value_dim = 5
 
@@ -120,25 +135,25 @@ def test_util_validate_model_raises_on_wrong_output_dim(device):
 
 def test_rm_no_backend(dims, device):
     """
-    RegressionModule should not assume a default backend.
+    Test that RegressionModule raises TypeError when backend is not provided.
     """
     c = torch.rand((dims["B"], dims["D"]), device=device)
     v = torch.rand((dims["B"], 1), device=device)
 
     with pytest.raises(TypeError):
-        RegressionModule(codebook=c, values=v)  # missing backend
+        RegressionModule(codebook=c, values=v)
 
 
 def test_rm_true_backend(backend, codebook, values):
     """
-    RegressionModule should initialize with a valid backend.
+    Test that RegressionModule initializes with a valid backend.
     """
     _ = RegressionModule(backend, codebook, values)
 
 
 def test_rm_invalid_backend(codebook, values):
     """
-    RegressionModule should raise if backend is not a BaseBackend.
+    Test that RegressionModule raises TypeError when backend is not a BaseBackend.
     """
     with pytest.raises(TypeError):
         _ = RegressionModule(5, codebook, values)
@@ -146,7 +161,7 @@ def test_rm_invalid_backend(codebook, values):
 
 def test_rm_codebook_invalid_type(backend, dims, device):
     """
-    RegressionModule should raise if codebook is not a Tensor.
+    Test that RegressionModule raises TypeError when codebook is not a Tensor.
     """
     import numpy as np
 
@@ -159,7 +174,7 @@ def test_rm_codebook_invalid_type(backend, dims, device):
 
 def test_rm_codebook_invalid_shape(backend, dims, device):
     """
-    RegressionModule should raise if codebook is not 2D.
+    Test that RegressionModule raises ValueError when codebook is not 2D.
     """
     c_small = torch.rand((dims["B"],), device=device)
     c_large = torch.rand((dims["B"], dims["D"], dims["D"]), device=device)
@@ -174,7 +189,7 @@ def test_rm_codebook_invalid_shape(backend, dims, device):
 
 def test_rm_codebook_invalid_dim(backend, dims, device):
     """
-    RegressionModule should raise if codebook last-dim != backend.vector_dim.
+    Test that RegressionModule raises ValueError when codebook last-dim != backend.vector_dim.
     """
     c_small = torch.rand((dims["B"], dims["D"] - 1), device=device)
     c_large = torch.rand((dims["B"], dims["D"] + 1), device=device)
@@ -189,7 +204,7 @@ def test_rm_codebook_invalid_dim(backend, dims, device):
 
 def test_rm_values_invalid_type(backend, dims, device):
     """
-    RegressionModule should raise if values is not a Tensor.
+    Test that RegressionModule raises TypeError when values is not a Tensor.
     """
     import numpy as np
 
@@ -202,7 +217,7 @@ def test_rm_values_invalid_type(backend, dims, device):
 
 def test_rm_values_invalid_shape(backend, dims, device):
     """
-    RegressionModule should raise if values is not 2D.
+    Test that RegressionModule raises ValueError when values is not 2D.
     """
     c = torch.rand((dims["B"], dims["D"]), device=device)
     v_small = torch.rand((dims["B"],), device=device)
@@ -217,7 +232,7 @@ def test_rm_values_invalid_shape(backend, dims, device):
 
 def test_rm_values_invalid_dim(dims, device):
     """
-    RegressionModule should raise if values last-dim != backend.value_dim.
+    Test that RegressionModule raises ValueError when values last-dim != backend.value_dim.
     """
     D, B, V = dims["D"], dims["B"], dims["V"]
     b = HRRBackend(vector_dim=D, value_dim=V)
@@ -235,7 +250,7 @@ def test_rm_values_invalid_dim(dims, device):
 
 def test_rm_method_invalid_type(backend, codebook, values):
     """
-    RegressionModule should raise if method is not a string.
+    Test that RegressionModule raises TypeError when method is not a string.
     """
     with pytest.raises(TypeError):
         _ = RegressionModule(backend, codebook, values, method=int(5))
@@ -243,10 +258,27 @@ def test_rm_method_invalid_type(backend, codebook, values):
 
 def test_rm_method_invalid_value(backend, codebook, values):
     """
-    RegressionModule should raise if method not in valid_methods.
+    Test that RegressionModule raises ValueError when method not in valid_methods.
     """
     with pytest.raises(ValueError):
         _ = RegressionModule(backend, codebook, values, method="SomeRandomMethod")
+
+
+def test_rm_temperature_must_be_positive(dims, device):
+    """
+    Test that RegressionModule raises ValueError when temperature is not positive.
+    """
+    D, B, V = dims["D"], dims["B"], dims["V"]
+    backend = HRRBackend(vector_dim=D, value_dim=V)
+
+    codebook = torch.rand((B, D), device=device)
+    values = torch.rand((B, V), device=device)
+
+    with pytest.raises(ValueError):
+        RegressionModule(backend, codebook, values, temperature=0.0)
+
+    with pytest.raises(ValueError):
+        RegressionModule(backend, codebook, values, temperature=-0.5)
 
 
 # -----------------------------------------------------------------------------
@@ -255,16 +287,15 @@ def test_rm_method_invalid_value(backend, codebook, values):
 
 def test_rm_call_missing_v(rm):
     """
-    Calling RegressionModule without an argument should raise TypeError
-    (python signature enforcement).
+    Test that calling RegressionModule without an argument raises TypeError.
     """
     with pytest.raises(TypeError):
-        rm()  # missing required positional argument
+        rm()
 
 
 def test_rm_call_v_type(rm):
     """
-    Calling RegressionModule with a non-Tensor should raise TypeError.
+    Test that calling RegressionModule with a non-Tensor raises TypeError.
     """
     import numpy as np
 
@@ -275,7 +306,7 @@ def test_rm_call_v_type(rm):
 
 def test_rm_call_v_shape_rejects_non_1d_or_2d(rm, dims, device):
     """
-    Calling RegressionModule with ndim not in {1,2} should raise ValueError.
+    Test that calling RegressionModule with ndim not in {1,2} raises ValueError.
     """
     bad = torch.rand((dims["B"], dims["D"], 2), device=device)
     with pytest.raises(ValueError):
@@ -284,7 +315,7 @@ def test_rm_call_v_shape_rejects_non_1d_or_2d(rm, dims, device):
 
 def test_rm_call_v_dim_rejects_mismatch(rm, dims, device):
     """
-    Calling RegressionModule with last-dim != backend.vector_dim should raise ValueError.
+    Test that calling RegressionModule with last-dim != backend.vector_dim raises ValueError.
     """
     D, B = dims["D"], dims["B"]
 
@@ -303,9 +334,13 @@ def test_rm_call_v_dim_rejects_mismatch(rm, dims, device):
         rm(inp_batch_large)
 
 
+# -----------------------------------------------------------------------------
+# RegressionModule network state tests
+# -----------------------------------------------------------------------------
+
 def test_rm_has_network_flags_default(rm):
     """
-    RegressionModule should expose network_needed/network_ready flags in codebook mode.
+    Test that RegressionModule exposes network_needed/network_ready flags in codebook mode.
     """
     assert hasattr(rm, "network_needed")
     assert hasattr(rm, "network_ready")
@@ -315,7 +350,7 @@ def test_rm_has_network_flags_default(rm):
 
 def test_rm_network_needed_with_neural(backend, codebook, values):
     """
-    RegressionModule should set network_needed=True in neural mode.
+    Test that RegressionModule sets network_needed=True in neural mode.
     """
     rm_neural = RegressionModule(backend, codebook, values, method="neural")
     assert rm_neural.network_needed is True
@@ -324,19 +359,19 @@ def test_rm_network_needed_with_neural(backend, codebook, values):
 
 def test_rm_call_with_no_loaded_network_raises(backend, codebook, values):
     """
-    In neural mode, calling without a loaded network should raise AttributeError.
+    Test that in neural mode, calling without a loaded network raises AttributeError.
     """
     rm_neural = RegressionModule(backend, codebook, values, method="neural")
     assert rm_neural.network_needed is True
     assert rm_neural.network_ready is False
 
     with pytest.raises(AttributeError):
-        rm_neural(codebook)  # any valid v triggers the "no network" guard
+        rm_neural(codebook)
 
 
 def test_rm_call_with_unneeded_loaded_network_raises(rm, codebook):
     """
-    In non-neural mode, having network_ready=True should raise ValueError.
+    Test that in non-neural mode, having network_ready=True raises ValueError.
     """
     assert rm.network_needed is False
     assert rm.network_ready is False
@@ -353,6 +388,9 @@ def test_rm_call_with_unneeded_loaded_network_raises(rm, codebook):
 # -----------------------------------------------------------------------------
 
 def test_rm_load_neural_network_rejects_non_module(backend, codebook, values):
+    """
+    Test that load_neural_network raises TypeError when model is not a nn.Module.
+    """
     rm_neural = RegressionModule(backend, codebook, values, method="neural")
 
     with pytest.raises(TypeError):
@@ -360,6 +398,9 @@ def test_rm_load_neural_network_rejects_non_module(backend, codebook, values):
 
 
 def test_rm_load_neural_network_accepts_valid_model(device, backend, codebook, values, dims):
+    """
+    Test that load_neural_network accepts a valid model and sets network_ready=True.
+    """
     rm_neural = RegressionModule(backend, codebook, values, method="neural")
 
     model = nn.Linear(dims["D"], dims["V"]).to(device)
@@ -372,6 +413,9 @@ def test_rm_load_neural_network_accepts_valid_model(device, backend, codebook, v
 
 
 def test_rm_load_neural_network_rejects_wrong_output_dim(device, backend, codebook, values, dims):
+    """
+    Test that load_neural_network raises ValueError when model output dimension is incorrect.
+    """
     rm_neural = RegressionModule(backend, codebook, values, method="neural")
 
     bad_model = nn.Linear(dims["D"], dims["V"] + 1).to(device)
@@ -382,8 +426,8 @@ def test_rm_load_neural_network_rejects_wrong_output_dim(device, backend, codebo
 
 def test_rm_load_neural_network_sets_ready_even_if_method_not_neural(device, backend, codebook, values, dims):
     """
-    NOTE: This reflects CURRENT behavior: load_neural_network does not check self.method.
-    It will validate and set network_ready=True even in codebook mode.
+    Test that load_neural_network sets network_ready=True even in codebook mode.
+    NOTE: This reflects CURRENT behavior.
     """
     rm_codebook = RegressionModule(backend, codebook, values, method="codebook")
 
@@ -392,22 +436,15 @@ def test_rm_load_neural_network_sets_ready_even_if_method_not_neural(device, bac
     rm_codebook.load_neural_network(model=model)
     assert rm_codebook.network_ready is True
 
-import pytest
-import torch
-import torch.nn as nn
 
-from hyperspace.backends.hrr import HRRBackend
-from hyperspace.core.regression.regression_module import RegressionModule
-
-
-@pytest.fixture(params=["cpu", "cuda"])
-def device(request):
-    if request.param == "cuda" and not torch.cuda.is_available():
-        pytest.skip("CUDA not available")
-    return torch.device(request.param)
-
+# -----------------------------------------------------------------------------
+# RegressionModule codebook attention mode tests
+# -----------------------------------------------------------------------------
 
 def test_rm_codebook_attention_unbatched_exact_match(device):
+    """
+    Test that codebook attention mode returns correct value for unbatched exact match.
+    """
     D = 64
     C = 8
     backend = HRRBackend(vector_dim=D, value_dim=1)
@@ -426,6 +463,9 @@ def test_rm_codebook_attention_unbatched_exact_match(device):
 
 
 def test_rm_codebook_attention_batched_exact_match(device):
+    """
+    Test that codebook attention mode returns correct values for batched exact matches.
+    """
     D = 64
     C = 8
     backend = HRRBackend(vector_dim=D, value_dim=1)
@@ -445,8 +485,7 @@ def test_rm_codebook_attention_batched_exact_match(device):
 
 def test_rm_temperature_sharpness_sanity(device):
     """
-    Lower temperature should behave more argmax-like.
-    This catches forgetting to divide by temperature (or dividing wrong).
+    Test that lower temperature behaves more argmax-like in codebook attention mode.
     """
     torch.manual_seed(0)
 
@@ -473,11 +512,34 @@ def test_rm_temperature_sharpness_sanity(device):
     assert torch.abs(out_cold - target) < torch.abs(out_hot - target)
 
 
+def test_rm_codebook_value_dim_not_1_raises(device):
+    """
+    Test that codebook mode raises NotImplementedError when value_dim != 1.
+    """
+    D = 32
+    C = 6
+    backend = HRRBackend(vector_dim=D, value_dim=3)
+
+    codebook = torch.eye(D, device=device)[:C]
+    values = torch.randn(C, 3, device=device)
+
+    rm = RegressionModule(backend, codebook, values, method="codebook")
+
+    with pytest.raises(NotImplementedError):
+        rm(codebook[0])
+
+
+# -----------------------------------------------------------------------------
+# RegressionModule neural mode tests
+# -----------------------------------------------------------------------------
+
 def test_rm_neural_path_matches_model_output(device):
+    """
+    Test that neural mode output matches the loaded model's output exactly.
+    """
     D = 32
     backend = HRRBackend(vector_dim=D, value_dim=1)
 
-    # ctor requires codebook/values but they aren't used in neural mode after guard checks
     C = 4
     codebook = torch.eye(D, device=device)[:C]
     values = torch.zeros((C, 1), device=device)
@@ -486,14 +548,14 @@ def test_rm_neural_path_matches_model_output(device):
     model = nn.Linear(D, 1).to(device)
     rm.load_neural_network(model)
 
-    # unbatched
+    # Test unbatched
     x = torch.randn(D, device=device)
     y_rm = rm(x)
     y_model = model(x)
     assert y_rm.shape == (1,)
     assert torch.allclose(y_rm, y_model, atol=1e-6)
 
-    # batched
+    # Test batched
     xb = torch.randn(7, D, device=device)
     yb_rm = rm(xb)
     yb_model = model(xb)
@@ -502,6 +564,9 @@ def test_rm_neural_path_matches_model_output(device):
 
 
 def test_rm_neural_and_codebook_output_shapes_match(device):
+    """
+    Test that neural and codebook modes produce outputs with the same shape.
+    """
     D = 32
     C = 6
     backend = HRRBackend(vector_dim=D, value_dim=1)
@@ -520,31 +585,3 @@ def test_rm_neural_and_codebook_output_shapes_match(device):
 
     assert rm_codebook(x1).shape == rm_neural(x1).shape == (1,)
     assert rm_codebook(xb).shape == rm_neural(xb).shape == (4, 1)
-
-def test_rm_temperature_must_be_positive(device):
-    D = 32
-    C = 8
-    backend = HRRBackend(vector_dim=D, value_dim=1)
-
-    codebook = torch.randn(C, D, device=device)
-    values = torch.randn(C, 1, device=device)
-
-    with pytest.raises(ValueError):
-        RegressionModule(backend, codebook, values, temperature=0.0)
-
-    with pytest.raises(ValueError):
-        RegressionModule(backend, codebook, values, temperature=-0.5)
-
-
-def test_rm_codebook_value_dim_not_1_raises(device):
-    D = 32
-    C = 6
-    backend = HRRBackend(vector_dim=D, value_dim=3)
-
-    codebook = torch.eye(D, device=device)[:C]
-    values = torch.randn(C, 3, device=device)
-
-    rm = RegressionModule(backend, codebook, values, method="codebook")
-
-    with pytest.raises(NotImplementedError):
-        rm(codebook[0])
