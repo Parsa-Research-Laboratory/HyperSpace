@@ -3,7 +3,7 @@ import numpy as np
 import torch
 from torch import device, Generator, Tensor
 import torch.nn.functional as F
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple
 
 from .base import BaseBackend
 
@@ -1243,12 +1243,17 @@ class HRRBackend(BaseBackend):
         if a.shape != b.shape:
             raise ValueError(f"Expected a and b to have the same shape; got {a.shape} and {b.shape}")
         
-        if a.ndim == 1: # Single Bind
-            out = F.cosine_similarity(a, b, dim=0)
-        elif a.ndim == 2: # Batch Bind
-            out = F.cosine_similarity(a, b, dim=1)
+        valid_conditions: List[bool] = [
+            a.ndim == 1 and b.ndim == 1,
+            a.ndim == 1 and b.ndim == 2,
+            a.ndim == 2 and b.ndim == 1,
+            a.ndim == 2 and b.ndim == 2,
+        ]
+
+        if any(valid_conditions):
+            out = F.cosine_similarity(a, b, dim=-1)
         else:
-            raise ValueError(f"Expected tensors to be single or two dimensional; got {a.ndim}")
+            raise ValueError(f"Expected tensors to be single or two dimensional; got {a.ndim} and {b.ndim}")
 
         info_dict = {}
 
