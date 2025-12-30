@@ -391,3 +391,160 @@ def test_rm_load_neural_network_sets_ready_even_if_method_not_neural(device, bac
 
     rm_codebook.load_neural_network(model=model)
     assert rm_codebook.network_ready is True
+
+import pytest
+import torch
+import torch.nn as nn
+
+from hyperspace.backends.hrr import HRRBackend
+from hyperspace.core.regression.regression_module import RegressionModule
+
+
+@pytest.fixture(params=["cpu", "cuda"])
+def device(request):
+    if request.param == "cuda" and not torch.cuda.is_available():
+        pytest.skip("CUDA not available")
+    return torch.device(request.param)
+
+
+def test_rm_codebook_attention_unbatched_exact_match(device):
+    D = 64
+    C = 8
+    backend = HRRBackend(vector_dim=D, value_dim=1)
+
+    codebook = torch.eye(D, device=device)[:C]  # (C,D)
+    values = torch.arange(C, device=device, dtype=torch.float32).unsqueeze(-1)  # (C,1)
+
+    rm = RegressionModule(backend, codebook, values, method="codebook", temperature=0.01)
+
+    true_idx = 5
+    v = codebook[true_idx].clone()  # (D,)
+
+    out = rm(v)
+    assert out.shape == (1,)
+    assert torch.isclose(out[0], values[true_idx, 0], atol=1e-4)
+
+
+def test_rm_codebook_attention_batched_exact_match(device):
+    D = 64
+    C = 8
+    backend = HRRBackend(vector_dim=D, value_dim=1)
+
+    codebook = torch.eye(D, device=device)[:C]
+    values = torch.arange(C, device=device, dtype=torch.float32).unsqueeze(-1)
+
+    rm = RegressionModule(backend, codebook, values, method="codebook", temperature=0.01)
+
+    idxs = torch.tensor([0, 2, 4, 7], device=device)
+    v = codebook[idxs].clone()  # (B,D)
+
+    out = rm(v)
+    assert out.shape == (idxs.numel(), 1)
+    assert torch.allclose(out[:, 0], values[idxs, 0], atol=1e-4)
+
+
+def test_rm_temperature_sharpness_sanity(device):
+    """
+    Lower temperature should behave more argmax-like.
+    This catches forgetting to divide by temperature (or dividing wrong).
+    """
+    torch.manual_seed(0)
+
+    D = 64
+    C = 8
+    backend = HRRBackend(vector_dim=D, value_dim=1)
+
+    codebook = torch.eye(D, device=device)[:C]
+    values = torch.arange(C, device=device, dtype=torch.float32).unsqueeze(-1)
+
+    true_idx = 3
+
+    # Slight noise so "hot" isn't already perfect argmax.
+    v = codebook[true_idx] + 0.10 * torch.randn(D, device=device)
+    v = v / v.norm(p=2)
+
+    rm_hot = RegressionModule(backend, codebook, values, method="codebook", temperature=1.0)
+    rm_cold = RegressionModule(backend, codebook, values, method="codebook", temperature=0.01)
+
+    out_hot = rm_hot(v)[0]
+    out_cold = rm_cold(v)[0]
+    target = values[true_idx, 0]
+
+    assert torch.abs(out_cold - target) < torch.abs(out_hot - target)
+
+
+def test_rm_neural_path_matches_model_output(device):
+    D = 32
+    backend = HRRBackend(vector_dim=D, value_dim=1)
+
+    # ctor requires codebook/values but they aren't used in neural mode after guard checks
+    C = 4
+    codebook = torch.eye(D, device=device)[:C]
+    values = torch.zeros((C, 1), device=device)
+
+    rm = RegressionModule(backend, codebook, values, method="neural")
+    model = nn.Linear(D, 1).to(device)
+    rm.load_neural_network(model)
+
+    # unbatched
+    x = torch.randn(D, device=device)
+    y_rm = rm(x)
+    y_model = model(x)
+    assert y_rm.shape == (1,)
+    assert torch.allclose(y_rm, y_model, atol=1e-6)
+
+    # batched
+    xb = torch.randn(7, D, device=device)
+    yb_rm = rm(xb)
+    yb_model = model(xb)
+    assert yb_rm.shape == (7, 1)
+    assert torch.allclose(yb_rm, yb_model, atol=1e-6)
+
+
+def test_rm_neural_and_codebook_output_shapes_match(device):
+    D = 32
+    C = 6
+    backend = HRRBackend(vector_dim=D, value_dim=1)
+
+    codebook = torch.eye(D, device=device)[:C]
+    values = torch.arange(C, device=device, dtype=torch.float32).unsqueeze(-1)
+
+    rm_codebook = RegressionModule(backend, codebook, values, method="codebook", temperature=0.1)
+
+    rm_neural = RegressionModule(backend, codebook, values, method="neural", temperature=0.1)
+    model = nn.Linear(D, 1).to(device)
+    rm_neural.load_neural_network(model)
+
+    x1 = torch.randn(D, device=device)
+    xb = torch.randn(4, D, device=device)
+
+    assert rm_codebook(x1).shape == rm_neural(x1).shape == (1,)
+    assert rm_codebook(xb).shape == rm_neural(xb).shape == (4, 1)
+
+def test_rm_temperature_must_be_positive(device):
+    D = 32
+    C = 8
+    backend = HRRBackend(vector_dim=D, value_dim=1)
+
+    codebook = torch.randn(C, D, device=device)
+    values = torch.randn(C, 1, device=device)
+
+    with pytest.raises(ValueError):
+        RegressionModule(backend, codebook, values, temperature=0.0)
+
+    with pytest.raises(ValueError):
+        RegressionModule(backend, codebook, values, temperature=-0.5)
+
+
+def test_rm_codebook_value_dim_not_1_raises(device):
+    D = 32
+    C = 6
+    backend = HRRBackend(vector_dim=D, value_dim=3)
+
+    codebook = torch.eye(D, device=device)[:C]
+    values = torch.randn(C, 3, device=device)
+
+    rm = RegressionModule(backend, codebook, values, method="codebook")
+
+    with pytest.raises(NotImplementedError):
+        rm(codebook[0])

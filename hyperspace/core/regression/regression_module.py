@@ -258,7 +258,7 @@ class RegressionModule(BaseModule):
         sims_rows = []
         for i in range(B):
             # (D,) vs (C,D) -> (C,)  (backend sees this as (D,) vs (B,D))
-            s_i, _ = self.backend.similarity(v[i], self.codebook)   # (C,)
+            s_i, _ = self.backend.similarity(v2[i], self.codebook)   # (C,)
             sims_rows.append(s_i)
 
         sims = torch.stack(sims_rows, dim=0)  # (B,C)
@@ -269,9 +269,11 @@ class RegressionModule(BaseModule):
         x_hat = weights @ self.values
 
         # return as (B,1) / (1,)
-        out = x_hat.unsqueeze(-1)  # (B,1)
+        # out = x_hat.unsqueeze(-1)  # (B,1)
         if squeeze_batch:
-            out = out.squeeze(0)   # (1,)
+            out = x_hat.squeeze(0)   # (1,)
+        else:
+            out = x_hat
 
         return out
 

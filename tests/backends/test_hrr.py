@@ -4692,3 +4692,110 @@ def test_base_batch_modern_hopfield_cleanup_single_step_batched_equivalence():
         f"max_abs={(attn_b - attn_s).abs().max().item():.3e}"
     )
 
+import pytest
+import torch
+
+from hyperspace.backends.hrr import HRRBackend
+
+
+@pytest.fixture(params=["cpu", "cuda"])
+def device(request):
+    if request.param == "cuda" and not torch.cuda.is_available():
+        pytest.skip("CUDA not available")
+    return torch.device(request.param)
+
+
+def test_similarity_single_single_returns_scalar(device):
+    D = 32
+    b = HRRBackend(vector_dim=D, value_dim=1)
+
+    a = torch.zeros(D, device=device)
+    a[0] = 1.0
+    c = a.clone()
+
+    s, _ = b.similarity(a, c)
+    assert s.ndim == 0
+    assert torch.isclose(s, torch.tensor(1.0, device=device), atol=1e-6)
+
+
+def test_similarity_batch_batch_returns_B(device):
+    D = 32
+    B = 6
+    b = HRRBackend(vector_dim=D, value_dim=1)
+
+    x = torch.eye(D, device=device)[:B]   # (B,D), orthonormal rows
+    y = x.clone()
+
+    s, _ = b.similarity(x, y)
+    assert s.shape == (B,)
+    assert torch.allclose(s, torch.ones(B, device=device), atol=1e-6)
+
+
+def test_similarity_batch_batch_mismatched_B_raises(device):
+    D = 32
+    b = HRRBackend(vector_dim=D, value_dim=1)
+
+    a = torch.randn(3, D, device=device)
+    c = torch.randn(5, D, device=device)
+
+    with pytest.raises(ValueError, match="batch sizes must match"):
+        b.similarity(a, c)
+
+
+def test_similarity_batch_single_broadcast(device):
+    D = 32
+    B = 6
+    b = HRRBackend(vector_dim=D, value_dim=1)
+
+    code = torch.eye(D, device=device)[:B]  # (B,D)
+    v = code[2].clone()                     # (D,)
+
+    s, _ = b.similarity(code, v)            # (B,)
+    assert s.shape == (B,)
+
+    # row 2 matches exactly
+    assert torch.isclose(s[2], torch.tensor(1.0, device=device), atol=1e-6)
+
+    # orthonormal -> others ~ 0
+    others = torch.cat([s[:2], s[3:]])
+    assert torch.all(torch.abs(others) < 1e-6)
+
+
+def test_similarity_single_batch_broadcast(device):
+    D = 32
+    B = 6
+    b = HRRBackend(vector_dim=D, value_dim=1)
+
+    code = torch.eye(D, device=device)[:B]
+    v = code[4].clone()
+
+    s1, _ = b.similarity(v, code)  # (B,)
+    s2, _ = b.similarity(code, v)  # (B,)
+    assert s1.shape == (B,)
+    assert torch.allclose(s1, s2, atol=1e-6)
+
+    assert torch.isclose(s1[4], torch.tensor(1.0, device=device), atol=1e-6)
+    others = torch.cat([s1[:4], s1[5:]])
+    assert torch.all(torch.abs(others) < 1e-6)
+
+
+def test_similarity_rejects_bad_ndim(device):
+    D = 32
+    b = HRRBackend(vector_dim=D, value_dim=1)
+
+    a = torch.randn(2, 3, D, device=device)
+    c = torch.randn(2, 3, D, device=device)
+
+    with pytest.raises(ValueError, match="must be 1D or 2D"):
+        b.similarity(a, c)
+
+
+def test_similarity_rejects_bad_last_dim(device):
+    D = 32
+    b = HRRBackend(vector_dim=D, value_dim=1)
+
+    a = torch.randn(D - 1, device=device)
+    c = torch.randn(D - 1, device=device)
+
+    with pytest.raises(ValueError, match="Last dim must match"):
+        b.similarity(a, c)
