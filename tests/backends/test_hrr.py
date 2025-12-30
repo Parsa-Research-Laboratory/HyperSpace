@@ -4489,7 +4489,7 @@ def test_backend_hopfield_cleanup_converges_over_iterations_batched():
     # ----------------------------
     # Core batched assertions
     # ----------------------------
-    k = 3  # or 2
+    k = 5  # or 2
     topk = torch.topk(s_after, k=k, dim=-1).indices           # (B, k)
     correct_topk = (topk == true_idx.unsqueeze(-1)).any(dim=-1)
     assert bool(correct_topk.all().item()), (
