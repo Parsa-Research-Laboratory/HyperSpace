@@ -211,7 +211,8 @@ def run_hyperspace_experiment(X_true: Tensor, Y_true: Tensor, args: dict) -> tup
     # ------------------------------------------
     hrr_backend = HRRBackend(vector_dim=args["vectorD"], device=args["device"])
     cleanup_module = CleanupModule(
-        backend=hrr_backend
+        backend=hrr_backend,
+        values=Y_true
     )
     memory_storage_module = MemoryStorageModule(
         backend=hrr_backend
@@ -223,8 +224,11 @@ def run_hyperspace_experiment(X_true: Tensor, Y_true: Tensor, args: dict) -> tup
         backend=hrr_backend,
         positions=X_true
     )
+    codebook, _ = hrr_backend.value_encoding(Y_true)
     regression_module = RegressionModule(
-        backend=hrr_backend
+        backend=hrr_backend,
+        codebook=codebook,
+        values=Y_true
     )
     value_encoder_module = ValueEncoderModule(
         backend=hrr_backend
@@ -244,14 +248,16 @@ def run_hyperspace_experiment(X_true: Tensor, Y_true: Tensor, args: dict) -> tup
         prev_memory=prev_memory
     )
     phi_hat, pim_info = positional_inversion_module(memory)
+    phi_hat_clean, cm_info = cleanup_module(phi_hat)
+    y_hat, reg_info = regression_module(phi_hat)
     
 
     # Placeholder for HyperSpace experiment logic
     print("Running HyperSpace experiment... (this is a placeholder)")
     # Here you would initialize your HyperSpace model, train it, and get predictions
     X_hat = X_true  # Placeholder: replace with actual predictions
-    y_hat = Y_true.clone()  # Placeholder: replace with actual predictions
-    y_hat += torch.randn_like(y_hat) * 0.05  # Add slight noise for demonstration
+    # y_hat = Y_true.clone()  # Placeholder: replace with actual predictions
+    # y_hat += torch.randn_like(y_hat) * 0.05  # Add slight noise for demonstration
     return X_hat, y_hat, {}
 
 
