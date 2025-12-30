@@ -321,6 +321,3 @@ class RegressionModule(BaseModule):
         self.model: nn.Module = model
         self.network_ready = True
         
-
-        
-
