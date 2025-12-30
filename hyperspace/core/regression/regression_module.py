@@ -188,7 +188,7 @@ class RegressionModule(BaseModule):
         if method in ["neural"]:
             self.network_needed = True
 
-    def __call__(self, v: Tensor) -> Tensor:
+    def __call__(self, v: Tensor) -> Tuple[Tensor, dict]:
         """
         Apply the specified regression method to the input tensor.
         """
@@ -222,10 +222,10 @@ class RegressionModule(BaseModule):
         # --------------------
         if self.method == "neural":
             assert self.model is not None
-            return self.model(v)
+            return self.model(v), {}
 
         # method == "codebook"
-        return self._codebook_attention_decode(v)
+        return self._codebook_attention_decode(v), {}
     
     # -----------------------------------------------------------------
     # Core decode math: pairwise cosine similarity + attention

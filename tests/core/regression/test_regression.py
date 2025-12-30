@@ -455,7 +455,7 @@ def test_rm_codebook_attention_unbatched_exact_match(device):
     true_idx = 5
     v = codebook[true_idx].clone()  # (D,)
 
-    out = rm(v)
+    out, _ = rm(v)
     assert out.shape == (1,)
     assert torch.isclose(out[0], values[true_idx, 0], atol=1e-4)
 
@@ -476,7 +476,7 @@ def test_rm_codebook_attention_batched_exact_match(device):
     idxs = torch.tensor([0, 2, 4, 7], device=device)
     v = codebook[idxs].clone()  # (B,D)
 
-    out = rm(v)
+    out, _ = rm(v)
     assert out.shape == (idxs.numel(), 1)
     assert torch.allclose(out[:, 0], values[idxs, 0], atol=1e-4)
 
@@ -548,14 +548,14 @@ def test_rm_neural_path_matches_model_output(device):
 
     # Test unbatched
     x = torch.randn(D, device=device)
-    y_rm = rm(x)
+    y_rm, _ = rm(x)
     y_model = model(x)
     assert y_rm.shape == (1,)
     assert torch.allclose(y_rm, y_model, atol=1e-6)
 
     # Test batched
     xb = torch.randn(7, D, device=device)
-    yb_rm = rm(xb)
+    yb_rm, _ = rm(xb)
     yb_model = model(xb)
     assert yb_rm.shape == (7, 1)
     assert torch.allclose(yb_rm, yb_model, atol=1e-6)
@@ -581,5 +581,5 @@ def test_rm_neural_and_codebook_output_shapes_match(device):
     x1 = torch.randn(D, device=device)
     xb = torch.randn(4, D, device=device)
 
-    assert rm_codebook(x1).shape == rm_neural(x1).shape == (1,)
-    assert rm_codebook(xb).shape == rm_neural(xb).shape == (4, 1)
+    assert rm_codebook(x1)[0].shape == rm_neural(x1)[0].shape == (1,)
+    assert rm_codebook(xb)[0].shape == rm_neural(xb)[0].shape == (4, 1)
