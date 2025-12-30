@@ -3,7 +3,7 @@ import numpy as np
 import torch
 from torch import device, Generator, Tensor
 import torch.nn.functional as F
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple
 
 from .base import BaseBackend
 
@@ -1239,20 +1239,39 @@ class HRRBackend(BaseBackend):
             dict
                 Information dictionary (currently empty).
         """
-
-        if a.shape != b.shape:
-            raise ValueError(f"Expected a and b to have the same shape; got {a.shape} and {b.shape}")
         
-        if a.ndim == 1: # Single Bind
-            out = F.cosine_similarity(a, b, dim=0)
-        elif a.ndim == 2: # Batch Bind
-            out = F.cosine_similarity(a, b, dim=1)
-        else:
-            raise ValueError(f"Expected tensors to be single or two dimensional; got {a.ndim}")
+        if not isinstance(a, Tensor) or not isinstance(b, Tensor):
+            raise TypeError(f"a and b must be torch.Tensor; got {type(a)} and {type(b)}")
 
-        info_dict = {}
+        if a.ndim not in (1, 2) or b.ndim not in (1, 2):
+            raise ValueError(f"a and b must be 1D or 2D; got a.ndim={a.ndim}, b.ndim={b.ndim}")
 
-        return out, info_dict
+        if a.shape[-1] != self.vector_dim or b.shape[-1] != self.vector_dim:
+            raise ValueError(
+                f"Last dim must match vector_dim={self.vector_dim}; got a:{a.shape[-1]}, b:{b.shape[-1]}"
+            )
+
+        # Case 1: both (D,)
+        if a.ndim == 1 and b.ndim == 1:
+            out = F.cosine_similarity(a, b, dim=-1)  # scalar
+            return out, {}
+
+        # Case 2: both (B,D) — require same B
+        if a.ndim == 2 and b.ndim == 2:
+            if a.shape[0] != b.shape[0]:
+                raise ValueError(f"For batched inputs, batch sizes must match; got {a.shape[0]} and {b.shape[0]}")
+            out = F.cosine_similarity(a, b, dim=-1)  # (B,)
+            return out, {}
+
+        # Case 3: (B,D) vs (D,)  -> broadcast b to (B,D)
+        if a.ndim == 2 and b.ndim == 1:
+            out = F.cosine_similarity(a, b.unsqueeze(0), dim=-1)  # (B,) via broadcast
+            return out, {}
+
+        # Case 4: (D,) vs (B,D)  -> broadcast a to (B,D)
+        # (a.ndim == 1 and b.ndim == 2)
+        out = F.cosine_similarity(a.unsqueeze(0), b, dim=-1)      # (B,) via broadcast
+        return out, {}
     
     def normalize(self, x: Tensor) -> Tuple[Tensor, dict]:
         """
