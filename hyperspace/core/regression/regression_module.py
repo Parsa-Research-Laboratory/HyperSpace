@@ -314,6 +314,9 @@ class RegressionModule(BaseModule):
         if not isinstance(model, nn.Module):
             raise TypeError(f"Expected model to be an nn.Module; got {type(model)}")
         
+        if not self.network_needed:
+            raise ValueError("A network is being loaded when not needed.")
+        
         _validate_model(
             model=model,
             feature_dim=self.backend.vector_dim,
