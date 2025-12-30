@@ -1,21 +1,122 @@
+import torch
 import torch.nn as nn
-from torch import Tensor
-from typing import List
+from torch import device, Tensor
+from typing import List, Tuple
 
 from ...backends.base import BaseBackend
 from ..base.base_module import BaseModule
 
-def _create_dummy_input(feature_dim: int, value_dim: int, device: str) -> Tensor:
+def _module_device(module: nn.Module) -> torch.device:
     """
-    TODO Finish Documentation
+    Infer the device on which a PyTorch module resides.
+
+    This utility determines the device of a module by inspecting its
+    parameters first, then its registered buffers. If the module has
+    neither parameters nor buffers, the device is assumed to be CPU.
+
+    This function is intended for lightweight validation and testing
+    utilities, where models are expected to reside on a single device.
+
+    Arguments:
+        module : nn.Module
+            The PyTorch module whose device should be inferred.
+
+    Returns:
+        torch.device
+            The device associated with the module's parameters or buffers,
+            or CPU if none are present.
     """
-    pass
+
+    try:
+        return next(module.parameters()).device
+    except StopIteration:
+        try:
+            return next(module.buffers()).device
+        except StopIteration:
+            return torch.device("cpu")
+
+def _create_dummy_input(feature_dim: int, device: device, batched: bool = False) -> Tensor:
+    """
+    Create a dummy input tensor for model validation.
+
+    This function generates a random input tensor with the appropriate
+    shape and moves it to the specified device. It supports both batched
+    and non-batched inputs for validating model forward behavior.
+
+    Arguments:
+        feature_dim : int
+            Dimensionality of the feature axis expected by the model.
+        device : torch.device
+            Device on which the input tensor should be allocated.
+        batched : bool, optional
+            If True, returns a batched input tensor of shape
+            (batch_size, feature_dim). If False, returns a single
+            unbatched input tensor of shape (feature_dim,).
+            Defaults to False.
+
+    Returns:
+        Tensor
+            A randomly initialized input tensor on the specified device.
+    """
+
+    i = None
+
+    if batched:
+        i = torch.rand((feature_dim,))
+    else:
+        i = torch.rand((16, feature_dim))
+
+    i = i.to(device)
+
+    return i
 
 def _validate_model(model: nn.Module, feature_dim: int, value_dim: int):
     """
-    TODO Finish Documentation
+    Validate a regression model's forward interface and output shapes.
+
+    This function performs a minimal functional validation of a model by:
+      1) inferring the model's device,
+      2) generating dummy batched and non-batched inputs,
+      3) executing forward passes, and
+      4) verifying that the output shapes match the expected value dimension.
+
+    The model is expected to accept inputs of shape:
+      - (feature_dim,) for non-batched input
+      - (batch_size, feature_dim) for batched input
+
+    and return outputs of shape:
+      - (value_dim,) for non-batched input
+      - (batch_size, value_dim) for batched input
+
+    Arguments:
+        model : nn.Module
+            The model to validate.
+        feature_dim : int
+            Expected dimensionality of the input feature vector.
+        value_dim : int
+            Expected dimensionality of the output value vector.
+
+    Raises:
+        ValueError
+            If the model's output shape does not match the expected
+            shape for either batched or non-batched inputs.
     """
-    pass
+
+    m_d: torch.device = _module_device(model)
+    m_input: Tensor = _create_dummy_input(feature_dim, m_d)
+    m_input_batch: Tensor = _create_dummy_input(feature_dim, m_d, batched=True)
+
+    m_output: Tensor = model(m_input)
+    m_output_batch: Tensor = model(m_input_batch)
+
+    m_o_shape: Tuple = (value_dim,)
+    m_o_b_shape: Tuple = (m_output_batch.shape[0], value_dim)
+
+    if m_output.shape != m_o_shape:
+        raise ValueError(f"Expected non-batched output to have shape {m_o_shape}; got {m_output.shape}")
+    
+    if m_output_batch.shape != m_o_b_shape:
+        raise ValueError(f"Expected non-batched output to have shape {m_o_b_shape}; got {m_output_batch.shape}")
 
 class RegressionModule(BaseModule):
     """
@@ -146,7 +247,11 @@ class RegressionModule(BaseModule):
         if not isinstance(model, nn.Module):
             raise TypeError(f"Expected model to be an nn.Module; got {type(model)}")
         
-        _validate_model(model)
+        _validate_model(
+            model=model,
+            feature_dim=self.backend.vector_dim,
+            value_dim=self.backend.value_dim
+        )
         
         self.model: nn.Module = model
         self.network_ready = True
