@@ -1,5 +1,4 @@
 import pytest
-from typing import List
 
 def test_base_create_single_vector_base_arguments():
     """
