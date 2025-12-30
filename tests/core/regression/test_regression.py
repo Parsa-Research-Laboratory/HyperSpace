@@ -427,15 +427,13 @@ def test_rm_load_neural_network_rejects_wrong_output_dim(device, backend, codebo
 def test_rm_load_neural_network_sets_ready_even_if_method_not_neural(device, backend, codebook, values, dims):
     """
     Test that load_neural_network sets network_ready=True even in codebook mode.
-    NOTE: This reflects CURRENT behavior.
     """
     rm_codebook = RegressionModule(backend, codebook, values, method="codebook")
 
     model = nn.Linear(dims["D"], dims["V"]).to(device)
 
-    rm_codebook.load_neural_network(model=model)
-    assert rm_codebook.network_ready is True
-
+    with pytest.raises(ValueError):
+        rm_codebook.load_neural_network(model=model)
 
 # -----------------------------------------------------------------------------
 # RegressionModule codebook attention mode tests
