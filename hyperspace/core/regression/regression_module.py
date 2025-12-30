@@ -131,7 +131,7 @@ class RegressionModule(BaseModule):
     network_ready: bool = False
 
     def __init__(self, backend: BaseBackend, codebook: Tensor, values: Tensor,
-                 method: str = "codebook"):
+                 method: str = "codebook", *, temperature: float = 0.10):
         """
         Initialize the RegressionModule.
 
@@ -145,12 +145,15 @@ class RegressionModule(BaseModule):
             method: str
                 The type of decoding method to leverage for the
                 regression process
+            temperature: float
+                TODO
         """
         super().__init__()
         self.backend: BaseBackend = backend
         self.codebook: Tensor = codebook
         self.values: Tensor = values
         self.method: str = method
+        self.temperature: float = temperature
 
         if not isinstance(backend, BaseBackend):
             raise TypeError(f"Expected the argued backend to extend the BaseBackend class; got {type(self.backend)}")
@@ -178,6 +181,9 @@ class RegressionModule(BaseModule):
         
         if method not in self.valid_methods:
             raise ValueError(f"Expected method to be on of [{self.valid_methods}]; got {method}")
+        
+        if self.temperature <= 0:
+            raise ValueError(f"temperature must be > 0; got {self.temperature}")
         
         if method in ["neural"]:
             self.network_needed = True
@@ -207,9 +213,68 @@ class RegressionModule(BaseModule):
         
         if not self.network_needed and self.network_ready:
             raise ValueError(f"Error: a network has been loaded when not needed.")
+        
+        if self.values.shape[-1] != 1:
+            raise NotImplementedError("The RegressionModule doesn't support decoding with more than 1 value dimension.")
+        
+        # --------------------
+        # Execute
+        # --------------------
+        if self.method == "neural":
+            assert self.model is not None
+            return self.model(v)
 
-        return self.backend.regression(v, v, v)
+        # method == "codebook"
+        return self._codebook_attention_decode(v)
     
+    # -----------------------------------------------------------------
+    # Core decode math: pairwise cosine similarity + attention
+    # -----------------------------------------------------------------
+    def _codebook_attention_decode(self, v: Tensor) -> Tensor:
+        """
+        Attention-style decode.
+
+        Input:
+          v: (D,) or (B, D)
+
+        Output:
+          (value_dim,) or (B, value_dim)
+        """
+        if v.ndim == 1:
+            v2 = v.unsqueeze(0)     # (1,D)
+            squeeze_batch = True
+        else:
+            v2 = v                  # (B,D)
+            squeeze_batch = False
+
+        # device alignment policy (strict)
+        if self.codebook.device != v2.device or self.values.device != v2.device:
+            raise ValueError(
+                f"Device mismatch: v={v2.device}, codebook={self.codebook.device}, x_values={self.values.device}"
+            )
+
+        B = v2.shape[0]
+
+        sims_rows = []
+        for i in range(B):
+            # (D,) vs (C,D) -> (C,)  (backend sees this as (D,) vs (B,D))
+            s_i, _ = self.backend.similarity(v[i], self.codebook)   # (C,)
+            sims_rows.append(s_i)
+
+        sims = torch.stack(sims_rows, dim=0)  # (B,C)
+
+        weights = torch.softmax(sims / self.temperature, dim=-1)     # (B,C)
+
+        # expected x: (B,) = (B,C) @ (C,)
+        x_hat = weights @ self.values
+
+        # return as (B,1) / (1,)
+        out = x_hat.unsqueeze(-1)  # (B,1)
+        if squeeze_batch:
+            out = out.squeeze(0)   # (1,)
+
+        return out
+
     def load_neural_network(self, model: nn.Module):
         """
         Load and register a fully constructed neural network module.
