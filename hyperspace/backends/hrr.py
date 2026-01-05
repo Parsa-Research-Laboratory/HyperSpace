@@ -3,9 +3,11 @@ import numpy as np
 import torch
 from torch import device, Generator, Tensor
 import torch.nn.functional as F
-from typing import List, Optional, Tuple
+from typing import Literal, Optional, Tuple
 
 from .base import BaseBackend
+
+SimMode = Literal["auto", "pairwise", "all_pairs"]
 
 def _base_create_single_vector(
         vector_dim: int,
@@ -1215,7 +1217,14 @@ class HRRBackend(BaseBackend):
         info_dict: dict = {}
         return out, info_dict
 
-    def similarity(self, a: Tensor, b: Tensor) -> Tuple[Tensor, dict]:
+    def similarity(
+        self,
+        a: Tensor,
+        b: Tensor,
+        *,
+        mode: SimMode = "auto",
+        eps: float = 1e-12,
+    ) -> Tuple[Tensor, dict]:
         """
         Compute cosine similarity between two HRR vectors.
 
@@ -1251,27 +1260,40 @@ class HRRBackend(BaseBackend):
                 f"Last dim must match vector_dim={self.vector_dim}; got a:{a.shape[-1]}, b:{b.shape[-1]}"
             )
 
-        # Case 1: both (D,)
+        if mode not in ("auto", "pairwise", "all_pairs"):
+            raise ValueError(f"mode must be one of ['auto','pairwise','all_pairs']; got {mode}")
+
+        # 1D / 1D
         if a.ndim == 1 and b.ndim == 1:
-            out = F.cosine_similarity(a, b, dim=-1)  # scalar
-            return out, {}
+            return F.cosine_similarity(a, b, dim=-1), {"mode": "pairwise"}
 
-        # Case 2: both (B,D) — require same B
-        if a.ndim == 2 and b.ndim == 2:
-            if a.shape[0] != b.shape[0]:
-                raise ValueError(f"For batched inputs, batch sizes must match; got {a.shape[0]} and {b.shape[0]}")
-            out = F.cosine_similarity(a, b, dim=-1)  # (B,)
-            return out, {}
-
-        # Case 3: (B,D) vs (D,)  -> broadcast b to (B,D)
+        # 2D / 1D or 1D / 2D -> always pairwise over the 2D batch
         if a.ndim == 2 and b.ndim == 1:
-            out = F.cosine_similarity(a, b.unsqueeze(0), dim=-1)  # (B,) via broadcast
-            return out, {}
+            return F.cosine_similarity(a, b.unsqueeze(0), dim=-1), {"mode": "pairwise"}
+        if a.ndim == 1 and b.ndim == 2:
+            return F.cosine_similarity(a.unsqueeze(0), b, dim=-1), {"mode": "pairwise"}
 
-        # Case 4: (D,) vs (B,D)  -> broadcast a to (B,D)
-        # (a.ndim == 1 and b.ndim == 2)
-        out = F.cosine_similarity(a.unsqueeze(0), b, dim=-1)      # (B,) via broadcast
-        return out, {}
+        # 2D / 2D
+        A, B = a, b  # (A,D), (B,D)
+
+        if mode == "pairwise":
+            if A.shape[0] != B.shape[0]:
+                raise ValueError(
+                    f"pairwise mode requires same batch size; got {A.shape[0]} and {B.shape[0]}"
+                )
+            return F.cosine_similarity(A, B, dim=-1), {"mode": "pairwise"}
+
+        if mode == "all_pairs":
+            A_norm = F.normalize(A, p=2, dim=-1, eps=eps)
+            B_norm = F.normalize(B, p=2, dim=-1, eps=eps)
+            return A_norm @ B_norm.transpose(-1, -2), {"mode": "all_pairs"}
+
+        # mode == "auto"
+        if A.shape[0] == B.shape[0]:
+            return F.cosine_similarity(A, B, dim=-1), {"mode": "pairwise"}
+        A_norm = F.normalize(A, p=2, dim=-1, eps=eps)
+        B_norm = F.normalize(B, p=2, dim=-1, eps=eps)
+        return A_norm @ B_norm.transpose(-1, -2), {"mode": "all_pairs"}
     
     def normalize(self, x: Tensor) -> Tuple[Tensor, dict]:
         """

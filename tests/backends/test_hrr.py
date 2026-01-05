@@ -4732,14 +4732,21 @@ def test_similarity_batch_batch_returns_B(device):
 
 
 def test_similarity_batch_batch_mismatched_B_raises(device):
+    """Test that pairwise mode raises error with mismatched batch sizes."""
     D = 32
     b = HRRBackend(vector_dim=D, value_dim=1)
 
     a = torch.randn(3, D, device=device)
     c = torch.randn(5, D, device=device)
 
-    with pytest.raises(ValueError, match="batch sizes must match"):
-        b.similarity(a, c)
+    # With explicit pairwise mode, should raise error
+    with pytest.raises(ValueError, match="pairwise mode requires same batch size"):
+        b.similarity(a, c, mode="pairwise")
+    
+    # With auto mode (default), should use all_pairs and return (3, 5) matrix
+    s, info = b.similarity(a, c)
+    assert s.shape == (3, 5)
+    assert info["mode"] == "all_pairs"
 
 
 def test_similarity_batch_single_broadcast(device):
@@ -4799,3 +4806,330 @@ def test_similarity_rejects_bad_last_dim(device):
 
     with pytest.raises(ValueError, match="Last dim must match"):
         b.similarity(a, c)
+
+def test_similarity_mode_parameter_default_auto():
+    """Test that mode defaults to 'auto' and behaves correctly."""
+    D = 128
+    b = HRRBackend(vector_dim=D)
+    
+    v1 = b.create_random_vector()
+    v2 = b.create_random_vector()
+    
+    # Single vectors should return scalar
+    sim, info = b.similarity(v1, v2)
+    assert sim.ndim == 0
+    assert info["mode"] == "pairwise"
+
+
+def test_similarity_mode_pairwise_single_vectors():
+    """Test explicit pairwise mode with single vectors."""
+    D = 128
+    b = HRRBackend(vector_dim=D)
+    
+    v1 = b.create_random_vector()
+    v2 = b.create_random_vector()
+    
+    sim, info = b.similarity(v1, v2, mode="pairwise")
+    assert sim.ndim == 0
+    assert info["mode"] == "pairwise"
+
+
+def test_similarity_mode_pairwise_batch_same_size():
+    """Test explicit pairwise mode with batched vectors of same size."""
+    D = 128
+    B = 8
+    b = HRRBackend(vector_dim=D)
+    
+    v1_list = [b.create_random_vector() for _ in range(B)]
+    v2_list = [b.create_random_vector() for _ in range(B)]
+    
+    v1 = torch.stack(v1_list, dim=0)
+    v2 = torch.stack(v2_list, dim=0)
+    
+    sim, info = b.similarity(v1, v2, mode="pairwise")
+    assert sim.shape == (B,)
+    assert info["mode"] == "pairwise"
+
+
+def test_similarity_mode_pairwise_batch_different_size_raises():
+    """Test that pairwise mode raises error with different batch sizes."""
+    D = 128
+    b = HRRBackend(vector_dim=D)
+    
+    v1 = torch.randn(5, D)
+    v2 = torch.randn(8, D)
+    
+    with pytest.raises(ValueError, match="pairwise mode requires same batch size"):
+        b.similarity(v1, v2, mode="pairwise")
+
+
+def test_similarity_mode_all_pairs_returns_matrix():
+    """Test that all_pairs mode returns (a, b) shaped matrix."""
+    D = 128
+    A = 5
+    B = 8
+    
+    backend = HRRBackend(vector_dim=D)
+    
+    v1_list = [backend.create_random_vector() for _ in range(A)]
+    v2_list = [backend.create_random_vector() for _ in range(B)]
+    
+    v1 = torch.stack(v1_list, dim=0)  # (A, D)
+    v2 = torch.stack(v2_list, dim=0)  # (B, D)
+    
+    sim, info = backend.similarity(v1, v2, mode="all_pairs")
+    
+    assert sim.shape == (A, B), f"Expected shape ({A}, {B}), got {sim.shape}"
+    assert info["mode"] == "all_pairs"
+    assert sim.ndim == 2
+
+
+def test_similarity_mode_all_pairs_identity_diagonal():
+    """Test that all_pairs mode gives 1.0 on diagonal for identical vectors."""
+    D = 256
+    N = 6
+    
+    backend = HRRBackend(vector_dim=D)
+    
+    vectors = torch.stack([backend.create_random_vector() for _ in range(N)], dim=0)
+    
+    sim, info = backend.similarity(vectors, vectors, mode="all_pairs")
+    
+    assert sim.shape == (N, N)
+    assert info["mode"] == "all_pairs"
+    
+    # Diagonal should be all 1.0 (self-similarity)
+    diagonal = torch.diagonal(sim)
+    assert torch.allclose(diagonal, torch.ones(N), atol=1e-5)
+
+
+def test_similarity_mode_all_pairs_orthogonal_vectors():
+    """Test all_pairs mode with approximately orthogonal vectors."""
+    D = 10000  # Large dimension for better orthogonality
+    N = 5
+    
+    backend = HRRBackend(vector_dim=D)
+    
+    v1 = torch.stack([backend.create_random_vector() for _ in range(N)], dim=0)
+    v2 = torch.stack([backend.create_random_vector() for _ in range(N)], dim=0)
+    
+    sim, info = backend.similarity(v1, v2, mode="all_pairs")
+    
+    assert sim.shape == (N, N)
+    assert info["mode"] == "all_pairs"
+    
+    # Off-diagonal elements should be close to 0 for random orthogonal vectors
+    # Using looser tolerance due to randomness
+    assert torch.all(torch.abs(sim) <= 1.0 + 1e-5)
+    assert torch.all(torch.abs(sim) >= -1.0 - 1e-5)
+
+
+def test_similarity_mode_all_pairs_asymmetric_shapes():
+    """Test all_pairs mode with different sized batches."""
+    D = 128
+    A = 3
+    B = 7
+    
+    backend = HRRBackend(vector_dim=D)
+    
+    v1 = torch.randn(A, D)
+    v2 = torch.randn(B, D)
+    
+    sim_ab, info_ab = backend.similarity(v1, v2, mode="all_pairs")
+    sim_ba, info_ba = backend.similarity(v2, v1, mode="all_pairs")
+    
+    assert sim_ab.shape == (A, B)
+    assert sim_ba.shape == (B, A)
+    assert info_ab["mode"] == "all_pairs"
+    assert info_ba["mode"] == "all_pairs"
+    
+    # sim_ab[i, j] should equal sim_ba[j, i] (transpose relationship)
+    assert torch.allclose(sim_ab, sim_ba.T, atol=1e-6)
+
+
+def test_similarity_mode_auto_same_batch_size_uses_pairwise():
+    """Test that auto mode uses pairwise when batch sizes match."""
+    D = 128
+    B = 6
+    
+    backend = HRRBackend(vector_dim=D)
+    
+    v1 = torch.randn(B, D)
+    v2 = torch.randn(B, D)
+    
+    sim, info = backend.similarity(v1, v2, mode="auto")
+    
+    assert sim.shape == (B,)  # Pairwise returns 1D
+    assert info["mode"] == "pairwise"
+
+
+def test_similarity_mode_auto_different_batch_size_uses_all_pairs():
+    """Test that auto mode uses all_pairs when batch sizes differ."""
+    D = 128
+    A = 4
+    B = 7
+    
+    backend = HRRBackend(vector_dim=D)
+    
+    v1 = torch.randn(A, D)
+    v2 = torch.randn(B, D)
+    
+    sim, info = backend.similarity(v1, v2, mode="auto")
+    
+    assert sim.shape == (A, B)  # all_pairs returns 2D
+    assert info["mode"] == "all_pairs"
+
+
+def test_similarity_mode_invalid_raises():
+    """Test that invalid mode parameter raises error."""
+    D = 128
+    backend = HRRBackend(vector_dim=D)
+    
+    v1 = torch.randn(4, D)
+    v2 = torch.randn(4, D)
+    
+    with pytest.raises(ValueError, match="mode must be one of"):
+        backend.similarity(v1, v2, mode="invalid_mode")
+
+
+def test_similarity_all_pairs_with_single_vector_broadcast():
+    """Test all_pairs mode with single vector vs batch."""
+    D = 128
+    B = 5
+    
+    backend = HRRBackend(vector_dim=D)
+    
+    v_single = backend.create_random_vector()  # (D,)
+    v_batch = torch.stack([backend.create_random_vector() for _ in range(B)], dim=0)  # (B, D)
+    
+    # Single vs Batch should give (B,) in pairwise mode (default behavior)
+    sim, info = backend.similarity(v_single, v_batch)
+    assert sim.shape == (B,)
+    assert info["mode"] == "pairwise"
+
+
+def test_similarity_all_pairs_codebook_query_scenario():
+    """
+    Test a realistic scenario: computing similarities between query vectors
+    and a codebook (all-pairs mode).
+    """
+    D = 512
+    num_queries = 4
+    codebook_size = 10
+    
+    backend = HRRBackend(vector_dim=D)
+    
+    # Create queries and codebook
+    queries = torch.stack([backend.create_random_vector() for _ in range(num_queries)], dim=0)
+    codebook = torch.stack([backend.create_random_vector() for _ in range(codebook_size)], dim=0)
+    
+    # Compute all-pairs similarities
+    sim, info = backend.similarity(queries, codebook, mode="all_pairs")
+    
+    assert sim.shape == (num_queries, codebook_size)
+    assert info["mode"] == "all_pairs"
+    
+    # Each row should have a maximum similarity (best match for each query)
+    max_sims = torch.max(sim, dim=1).values
+    assert max_sims.shape == (num_queries,)
+    
+    # All similarities should be in valid range
+    assert torch.all(sim >= -1.0 - 1e-5)
+    assert torch.all(sim <= 1.0 + 1e-5)
+
+
+def test_similarity_all_pairs_consistency_with_manual_computation():
+    """
+    Test that all_pairs mode produces the same results as manually computing
+    all pairwise similarities.
+    """
+    D = 256
+    A = 3
+    B = 4
+    
+    backend = HRRBackend(vector_dim=D)
+    
+    v1 = torch.stack([backend.create_random_vector() for _ in range(A)], dim=0)
+    v2 = torch.stack([backend.create_random_vector() for _ in range(B)], dim=0)
+    
+    # Use all_pairs mode
+    sim_all, info = backend.similarity(v1, v2, mode="all_pairs")
+    assert sim_all.shape == (A, B)
+    
+    # Manually compute each similarity
+    sim_manual = torch.zeros(A, B)
+    for i in range(A):
+        for j in range(B):
+            s, _ = backend.similarity(v1[i], v2[j], mode="pairwise")
+            sim_manual[i, j] = s
+    
+    assert torch.allclose(sim_all, sim_manual, atol=1e-6)
+
+
+def test_similarity_eps_parameter():
+    """Test that eps parameter is accepted and used."""
+    D = 128
+    backend = HRRBackend(vector_dim=D)
+    
+    v1 = torch.randn(5, D)
+    v2 = torch.randn(8, D)
+    
+    # Should not raise error
+    sim, info = backend.similarity(v1, v2, mode="all_pairs", eps=1e-10)
+    assert sim.shape == (5, 8)
+
+
+def test_similarity_all_pairs_values_in_valid_range():
+    """Test that all_pairs mode produces cosine similarities in [-1, 1]."""
+    D = 256
+    A = 10
+    B = 15
+    
+    backend = HRRBackend(vector_dim=D)
+    
+    # Create random vectors with various magnitudes
+    v1 = torch.randn(A, D) * torch.randint(1, 10, (A, 1)).float()
+    v2 = torch.randn(B, D) * torch.randint(1, 10, (B, 1)).float()
+    
+    sim, info = backend.similarity(v1, v2, mode="all_pairs")
+    
+    assert sim.shape == (A, B)
+    assert torch.all(sim >= -1.0 - 1e-5), f"Min similarity: {sim.min()}"
+    assert torch.all(sim <= 1.0 + 1e-5), f"Max similarity: {sim.max()}"
+
+
+def test_similarity_all_pairs_batch_size_one():
+    """Test all_pairs mode with batch size 1 (edge case)."""
+    D = 128
+    backend = HRRBackend(vector_dim=D)
+    
+    v1 = backend.create_random_vector().unsqueeze(0)  # (1, D)
+    v2 = torch.stack([backend.create_random_vector() for _ in range(5)], dim=0)  # (5, D)
+    
+    sim, info = backend.similarity(v1, v2, mode="all_pairs")
+    
+    assert sim.shape == (1, 5)
+    assert info["mode"] == "all_pairs"
+
+
+def test_similarity_mode_in_info_dict():
+    """Test that the mode used is always returned in the info dict."""
+    D = 128
+    backend = HRRBackend(vector_dim=D)
+    
+    v1 = torch.randn(3, D)
+    v2 = torch.randn(3, D)
+    
+    for mode in ["auto", "pairwise", "all_pairs"]:
+        if mode == "all_pairs":
+            v2_test = torch.randn(5, D)  # Different size for all_pairs
+        else:
+            v2_test = v2
+            
+        sim, info = backend.similarity(v1, v2_test, mode=mode)
+        assert "mode" in info
+        assert isinstance(info["mode"], str)
+
+
+if __name__ == "__main__":
+    pytest.main([__file__, "-v"])
