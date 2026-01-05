@@ -27,6 +27,7 @@ classifiers = [
 dependencies = [
     "IPython",
     "ipykernel",
+    "ipywidgets",
     "pytest",
     "matplotlib",
     "scipy",
