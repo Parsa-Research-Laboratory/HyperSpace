@@ -848,12 +848,13 @@ class HRRBackend(BaseBackend):
     as defined in the HyperSpace paper using HRR principles.
     """
     def __init__(self, vector_dim: int, length_scale: float = 1.0, device: str = "cpu",
-                 env_dim: int = 1, value_dim: int = 1):
+                 env_dim: int = 1, value_dim: int = 1, seed: int = 42):
         super().__init__(
             name="HRR",
             vector_dim=vector_dim,
             vector_dtype=torch.float32,
-            device=device
+            device=device,
+            seed=seed
         )
 
         self.length_scale: float = float(length_scale)
