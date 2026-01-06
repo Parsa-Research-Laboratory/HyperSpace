@@ -186,6 +186,6 @@ class CleanupModule(BaseModule):
         elif self.method == "modern_hopfield":
             out, info_dict = self.backend._hopfield_cleanup(v, self.codebook, num_iters, **kwargs)
         else:
-            raise ValueError(f"received invalid cleanup method: {method}")
+            raise ValueError(f"received invalid cleanup method: {self.method}")
 
         return out, info_dict
