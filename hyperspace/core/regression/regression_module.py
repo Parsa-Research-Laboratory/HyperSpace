@@ -136,7 +136,7 @@ class RegressionModule(BaseModule):
         Initialize the RegressionModule.
 
         Arguments:
-            backend : BaseBackend
+            backend : BaseBackend`
                 The backend to use for encoding operations.
             codebook : Tensor
                 The set of vectors representing discrete values
@@ -144,9 +144,9 @@ class RegressionModule(BaseModule):
                 The discrete values represented by the codebook
             method: str
                 The type of decoding method to leverage for the
-                regression process
+                regression process; must be one of ["codebook", "neural"]
             temperature: float
-                TODO
+                The sharpness parameter for the softmax function.
         """
         super().__init__()
         self.backend: BaseBackend = backend
