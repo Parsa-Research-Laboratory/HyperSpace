@@ -55,8 +55,9 @@ You are now ready to begin leveraging the HyperSpace framework. If you have any 
 
 ## Future Works and Features
 
-- multi-factor resonator support
 - Fourier Holographic Reduced Representations backend
+- multi-factor resonator support
+- automation of regression network training
 
 ## Credits
 
