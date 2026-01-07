@@ -19,15 +19,76 @@
 
 ## Introduction
 
-TODO
+**HyperSpace** is a unified Python framework for building and evaluating Vector Symbolic Architectures (VSAs) on continuous spatial domains. Built on PyTorch, HyperSpace enables researchers and practitioners to leverage hyperdimensional computing principles to encode, store, and retrieve continuous-valued data in high-dimensional vector spaces.
+
+The framework implements Holographic Reduced Representations (HRR) using Fourier-domain operations and fractional power encoding (FPE), allowing smooth interpolation and association of continuous spatial coordinates with arbitrary values. HyperSpace is designed to be modular, extensible, and performance-optimized with `torch.compile` support for efficient computation.
 
 ## Key Features
 
-TODO
+- **🔬 Holographic Reduced Representations (HRR) Backend**: Implements circular convolution (binding) and superposition (bundling) operations via FFT for efficient hypervector manipulation
+- **📍 Continuous Encoding**: Fractional power encoding (FPE) enables smooth representation of continuous spatial positions and scalar values
+- **🧩 Modular Architecture**: Six core modules for flexible VSA workflows:
+  - `PositionalEncoderModule` - Encodes continuous positions into hypervectors
+  - `ValueEncoderModule` - Encodes scalar values into hypervectors
+  - `MemoryStorageModule` - Maintains associative key-value memory through binding and bundling
+  - `PositionalInversionModule` - Decodes positions from memory vectors
+  - `CleanupModule` - Refines noisy hypervectors using resonator or Hopfield networks
+  - `RegressionModule` - Recovers continuous values from hypervectors
+- **⚡ Performance Optimized**: Leverages `torch.compile` for accelerated computation and supports both CPU and GPU execution
+- **🔄 Batched Operations**: Efficient batched processing for encoding, binding, bundling, and similarity computations
+- **🧪 Research-Ready**: Built for experimentation with VSAs on continuous spatial tasks like function approximation and spatial memory
 
 ## Basic Usage
 
-TODO
+Here's a minimal example demonstrating how to use HyperSpace to encode and retrieve continuous position-value pairs:
+
+```python
+import torch
+from hyperspace.backends import HRRBackend
+from hyperspace.core import (
+    PositionalEncoderModule,
+    ValueEncoderModule,
+    MemoryStorageModule,
+    RegressionModule
+)
+
+# Initialize the HRR backend
+backend = HRRBackend(vector_dim=256, device="cpu")
+
+# Create modules
+pos_encoder = PositionalEncoderModule(backend=backend)
+val_encoder = ValueEncoderModule(backend=backend)
+memory = MemoryStorageModule(backend=backend)
+
+# Sample data: positions (X) and values (Y)
+X = torch.tensor([[0.2], [0.5], [0.8]])  # 3 positions
+Y = torch.tensor([[1.0], [2.0], [1.5]])  # 3 corresponding values
+
+# Encode positions and values into hypervectors
+pos_vectors, _ = pos_encoder(X)
+val_vectors, _ = val_encoder(Y)
+
+# Store position-value associations in memory
+prev_memory = backend.create_empty_vector()
+memory_vector, _ = memory(
+    p_vectors=pos_vectors,
+    v_vectors=val_vectors,
+    prev_memory=prev_memory
+)
+
+# Create regression module for decoding
+codebook, _ = backend.value_encoding(Y)
+regressor = RegressionModule(backend=backend, codebook=codebook, values=Y)
+
+# Query the memory at a position and retrieve the value
+query_pos = torch.tensor([[0.5]])  # Query at x=0.5
+query_vector, _ = pos_encoder(query_pos)
+predicted_value, _ = regressor(query_vector)
+
+print(f"Predicted value at x=0.5: {predicted_value.item():.2f}")
+```
+
+For more detailed examples including function approximation and spatial memory tasks, see the `experiments/` directory.
 
 ## Installation
 
