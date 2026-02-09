@@ -803,7 +803,7 @@ def _base_batch_modern_hopfield_cleanup(v: Tensor, codebook: Tensor, temperature
     attn = F.softmax(logits, dim=-1)  # (B, C)
 
     # Weighted sum (stays complex)
-    v_out = torch.einsum("bc,cd->bd", attn, codebook)
+    v_out = torch.einsum("bc,cd->bd", attn.to(codebook.dtype), codebook)
     
     # Normalize using complex magnitude
     out_norm = torch.sqrt(torch.sum(torch.abs(v_out) ** 2, dim=-1, keepdim=True))
