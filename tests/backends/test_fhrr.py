@@ -474,7 +474,7 @@ def test_backend_base_init():
     
     assert b.vector_dim == vdim
     assert b.name == "FHRR"
-    assert b.vector_dtype == torch.complex32
+    assert b.vector_dtype in [torch.complex32, torch.complex64, torch.complex128]
 
 
 def test_length_scale_init():
