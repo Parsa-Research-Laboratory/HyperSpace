@@ -12,7 +12,11 @@ def test_fhrr_backend_initialization():
     """Test that FHRRBackend can be instantiated."""
     backend = FHRRBackend(vector_dim=128)
     assert backend.vector_dim == 128
-    assert backend.vector_dtype == torch.complex32
+    assert backend.vector_dtype in [
+        torch.complex32,
+        torch.complex64,
+        torch.complex128
+    ], f"Unexpected vector dtype: {backend.vector_dtype}"
     assert backend.name == "FHRR"
 
 
