@@ -823,7 +823,7 @@ class FHRRBackend(BaseBackend):
         super().__init__(
             name="FHRR",
             vector_dim=vector_dim,
-            vector_dtype=torch.complex32,
+            vector_dtype=torch.complex64,
             device=device,
             seed=seed
         )
