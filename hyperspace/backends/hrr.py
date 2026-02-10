@@ -875,28 +875,28 @@ class HRRBackend(BaseBackend):
         # -----------------------------
         # Compile HRR Specific Methods
         # -----------------------------
-        self._comp_create_single_vector = torch.compile(_base_create_single_vector)
-        self._comp_single_bind = torch.compile(_base_single_bind)
-        self._comp_single_bundle = torch.compile(_base_single_bundle)
-        self._comp_single_fpe = torch.compile(_base_single_fpe)
-        self._comp_single_ve = torch.compile(_base_single_value_encoding)
-        self._comp_single_normalize = torch.compile(_base_single_normalize)
-        self._comp_single_invert = torch.compile(_base_single_invert)
-        self._comp_single_weight = torch.compile(_base_single_weight)
-        self._comp_batch_bind = torch.compile(_base_batch_bind)
-        self._comp_batch_bundle = torch.compile(_base_batch_bundle)
-        self._comp_batch_fpe = torch.compile(_base_batch_fpe)
-        self._comp_batch_ve = torch.compile(_base_batch_value_encoding)
-        self._comp_batch_normalize = torch.compile(_base_batch_normalize)
-        self._comp_batch_invert = torch.compile(_base_batch_invert)
-        self._comp_batch_weight = torch.compile(_base_batch_weight)
+        self._comp_create_single_vector = _base_create_single_vector
+        self._comp_single_bind = _base_single_bind
+        self._comp_single_bundle = _base_single_bundle
+        self._comp_single_fpe = _base_single_fpe
+        self._comp_single_ve = _base_single_value_encoding
+        self._comp_single_normalize = _base_single_normalize
+        self._comp_single_invert = _base_single_invert
+        self._comp_single_weight = _base_single_weight
+        self._comp_batch_bind = _base_batch_bind
+        self._comp_batch_bundle = _base_batch_bundle
+        self._comp_batch_fpe = _base_batch_fpe
+        self._comp_batch_ve = _base_batch_value_encoding
+        self._comp_batch_normalize = _base_batch_normalize
+        self._comp_batch_invert = _base_batch_invert
+        self._comp_batch_weight = _base_batch_weight
         # Disable torch.compile for cleanup functions to avoid crashes on some platforms
         self._comp_batch_resonator_cleanup = _base_batch_resonator_cleanup
         self._comp_batch_modern_hopfield_cleanup = _base_batch_modern_hopfield_cleanup
-        self._comp_list_bundle = torch.compile(_base_list_bundle)
-        self._comp_list_bind = torch.compile(_base_list_bind)
-        self._comp_single_to_batch_bind = torch.compile(_base_single_to_batch_bind)
-        self._comp_single_to_batch_bundle = torch.compile(_base_single_to_batch_bundle)
+        self._comp_list_bundle = _base_list_bundle
+        self._comp_list_bind = _base_list_bind
+        self._comp_single_to_batch_bind = _base_single_to_batch_bind
+        self._comp_single_to_batch_bundle = _base_single_to_batch_bundle
         
 
         # ----------------------------------------
