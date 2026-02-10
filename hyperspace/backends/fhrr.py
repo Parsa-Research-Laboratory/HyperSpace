@@ -1,4 +1,3 @@
-
 import numpy as np
 import torch
 from torch import device, Generator, Tensor
@@ -16,7 +15,10 @@ def _base_create_single_vector(
         dev: device = torch.device("cpu")
     ) -> Tensor:
     """
-    Generate a randomly initialized HRR
+    Generate a randomly initialized FHRR vector in frequency domain.
+
+    Creates a complex-valued unit vector by generating random phases
+    and constructing complex numbers on the unit circle: v[k] = e^(i*φ_k)
 
     Arguments:
     ----------
@@ -26,16 +28,15 @@ def _base_create_single_vector(
             A PyTorch generator to control the stochasticity of
             the random process
         eps: float
-            A threshold for the upper and lower bounds of the
-            fourier coefficients
+            A threshold for phase bounds (not used but kept for API compatibility)
         dev: torch.Device
             The device to generate the vector on
 
     Returns:
     --------
         v: torch.Tensor
-            The randomly generated vector with shape (vector_dim). It
-            should be noted this vector is returned the time domain.
+            The randomly generated complex vector with shape (vector_dim).
+            This vector is in the frequency domain with unit magnitude.
     """
     if not isinstance(vector_dim, int):
         raise TypeError(f"vector_dim should be an integer; got {type(vector_dim)}")
@@ -58,59 +59,37 @@ def _base_create_single_vector(
     if dev != gen.device:
         raise AttributeError(f"the generator should be on the same device; got {gen.device} and {dev}")
     
-    a = torch.rand((vector_dim - 1) // 2, generator=gen)
-    sign = np.random.choice((-1, +1), len(a))
+    # Generate random phases in [-π, π]
+    phases = torch.rand(vector_dim, generator=gen, device=dev) * 2 * np.pi - np.pi
     
-    sign = torch.from_numpy(sign).to(dev)
-    a = a.to(dev)
-
-    phi = sign * torch.pi * (eps + a * (1 - 2 * eps))
-
-    if not torch.all(torch.abs(phi) >= torch.pi * eps):
-        raise ValueError("Generated phi values are out of bounds (lower).")
-    if not torch.all(torch.abs(phi) <= torch.pi * (1 - eps)):
-        raise ValueError("Generated phi values are out of bounds (upper).")
-
-    fv = torch.zeros(vector_dim, dtype=torch.complex64, device=dev)
-    fv[0] = 1
-    fv[1:(vector_dim + 1) // 2] = torch.cos(phi) + 1j * torch.sin(phi)
-    fv[(vector_dim // 2) + 1:] = torch.flip(
-        torch.conj(fv[1:(vector_dim + 1) // 2]), dims=[0]
-    )
-
-    if vector_dim % 2 == 0:
-        fv[vector_dim // 2] = 1
-
-    if not torch.allclose(torch.abs(fv), torch.ones(fv.shape, device=dev)):
-        raise ValueError("Generated frequency vector is not unit magnitude.")
-
-    v = torch.fft.ifft(fv)
-    v = v.real
-    v = v.to(dev)
-
-    if not torch.allclose(torch.fft.fft(v), fv):
-        raise ValueError("Inverse FFT did not produce the expected frequency vector.")
-
-    if not torch.allclose(torch.linalg.norm(v), torch.ones(v.shape, device=dev)):
-        raise ValueError("Inverse FFT did not produce the expected norm.")
+    # Create unit magnitude complex vector: e^(i*φ)
+    v = torch.exp(1j * phases)
+    
+    # Verify unit magnitude
+    magnitudes = torch.abs(v)
+    if not torch.allclose(magnitudes, torch.ones_like(magnitudes), atol=1e-6):
+        raise ValueError("Generated FHRR vector does not have unit magnitude.")
     
     return v
 
 def _base_single_bind(v1: Tensor, v2: Tensor) -> Tensor:
     """
-    Bind two HRR vectors together
+    Bind two FHRR vectors together using element-wise complex multiplication.
+    
+    In frequency domain, binding is simply element-wise multiplication.
+    This is O(n) vs O(n log n) for HRR.
 
     Arguments:
     ----------
     1) v1: Tensor
-        The first vector to bind together
+        The first complex vector to bind together
     2) v2: Tensor
-        The second vector to bind together
+        The second complex vector to bind together
 
     Returns:
     --------
     1) v_out: Tensor
-        The binded vector
+        The bound complex vector
     """
 
     if not isinstance(v1, Tensor):
@@ -125,16 +104,14 @@ def _base_single_bind(v1: Tensor, v2: Tensor) -> Tensor:
     if len(v1.shape) != 1:
         raise ValueError(f"expected v1 to be a 1d vector; got {v1.shape}")
     
-    v1_fft = torch.fft.fft(v1)
-    v2_fft = torch.fft.fft(v2)
-    v_out_fft = v1_fft * v2_fft
-    v_out = torch.fft.ifft(v_out_fft).real
+    # Complex multiplication in frequency domain
+    v_out = v1 * v2
 
     return v_out
 
 def _base_batch_bind(v1: Tensor, v2: Tensor) -> Tensor:
     """
-    Batched HRR binding via FFT.
+    Batched FHRR binding using element-wise complex multiplication.
 
     v1: (B, D)
     v2: (B, D)
@@ -150,18 +127,15 @@ def _base_batch_bind(v1: Tensor, v2: Tensor) -> Tensor:
     if v1.ndim != 2:
         raise ValueError(f"expected v1 to be (B, D); got {v1.shape}")
 
-    # FFT along the last dimension (D), broadcast across batch (B)
-    v1_fft = torch.fft.fft(v1, dim=-1)
-    v2_fft = torch.fft.fft(v2, dim=-1)
-
-    v_out_fft = v1_fft * v2_fft
-    v_out = torch.fft.ifft(v_out_fft, dim=-1).real
+    # Complex multiplication in frequency domain
+    v_out = v1 * v2
 
     return v_out
 
 def _base_single_bundle(v1: Tensor, v2: Tensor) -> Tensor:
     """
-    Bundle (superpose) two HRR vectors together via elementwise addition.
+    Bundle (superpose) two FHRR vectors together via elementwise addition.
+    Same as HRR - complex addition works naturally.
 
     Arguments:
     ----------
@@ -192,7 +166,7 @@ def _base_single_bundle(v1: Tensor, v2: Tensor) -> Tensor:
 
 def _base_batch_bundle(v1: Tensor, v2: Tensor) -> Tensor:
     """
-    Batched HRR bundling via elementwise addition.
+    Batched FHRR bundling via elementwise addition.
 
     v1: (B, D)
     v2: (B, D)
@@ -210,12 +184,11 @@ def _base_batch_bundle(v1: Tensor, v2: Tensor) -> Tensor:
         raise ValueError(f"expected v1 to be (B, D); got {v1.shape}")
 
     v_out = v1 + v2
-
     return v_out
 
 def _base_list_bundle(v: Tensor) -> Tensor:
     """
-    List HRR bundling where all vectors in the list are bundled together
+    List FHRR bundling where all vectors in the list are bundled together
 
     v: (B, D)
     returns: (D)
@@ -227,24 +200,25 @@ def _base_list_bundle(v: Tensor) -> Tensor:
         raise ValueError(f"expected v to be (B, D); got {v.shape}")
 
     v_out = torch.sum(v, dim=0)
-
     return v_out
 
 def _base_single_fpe(basis: Tensor, power: float, length_scale: float) -> Tensor:
     """
-    Single HRR fractional power encoding
+    Single FHRR fractional power encoding.
+    
+    Direct complex exponentiation in frequency domain - no FFT needed!
 
     Arguments:
         basis: Tensor
-            the random vector representing the basis of encoding; shape = (D)
+            the random complex vector representing the basis of encoding; shape = (D)
         power: float
             The value to exponentiate the basis
         length_scale: float
-            Adjust the kernel with between locations
+            Adjust the kernel width between locations
     
     Returns:
         v_out: Tensor
-            The fractional power encoded vector
+            The fractional power encoded complex vector
     """
 
     if not isinstance(basis, Tensor):
@@ -262,27 +236,28 @@ def _base_single_fpe(basis: Tensor, power: float, length_scale: float) -> Tensor
     if basis.ndim != 1:
         raise ValueError(f"expected basis to be (D); got {basis.shape}")
     
-    v_out: Tensor = torch.fft.fft(basis)
-    v_out = v_out ** (power / length_scale)
-    v_out = torch.fft.ifft(v_out).real
+    # Direct complex exponentiation (already in frequency domain)
+    v_out = basis ** (power / length_scale)
 
     return v_out
 
 def _base_batch_fpe(basis: Tensor, powers: Tensor, length_scale: float) -> Tensor:
     """
-    Single HRR fractional power encoding
+    Batched FHRR fractional power encoding.
+    
+    Direct complex exponentiation in frequency domain.
 
     Arguments:
         basis: Tensor
-            the random vector representing the basis of encoding; shape = (B, D)
+            the random complex vectors representing the basis of encoding; shape = (B, D)
         powers: Tensor
             The values to exponentiate the basis; shape = (B)
         length_scale: float
-            Adjust the kernel with between locations
+            Adjust the kernel width between locations
     
     Returns:
         v_out: Tensor
-            The fractional power encoded vectors; shape = (B, D)
+            The fractional power encoded complex vectors; shape = (B, D)
     """
 
     if not isinstance(basis, Tensor):
@@ -305,15 +280,16 @@ def _base_batch_fpe(basis: Tensor, powers: Tensor, length_scale: float) -> Tenso
     if basis.shape[0] != powers.shape[0]:
         raise ValueError(f"expected batch size of bases and power to match; got {basis.shape[0]} and {powers.shape[0]}")
 
-    v_out: Tensor = torch.fft.fft(basis, dim=-1)
-    v_out = v_out ** (powers / length_scale).unsqueeze(-1)
-    v_out = torch.fft.ifft(v_out, dim=-1).real
+    # Direct complex exponentiation with broadcasting
+    v_out = basis ** (powers / length_scale).unsqueeze(-1)
 
     return v_out
 
 def _base_single_value_encoding(x: Tensor, basis: Tensor, length_scale: float) -> Tensor:
     """
-    Single HRR value encoding with multiple dimensions
+    Single FHRR value encoding with multiple dimensions.
+    
+    Apply FPE to each dimension's basis and multiply (bind) them together.
 
     Arguments:
         x: Tensor
@@ -327,7 +303,7 @@ def _base_single_value_encoding(x: Tensor, basis: Tensor, length_scale: float) -
 
     Returns:
         v_out: Tensor
-            The n-dimensional positon encoded as a vector
+            The n-dimensional position encoded as a vector
     """
 
     if not isinstance(x, Tensor):
@@ -348,23 +324,22 @@ def _base_single_value_encoding(x: Tensor, basis: Tensor, length_scale: float) -
         raise ValueError(f"expected basis to be (value_dim, vector_dim); got {basis.shape}")
     
     if x.shape[0] != basis.shape[0]:
-        raise ValueError(f"Expected the ")
+        raise ValueError(f"Expected the value_dim of x ({x.shape[0]}) to match the value_dim of basis ({basis.shape[0]})")
     
-    basis_fft = torch.fft.fft(basis, dim=-1)
-    v_out = basis_fft ** (x / length_scale).unsqueeze(-1)
-    v_out = torch.prod(v_out, dim=0)
-    v_out = torch.fft.ifft(v_out).real
+    # Apply FPE to each dimension: basis[i] ** (x[i] / length_scale)
+    # Then multiply (bind) all together
+    v_out = basis ** (x / length_scale).unsqueeze(-1)  # (value_dim, vector_dim)
+    v_out = torch.prod(v_out, dim=0)  # (vector_dim,) - multiply along value_dim
     
     return v_out
 
 def _base_batch_value_encoding(x: Tensor, basis: Tensor, length_scale: float) -> Tensor:
     """
-    Batched HRR value encoding with multiple dimensions using bundling.
+    Batched FHRR value encoding with multiple dimensions.
     
     Efficiently encodes multiple n-dimensional values into hypervectors by
     applying fractional power encoding (FPE) to each dimension's basis vector,
-    then bundling them together via vector addition. All batches are processed
-    in parallel.
+    then multiplying (binding) them together. All batches are processed in parallel.
 
     Arguments:
         x: Tensor
@@ -410,39 +385,24 @@ def _base_batch_value_encoding(x: Tensor, basis: Tensor, length_scale: float) ->
             f"Expected x.shape[1] ({x.shape[1]}) to match basis.shape[0] ({basis.shape[0]})"
         )
     
-    # Efficient batched computation in frequency domain
-    # Step 1: Transform basis to frequency domain once for all batches
-    # Shape: (value_dim, vector_dim)
-    basis_fft = torch.fft.fft(basis, dim=-1)
+    # Apply FPE with broadcasting: (1, value_dim, vector_dim) ** (batch_size, value_dim, 1)
+    encoded = basis.unsqueeze(0) ** (x / length_scale).unsqueeze(-1)  # (batch_size, value_dim, vector_dim)
     
-    # Step 2: Apply FPE for all dimensions and batches
-    # Broadcasting: (1, value_dim, vector_dim) ** (batch_size, value_dim, 1)
-    # Result: (batch_size, value_dim, vector_dim)
-    encoded_fft = basis_fft.unsqueeze(0) ** (x / length_scale).unsqueeze(-1)
-
-    # Step 3: Bundle dimensions via summation for each batch
-    # Sum along dim=1 (value_dim): (batch_size, value_dim, vector_dim) -> (batch_size, vector_dim)
-    encoded_fft = torch.prod(encoded_fft, dim=1)
-    
-    # Step 4: Transform back to time domain for all batches
-    # Shape: (batch_size, value_dim, vector_dim)
-    encoded = torch.fft.ifft(encoded_fft, dim=-1).real
+    # Multiply (bind) along value_dim: (batch_size, value_dim, vector_dim) -> (batch_size, vector_dim)
+    encoded = torch.prod(encoded, dim=1)
     
     return encoded
 
 def _base_single_normalize(x: Tensor) -> Tensor:
     """
-    Normalize a single vector to unit L2 norm.
-
-    This function rescales a one-dimensional input tensor so that its
-    Euclidean (L2) norm is equal to 1. Normalization is performed using
-    ``torch.nn.functional.normalize``, which is numerically stable and
-    safely handles zero vectors.
+    Normalize a single complex vector to unit L2 norm.
+    
+    For complex vectors, L2 norm is computed using magnitudes.
 
     Parameters
     ----------
     x : Tensor
-        A one-dimensional tensor of shape ``(vector_dim,)`` representing
+        A one-dimensional complex tensor of shape ``(vector_dim,)`` representing
         the input vector to be normalized.
 
     Returns
@@ -464,24 +424,23 @@ def _base_single_normalize(x: Tensor) -> Tensor:
     if x.dim() != 1:
         raise ValueError("Input x must be a 1D tensor of shape (vector_dim).")
     
-    x = F.normalize(x, p=2, dim=0)
+    # For complex vectors: norm = sqrt(sum(|x_i|^2))
+    norm = torch.sqrt(torch.sum(torch.abs(x) ** 2))
+    x = x / (norm + 1e-12)
 
     return x
 
 def _base_batch_normalize(x: Tensor) -> Tensor:
     """
-    Normalize a batch of vector to unit L2 norm.
-
-    This function rescales a one-dimensional input tensor so that its
-    Euclidean (L2) norm is equal to 1. Normalization is performed using
-    ``torch.nn.functional.normalize``, which is numerically stable and
-    safely handles zero vectors.
+    Normalize a batch of complex vectors to unit L2 norm.
+    
+    For complex vectors, L2 norm is computed using magnitudes.
 
     Parameters
     ----------
     x : Tensor
-        A one-dimensional tensor of shape ``(batch_size, vector_dim)`` representing
-        the input vector to be normalized.
+        A two-dimensional complex tensor of shape ``(batch_size, vector_dim)`` representing
+        the input vectors to be normalized.
 
     Returns
     -------
@@ -501,31 +460,30 @@ def _base_batch_normalize(x: Tensor) -> Tensor:
     if x.dim() != 2:
         raise ValueError("Input x must be a 2D tensor of shape (batch_size, vector_dim).")
     
-    x = F.normalize(x, p=2, dim=-1)
+    # For complex vectors: norm = sqrt(sum(|x_i|^2)) per row
+    norm = torch.sqrt(torch.sum(torch.abs(x) ** 2, dim=-1, keepdim=True))
+    x = x / (norm + 1e-12)
 
     return x
 
 def _base_single_invert(x: Tensor) -> Tensor:
     """
-    Compute the inverse of a single HRR vector using frequency-domain conjugation.
-
-    This function computes the approximate inverse of a single
-    Holographic Reduced Representation (HRR) vector by transforming it
-    into the frequency domain, applying complex conjugation, and
-    transforming it back via the inverse FFT. The result corresponds to
-    the circular correlation inverse used in HRR unbinding.
+    Compute the inverse of a single FHRR vector using complex conjugation.
+    
+    Since we're already in frequency domain, inversion is just conjugation!
+    This is O(n) vs O(n log n) for HRR.
 
     Parameters
     ----------
     x : Tensor
-        A one-dimensional real-valued tensor of shape (vector_dim,)
-        representing an HRR vector.
+        A one-dimensional complex tensor of shape (vector_dim,)
+        representing an FHRR vector.
 
     Returns
     -------
     Tensor
-        A one-dimensional real-valued tensor of shape (vector_dim,)
-        representing the inverse HRR vector.
+        A one-dimensional complex tensor of shape (vector_dim,)
+        representing the inverse FHRR vector.
 
     Raises
     ------
@@ -539,32 +497,28 @@ def _base_single_invert(x: Tensor) -> Tensor:
     if x.dim() != 1:
         raise ValueError("Input x must be a 1D tensor of shape (vector_dim).")
     
-    out = torch.fft.fft(x)
-    out = torch.conj(out)
-    out = torch.fft.ifft(out).real
+    # Complex conjugation in frequency domain
+    out = torch.conj(x)
 
     return out
 
 def _base_batch_invert(x: Tensor) -> Tensor:
     """
-    Compute the inverse of a batch of HRR vectors via Fourier-domain conjugation.
-
-    This function performs the HRR inverse operation by applying a Fast Fourier
-    Transform (FFT) along the feature dimension, taking the complex conjugate
-    in the frequency domain, and transforming back with the inverse FFT (IFFT).
-    The operation is applied independently to each vector in the batch.
+    Compute the inverse of a batch of FHRR vectors via complex conjugation.
+    
+    Since we're already in frequency domain, inversion is just conjugation!
 
     Parameters
     ----------
     x : Tensor
-        A real-valued tensor of shape (batch_size, vector_dim) containing a batch
-        of HRR vectors to be inverted.
+        A complex tensor of shape (batch_size, vector_dim) containing a batch
+        of FHRR vectors to be inverted.
 
     Returns
     -------
     Tensor
-        A real-valued tensor of shape (batch_size, vector_dim) containing the
-        inverted HRR vectors.
+        A complex tensor of shape (batch_size, vector_dim) containing the
+        inverted FHRR vectors.
 
     Raises
     ------
@@ -578,9 +532,8 @@ def _base_batch_invert(x: Tensor) -> Tensor:
     if x.dim() != 2:
         raise ValueError("Input x must be a 2D tensor of shape (batch_size, vector_dim).")
     
-    out = torch.fft.fft(x, dim=-1)
-    out = torch.conj(out)
-    out = torch.fft.ifft(out, dim=-1).real
+    # Complex conjugation in frequency domain
+    out = torch.conj(x)
 
     return out
 
@@ -758,73 +711,87 @@ def _base_list_bind(batch: Tensor) -> Tensor:
 def _base_batch_resonator_cleanup(v: Tensor, codebook: Tensor, normalize: bool = True
                                   ) -> Tuple[Tensor, Tensor]:
     """
-    Resonator-style cleanup of HRR vectors via linear similarity reinforcement.
+    Resonator-style cleanup of FHRR vectors via linear similarity reinforcement in frequency domain.
 
-    This method computes the similarity between each input vector and all
-    codebook vectors, uses these similarities to linearly weight the codebook,
-    and bundles the result into a new vector. The output is normalized to
-    unit length to maintain HRR vector properties.
+    This method computes the similarity between each input complex vector and all
+    codebook vectors using real part of complex inner product, uses these similarities 
+    to linearly weight the codebook, and combines the result into a new vector.
 
     Args:
         v : Tensor
-            Input HRR vectors of shape (B, D).
+            Input FHRR vectors of shape (B, D) - complex.
         codebook : Tensor
-            Codebook vectors of shape (C, D).
+            Codebook vectors of shape (C, D) - complex.
         normalize : bool
-            If True, L2-normalize inputs before similarity computation.
+            If True, L2-normalize inputs before similarity computation using complex magnitude.
 
     Returns:
         v_out : Tensor
-            Cleaned HRR vectors of shape (B, D).
+            Cleaned FHRR vectors of shape (B, D) - complex.
         sims : Tensor
-            Similarity scores between v and codebook, shape (B, C).
+            Similarity scores between v and codebook, shape (B, C) - real.
     """
+    eps = 1e-12
+    
     if normalize:
-        vq = F.normalize(v, dim=-1)
-        kb = F.normalize(codebook, dim=-1)
+        # Normalize using complex magnitude: |z| = sqrt(real^2 + imag^2)
+        v_norm = torch.sqrt(torch.sum(torch.abs(v) ** 2, dim=-1, keepdim=True))
+        vq = v / (v_norm + eps)
+        
+        kb_norm = torch.sqrt(torch.sum(torch.abs(codebook) ** 2, dim=-1, keepdim=True))
+        kb = codebook / (kb_norm + eps)
     else:
         vq = v
         kb = codebook
 
-    # Step 1: Similarities (B, C)
-    sims = torch.einsum("bd,cd->bc", vq, kb)
+    # Step 1: Complex similarity - real part of inner product with conjugate
+    # sims[b, c] = Re(sum_d(vq[b,d] * conj(kb[c,d])))
+    sims = torch.real(torch.einsum("bd,cd->bc", vq, torch.conj(kb)))
 
-    # Step 2 + 3: Linear superposition of weighted codebook vectors
-    v_out = torch.einsum("bc,cd->bd", sims, codebook)
+    # Step 2 + 3: Linear superposition of weighted codebook vectors (stays complex)
+    # Need to handle real weights × complex vectors
+    v_out = torch.einsum("bc,cd->bd", sims.to(codebook.dtype), codebook)
 
-    # Step 4: Normalize to unit length (critical for HRR stability)
-    v_out = F.normalize(v_out, dim=-1)
+    # Step 4: Normalize to unit length using complex magnitude
+    out_norm = torch.sqrt(torch.sum(torch.abs(v_out) ** 2, dim=-1, keepdim=True))
+    v_out = v_out / (out_norm + eps)
 
     return v_out, sims
 
 def _base_batch_modern_hopfield_cleanup(v: Tensor, codebook: Tensor, temperature: float = 1.0,
                                         normalize: bool = True) -> Tuple[Tensor, Tensor]:
     """
-    Modern Hopfield (dense associative memory) cleanup via softmax retrieval.
+    Modern Hopfield (dense associative memory) cleanup via softmax retrieval in frequency domain.
 
     Computes attention weights over the codebook for each query vector in `v`
-    using (optionally normalized) dot-product similarity, then returns the
+    using complex similarity (real part of inner product with conjugate), then returns the
     weighted sum of codebook vectors.
 
     Args:
-        v: Query vectors, shape (B, D).
-        codebook: Stored patterns, shape (C, D).
+        v: Query vectors, shape (B, D) - complex.
+        codebook: Stored patterns, shape (C, D) - complex.
         temperature: Softmax temperature. Smaller -> sharper retrieval.
-        normalize: If True, L2-normalize v and codebook before similarity.
+        normalize: If True, L2-normalize v and codebook before similarity using complex magnitude.
 
     Returns:
-        v_out: Retrieved/cleaned vectors, shape (B, D).
-        attn: Attention weights over codebook, shape (B, C).
+        v_out: Retrieved/cleaned vectors, shape (B, D) - complex.
+        attn: Attention weights over codebook, shape (B, C) - real.
     """
+    eps = 1e-12
+    
     if normalize:
-        vq = F.normalize(v, dim=-1)
-        kb = F.normalize(codebook, dim=-1)
+        # Normalize using complex magnitude
+        v_norm = torch.sqrt(torch.sum(torch.abs(v) ** 2, dim=-1, keepdim=True))
+        vq = v / (v_norm + eps)
+        
+        kb_norm = torch.sqrt(torch.sum(torch.abs(codebook) ** 2, dim=-1, keepdim=True))
+        kb = codebook / (kb_norm + eps)
     else:
         vq = v
         kb = codebook
 
-    # logits: (B, C)
-    logits = torch.einsum("bd,cd->bc", vq, kb)
+    # Complex similarity for logits - real part of inner product with conjugate
+    logits = torch.real(torch.einsum("bd,cd->bc", vq, torch.conj(kb)))
 
     # scale + temperature
     if temperature <= 0:
@@ -832,17 +799,21 @@ def _base_batch_modern_hopfield_cleanup(v: Tensor, codebook: Tensor, temperature
     
     logits = logits / temperature
 
+    # Softmax over real-valued logits
     attn = F.softmax(logits, dim=-1)  # (B, C)
 
-    # weighted sum: (B, D)
-    v_out = torch.einsum("bc,cd->bd", attn, codebook)
-    v_out = F.normalize(v_out, dim=-1)
+    # Weighted sum (stays complex)
+    v_out = torch.einsum("bc,cd->bd", attn.to(codebook.dtype), codebook)
+    
+    # Normalize using complex magnitude
+    out_norm = torch.sqrt(torch.sum(torch.abs(v_out) ** 2, dim=-1, keepdim=True))
+    v_out = v_out / (out_norm + eps)
 
     return v_out, attn
 
-class HRRBackend(BaseBackend):
+class FHRRBackend(BaseBackend):
     """
-    Holographic Reduced Representations (HRR) backend implementation.
+    Fourier Holographic Reduced Representations (FHRR) backend implementation.
 
     Implements the continuous encoding, binding, and bundling operations
     as defined in the HyperSpace paper using HRR principles.
@@ -850,9 +821,9 @@ class HRRBackend(BaseBackend):
     def __init__(self, vector_dim: int, length_scale: float = 1.0, device: str = "cpu",
                  env_dim: int = 1, value_dim: int = 1, seed: int = 42):
         super().__init__(
-            name="HRR",
+            name="FHRR",
             vector_dim=vector_dim,
-            vector_dtype=torch.float32,
+            vector_dtype=torch.complex32,
             device=device,
             seed=seed
         )
@@ -873,7 +844,7 @@ class HRRBackend(BaseBackend):
             raise ValueError(f"value dim should be > 0; received {self.value_dim}")
 
         # -----------------------------
-        # Compile HRR Specific Methods
+        # Disable torch.compile for FHRR - complex operations cause OpenMP conflicts
         # -----------------------------
         self._comp_create_single_vector = _base_create_single_vector
         self._comp_single_bind = _base_single_bind
@@ -890,7 +861,6 @@ class HRRBackend(BaseBackend):
         self._comp_batch_normalize = _base_batch_normalize
         self._comp_batch_invert = _base_batch_invert
         self._comp_batch_weight = _base_batch_weight
-        # Disable torch.compile for cleanup functions to avoid crashes on some platforms
         self._comp_batch_resonator_cleanup = _base_batch_resonator_cleanup
         self._comp_batch_modern_hopfield_cleanup = _base_batch_modern_hopfield_cleanup
         self._comp_list_bundle = _base_list_bundle
@@ -967,7 +937,7 @@ class HRRBackend(BaseBackend):
                 length_scale=self.length_scale
             )
         else:
-            raise ValueError(f"Expected tensors to be single or two dimensional; got {a.ndim}")
+            raise ValueError(f"Expected tensors to be single or two dimensional; got {x.ndim}")
 
         info_dict = {}
 
@@ -1015,7 +985,7 @@ class HRRBackend(BaseBackend):
                 length_scale=self.length_scale
             )
         else:
-            raise ValueError(f"Expected tensors to be single or two dimensional; got {a.ndim}")
+            raise ValueError(f"Expected tensors to be single or two dimensional; got {x.ndim}")
 
         info_dict = {}
 
@@ -1228,27 +1198,29 @@ class HRRBackend(BaseBackend):
         eps: float = 1e-12,
     ) -> Tuple[Tensor, dict]:
         """
-        Compute cosine similarity between two HRR vectors.
+        Compute cosine similarity between two FHRR (complex) vectors.
 
-        Calculates the cosine similarity metric between two tensors, measuring
-        the cosine of the angle between them. This operation supports both single
-        vector and batched operations. The similarity values range from -1 (completely
-        dissimilar) to 1 (identical).
+        For complex vectors, similarity is computed as the real part of the
+        complex inner product with conjugate: Re(<a, conj(b)>) / (||a|| * ||b||)
+        where ||z|| = sqrt(sum(|z_i|^2))
 
         Arguments:
             a : Tensor
-                First input tensor. Shape should be either (D,) for single vectors
-                or (B, D) for batch operations, where B is batch size and D is the
-                vector dimension.
+                First input complex tensor. Shape (D,) or (B, D)
             b : Tensor
-                Second input tensor. Must have the same shape as `a`.
+                Second input complex tensor. Must be compatible with `a`.
+            mode : SimMode
+                "pairwise": element-wise similarity
+                "all_pairs": all combinations (returns matrix)
+                "auto": choose based on shapes
+            eps : float
+                Small value to avoid division by zero
 
         Returns:
             Tensor
-                Cosine similarity scores. Shape is scalar for single vectors or
-                (B,) for batch operations.
+                Cosine similarity scores (real-valued).
             dict
-                Information dictionary (currently empty).
+                Information dictionary with "mode" key.
         """
         
         if not isinstance(a, Tensor) or not isinstance(b, Tensor):
@@ -1265,37 +1237,73 @@ class HRRBackend(BaseBackend):
         if mode not in ("auto", "pairwise", "all_pairs"):
             raise ValueError(f"mode must be one of ['auto','pairwise','all_pairs']; got {mode}")
 
-        # 1D / 1D
-        if a.ndim == 1 and b.ndim == 1:
-            return F.cosine_similarity(a, b, dim=-1), {"mode": "pairwise"}
+        # Helper: complex L2 norm
+        def complex_norm(x):
+            return torch.sqrt(torch.sum(torch.abs(x) ** 2, dim=-1, keepdim=True) + eps)
 
-        # 2D / 1D or 1D / 2D -> always pairwise over the 2D batch
+        # 1D / 1D - single vector similarity
+        if a.ndim == 1 and b.ndim == 1:
+            # Re(<a, conj(b)>) / (||a|| * ||b||)
+            dot = torch.dot(a, torch.conj(b))
+            norm_a = torch.sqrt(torch.sum(torch.abs(a) ** 2) + eps)
+            norm_b = torch.sqrt(torch.sum(torch.abs(b) ** 2) + eps)
+            sim = torch.real(dot) / (norm_a * norm_b)
+            return sim, {"mode": "pairwise"}
+
+        # 2D / 1D or 1D / 2D -> broadcast to pairwise
         if a.ndim == 2 and b.ndim == 1:
-            return F.cosine_similarity(a, b.unsqueeze(0), dim=-1), {"mode": "pairwise"}
+            # Normalize
+            a_norm = a / complex_norm(a)
+            b_norm = b / torch.sqrt(torch.sum(torch.abs(b) ** 2) + eps)
+            # Compute: Re(sum_d(a[i,d] * conj(b[d])))
+            sim = torch.real(torch.einsum("bd,d->b", a_norm, torch.conj(b_norm)))
+            return sim, {"mode": "pairwise"}
+            
         if a.ndim == 1 and b.ndim == 2:
-            return F.cosine_similarity(a.unsqueeze(0), b, dim=-1), {"mode": "pairwise"}
+            # Normalize
+            a_norm = a / torch.sqrt(torch.sum(torch.abs(a) ** 2) + eps)
+            b_norm = b / complex_norm(b)
+            # Compute: Re(sum_d(a[d] * conj(b[i,d])))
+            sim = torch.real(torch.einsum("d,bd->b", a_norm, torch.conj(b_norm)))
+            return sim, {"mode": "pairwise"}
 
         # 2D / 2D
-        A, B = a, b  # (A,D), (B,D)
+        A, B = a, b
 
         if mode == "pairwise":
             if A.shape[0] != B.shape[0]:
                 raise ValueError(
                     f"pairwise mode requires same batch size; got {A.shape[0]} and {B.shape[0]}"
                 )
-            return F.cosine_similarity(A, B, dim=-1), {"mode": "pairwise"}
+            # Normalize both
+            A_norm = A / complex_norm(A)
+            B_norm = B / complex_norm(B)
+            # Element-wise: Re(sum_d(A[i,d] * conj(B[i,d])))
+            sim = torch.real(torch.sum(A_norm * torch.conj(B_norm), dim=-1))
+            return sim, {"mode": "pairwise"}
 
         if mode == "all_pairs":
-            A_norm = F.normalize(A, p=2, dim=-1, eps=eps)
-            B_norm = F.normalize(B, p=2, dim=-1, eps=eps)
-            return A_norm @ B_norm.transpose(-1, -2), {"mode": "all_pairs"}
+            # Normalize
+            A_norm = A / complex_norm(A)
+            B_norm = B / complex_norm(B)
+            # All pairs: Re(A @ conj(B)^T)
+            # A_norm: (A, D), B_norm: (B, D) -> result: (A, B)
+            sim = torch.real(A_norm @ torch.conj(B_norm).transpose(-1, -2))
+            return sim, {"mode": "all_pairs"}
 
         # mode == "auto"
         if A.shape[0] == B.shape[0]:
-            return F.cosine_similarity(A, B, dim=-1), {"mode": "pairwise"}
-        A_norm = F.normalize(A, p=2, dim=-1, eps=eps)
-        B_norm = F.normalize(B, p=2, dim=-1, eps=eps)
-        return A_norm @ B_norm.transpose(-1, -2), {"mode": "all_pairs"}
+            # Same size -> pairwise
+            A_norm = A / complex_norm(A)
+            B_norm = B / complex_norm(B)
+            sim = torch.real(torch.sum(A_norm * torch.conj(B_norm), dim=-1))
+            return sim, {"mode": "pairwise"}
+        else:
+            # Different sizes -> all_pairs
+            A_norm = A / complex_norm(A)
+            B_norm = B / complex_norm(B)
+            sim = torch.real(A_norm @ torch.conj(B_norm).transpose(-1, -2))
+            return sim, {"mode": "all_pairs"}
     
     def normalize(self, x: Tensor) -> Tuple[Tensor, dict]:
         """
@@ -1509,21 +1517,20 @@ class HRRBackend(BaseBackend):
 
     def create_empty_vector(self) -> Tensor:
         """
-        Create an empty HRR vector initialized to all zeros.
+        Create an empty FHRR vector initialized to all zeros.
 
-        This method allocates a real-valued tensor of shape ``(vector_dim,)`` on the
+        This method allocates a complex-valued tensor of shape ``(vector_dim,)`` on the
         backend's configured device. The returned vector represents the neutral
-        (zero) element in HRR space prior to any binding, bundling, or encoding
+        (zero) element in FHRR space prior to any binding, bundling, or encoding
         operations.
 
         Returns
         -------
         Tensor
-            A real-valued tensor of shape ``(vector_dim,)`` initialized to zeros and
+            A complex-valued tensor of shape ``(vector_dim,)`` initialized to zeros and
             placed on ``self.device``.
         """
-        v = torch.zeros((self.vector_dim))
-        v = v.to(self.device)
+        v = torch.zeros((self.vector_dim), dtype=self.vector_dtype, device=self.device)
         return v
     
     def _nearest_neighbor_regression(self, vectors: Tensor) -> Tensor:
