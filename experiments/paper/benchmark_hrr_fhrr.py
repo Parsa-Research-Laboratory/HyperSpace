@@ -15,6 +15,8 @@ from pathlib import Path
 from typing import Dict, List, Tuple, Any
 
 import numpy as np
+from scipy.interpolate import CubicSpline
+from scipy.ndimage import distance_transform_edt, zoom
 import torch
 import torch.nn as nn
 from tqdm import tqdm
@@ -169,6 +171,43 @@ def generate_x_pattern_terrain(
     return positions, costmap
 
 
+def create_spline(points: List[Tuple[int, int]], num_samples: int) -> np.ndarray:
+    x_points = [p[0] for p in points]
+    y_points = [p[1] for p in points]
+
+    cs = CubicSpline(
+        np.linspace(0, 1, len(x_points)),
+        np.vstack([x_points, y_points]), axis=1
+    )
+    t = np.linspace(0, 1, num_samples)
+    spline_points = cs(t).T
+    return spline_points
+
+def create_costmap(world: np.ndarray, spline_points: np.ndarray, path_cost: float) -> np.ndarray:
+    costmap = np.zeros(world.shape)
+    for point in spline_points:
+        x, y = int(point[0]), int(point[1])
+        if 0 <= x < world.shape[0] and 0 <= y < world.shape[1]:
+            costmap[x, y] = path_cost
+
+    path_mask = (costmap == path_cost)
+    distances = distance_transform_edt(~path_mask)
+    costmap = 1 + distances
+    return costmap
+
+def create_discretized_costmaps(cost_maps: List[np.ndarray], num_samples: int) -> List[np.ndarray]:
+    """
+    convert the continuous valued cost maps into a discretized version
+    """
+    discretized_maps = []
+    for cost_map in cost_maps:
+        normalized_map = (cost_map - cost_map.min()) / (cost_map.max() - cost_map.min())
+        # Create a new map with the same shape but discretized values
+        discretized_map = np.digitize(normalized_map, bins=np.linspace(0, 1, num_samples))
+        discretized_maps.append(discretized_map)
+    return discretized_maps
+
+
 def split_train_test(
     positions: torch.Tensor,
     values: torch.Tensor,
@@ -236,6 +275,61 @@ def benchmark_encoding(
     
     return memory, timings
 
+def convert_costmap_to_points(costmap: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Convert a costmap to a set of points sampled according to the cost distribution.
+    """
+    # Get coordinates
+    x_indices, y_indices = np.meshgrid(
+        np.arange(costmap.shape[1]),  # x = columns
+        np.arange(costmap.shape[0])   # y = rows
+    )
+
+    # Flatten to a list of (x, y) points
+    points = np.stack([x_indices.ravel(), y_indices.ravel()], axis=-1)
+
+    # Flatten the costmap values
+    labels = costmap.ravel()
+
+    # Subtract 1 from all labels to ensure they are zero-indexed
+    # labels -= 1
+    return points, labels
+
+def generate_spline_terrain(downscale_factor: float = 0.01) -> Tuple[np.ndarray, np.ndarray]:
+    WORLD_SIZE: Tuple[int, int] = (1000, 1000)
+    START_POSITION: Tuple[int, int] = (1, 1)
+    END_POSITION: Tuple[int, int] = (999, 999)
+    PATH_COST: float = 1.0
+    NUM_SPLINE_SAMPLES: int = 10000
+    SPLINE_POINTS_BEGINNING: List[Tuple[int, int]] = [
+        START_POSITION,
+        (200, 200),
+        (200, 400),
+        (500, 500),
+        (800, 600),
+        (800, 800),
+        END_POSITION
+    ]
+
+    cost_map = create_costmap(
+        world=np.zeros(WORLD_SIZE),
+        spline_points=create_spline(SPLINE_POINTS_BEGINNING, NUM_SPLINE_SAMPLES),
+        path_cost=PATH_COST
+    )
+
+    cost_map = zoom(cost_map, downscale_factor, order=1)
+
+    X, y = convert_costmap_to_points(cost_map)
+
+    X = torch.from_numpy(X).float()
+    y = torch.from_numpy(y).float()
+
+    y_norm = (y - y.min()) / (y.max() - y.min())
+    y_norm = y_norm * 10  # Scale to [0, 10] range
+    y_norm += 1
+    # y_norm = y_norm.unsqueeze(-1)
+
+    return X.numpy(), y_norm.numpy()
 
 def benchmark_query(
     backend,
@@ -445,6 +539,7 @@ def run_full_benchmark(
     backend_name: str,
     resolution: int,
     vector_dim: int,
+    vector_length_scale: float = 1.0,
     device: str = 'cpu',
     terrain_type: str = 'mixed',
     codebook_size: int = 64,
@@ -454,13 +549,14 @@ def run_full_benchmark(
 ) -> Dict:
     """Run complete benchmark for one configuration."""
     print(f"\n{'='*60}")
-    print(f"Benchmarking {backend_name} | Resolution: {resolution}x{resolution} | D: {vector_dim}")
+    print(f"Benchmarking {backend_name} | Resolution: {1000 * resolution}x{1000 * resolution} | D: {vector_dim}")
     print(f"{'='*60}")
     
     # Initialize backend
     if backend_name == 'HRR':
         backend = HRRBackend(
             vector_dim=vector_dim,
+            length_scale=vector_length_scale,
             device=device,
             env_dim=2,
             value_dim=1,
@@ -469,6 +565,7 @@ def run_full_benchmark(
     else:  # FHRR
         backend = FHRRBackend(
             vector_dim=vector_dim,
+            length_scale=vector_length_scale,
             device=device,
             env_dim=2,
             value_dim=1,
@@ -483,8 +580,13 @@ def run_full_benchmark(
         positions, values = generate_obstacle_distance_field(resolution, seed=seed)
     elif terrain_type == 'xpattern':
         positions, values = generate_x_pattern_terrain(resolution, seed=seed)
+    elif terrain_type == 'spline':
+        positions, values = generate_spline_terrain(resolution)
     else:
         positions, values = generate_mixed_terrain(resolution, seed=seed)
+
+    positions = torch.from_numpy(positions).to(device)
+    values = torch.from_numpy(values).to(device)
     
     # Split train/test
     train_pos, train_vals, test_pos, test_vals = split_train_test(
@@ -578,14 +680,14 @@ def main():
                         help='Output JSON file for results')
     parser.add_argument('--device', type=str, default='cpu',
                         help='Device to run on (cpu/cuda)')
-    parser.add_argument('--resolutions', type=int, nargs='+',
-                        default=[32, 64, 128, 256],
+    parser.add_argument('--resolutions', type=float, nargs='+',
+                        default=[0.01, 0.02, 0.03, 0.04, 0.05],
                         help='Grid resolutions to test')
     parser.add_argument('--vector-dims', type=int, nargs='+',
-                        default=[512, 1024, 2048],
+                        default=[1024, 2048, 4096, 8192],
                         help='Vector dimensions to test')
     parser.add_argument('--terrain-type', type=str, default='xpattern',
-                        choices=['gaussian', 'obstacle', 'mixed', 'xpattern'],
+                        choices=['gaussian', 'obstacle', 'mixed', 'xpattern', 'spline', 'spline_end'],
                         help='Terrain type to generate')
     parser.add_argument('--codebook-size', type=int, default=64,
                         help='Codebook size for cleanup')
@@ -608,6 +710,7 @@ def main():
                 'HRR',
                 resolution=resolution,
                 vector_dim=vector_dim,
+                vector_length_scale=2.0,  # Longer vectors for HRR to improve capacity
                 device=args.device,
                 terrain_type=args.terrain_type,
                 codebook_size=args.codebook_size,
@@ -622,6 +725,7 @@ def main():
                 'FHRR',
                 resolution=resolution,
                 vector_dim=vector_dim,
+                vector_length_scale=2.0,
                 device=args.device,
                 terrain_type=args.terrain_type,
                 codebook_size=args.codebook_size,

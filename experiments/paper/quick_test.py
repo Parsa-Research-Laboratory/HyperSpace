@@ -9,17 +9,17 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 from benchmark_hrr_fhrr import run_full_benchmark
 
 # Quick test with small configuration
-print("Running quick test with 16x16 map, D=256...")
+print("Running quick test with 10x10 map, D=1024...")
 print("This should complete in ~30 seconds\n")
 
 results_hrr = run_full_benchmark(
     backend_name='HRR',
-    resolution=16,
-    vector_dim=256,
+    resolution=0.01,
+    vector_dim=1024,
     device='cpu',
-    terrain_type='mixed',
+    terrain_type='spline',
     codebook_size=32,
-    cleanup_iterations=2,
+    cleanup_iterations=5,
     num_test_queries=20,
     seed=42
 )
@@ -28,12 +28,12 @@ print("\n" + "="*60)
 
 results_fhrr = run_full_benchmark(
     backend_name='FHRR',
-    resolution=16,
-    vector_dim=256,
+    resolution=0.01,
+    vector_dim=1024,
     device='cpu',
-    terrain_type='mixed',
+    terrain_type='spline',
     codebook_size=32,
-    cleanup_iterations=2,
+    cleanup_iterations=5,
     num_test_queries=20,
     seed=42
 )
