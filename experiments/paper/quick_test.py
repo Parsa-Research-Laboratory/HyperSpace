@@ -12,10 +12,12 @@ import numpy as np
 from benchmark_hrr_fhrr import run_full_benchmark
 
 # Test configurations
-VECTOR_DIMS = [2048, 4096]
-RESOLUTION = 0.01
+VECTOR_DIMS = [8096]
+VECTOR_LENGTH_SCALE = 2.0
+RESOLUTION = 0.028
 CLEANUP_METHOD = 'resonator'
-CLEANUP_ITERS = 2
+CLEANUP_ITERS = 3
+
 
 print("="*80)
 print("QUICK TEST: HRR vs FHRR Comparison")
@@ -37,6 +39,7 @@ for vector_dim in VECTOR_DIMS:
     results_hrr = run_full_benchmark(
         backend_name='HRR',
         resolution=RESOLUTION,
+        vector_length_scale=VECTOR_LENGTH_SCALE,
         vector_dim=vector_dim,
         device='cpu',
         cleanup_method=CLEANUP_METHOD,
@@ -49,6 +52,7 @@ for vector_dim in VECTOR_DIMS:
     results_fhrr = run_full_benchmark(
         backend_name='FHRR',
         resolution=RESOLUTION,
+        vector_length_scale=VECTOR_LENGTH_SCALE,
         vector_dim=vector_dim,
         device='cpu',
         cleanup_method=CLEANUP_METHOD,

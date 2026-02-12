@@ -523,7 +523,7 @@ def run_full_benchmark(
     global_decoded_vecs, _ = global_pi_module(start_memory)
     global_decoded_vecs, _ = cleanup_module(
         global_decoded_vecs,
-        num_iters=cleanup_iterations
+        num_iters=cleanup_iterations,
     )
     global_predictions, _ = regression_module(global_decoded_vecs)
     global_predictions = global_predictions.squeeze(-1)
@@ -555,13 +555,15 @@ def run_full_benchmark(
     
     fig, axs = plt.subplots(1, 2, figsize=(12, 5))
 
+    N = np.sqrt(len(positions)).astype(int)
+
     # plot the ground truth for visualization as image
-    axs[0].imshow(values.reshape(10, 10).cpu().detach(), cmap='viridis', origin='lower')
+    axs[0].imshow(values.reshape(N, N).cpu().detach(), cmap='viridis', origin='lower')
     axs[0].set_title(f'Ground Truth Values')
     axs[0].set_xlabel('X')
     axs[0].set_ylabel('Y')
     # plot the global predictions for visualization as image
-    axs[1].imshow(global_predictions.reshape(10, 10).cpu().detach(), cmap='viridis', origin='lower')
+    axs[1].imshow(global_predictions.reshape(N, N).cpu().detach(), cmap='viridis', origin='lower')
     axs[1].set_title(f'Global Decoding Predictions')
     axs[1].set_xlabel('X')
     axs[1].set_ylabel('Y')
