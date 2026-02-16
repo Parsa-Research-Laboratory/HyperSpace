@@ -92,3 +92,71 @@ def plot_hyperspace_latency_bars(
         fig.savefig(savepath, bbox_inches="tight")
 
     return fig, ax
+
+def plot_best_triptych(
+    image_dict: dict,
+    *,
+    gt_key: str = "Ground Truth",
+    best_hrr_key: str,
+    best_fhrr_key: str,
+    cmap: str = "viridis",
+    preset: str = "single",          # "single" (1-col) or "double" (2-col)
+    width_single: float = 3.35,
+    width_double: float = 6.9,
+    aspect: float = 0.42,            # height = width*aspect for 1×3
+    share_scale: bool = True,        # same vmin/vmax across all 3 for fair visual compare
+    vmin: float | None = None,
+    vmax: float | None = None,
+    title: str | None = None,
+    savepath: str | None = None,
+    dpi: int = 300,
+):
+    keys = [gt_key, best_hrr_key, best_fhrr_key]
+    for k in keys:
+        if k not in image_dict:
+            raise KeyError(f"Key '{k}' not found in image_dict.")
+
+    imgs = [np.asarray(image_dict[k]) for k in keys]
+
+    if share_scale and (vmin is None or vmax is None):
+        stacked = np.stack(imgs, axis=0)
+        if vmin is None:
+            vmin = float(np.nanmin(stacked))
+        if vmax is None:
+            vmax = float(np.nanmax(stacked))
+
+    width = width_single if preset == "single" else width_double
+    height = width * aspect
+
+    plt.rcParams.update({
+        "font.size": 7.5,
+        "axes.titlesize": 7.5,
+        "axes.labelsize": 7.5,
+    })
+
+    fig, axes = plt.subplots(1, 3, figsize=(width, height), dpi=dpi, constrained_layout=True)
+    mappable = None
+    for ax, k, img in zip(axes, keys, imgs):
+        mappable = ax.imshow(img, cmap=cmap, vmin=vmin, vmax=vmax)
+
+        if "FHRR" in k:
+            k = "FHRR"
+
+        elif "HRR" in k:
+            k = "HRR"
+
+        ax.set_title(k, pad=2)
+        ax.set_xticks([])
+        ax.set_yticks([])
+
+    # # one shared colorbar
+    # cbar = fig.colorbar(mappable, ax=axes, fraction=0.035, pad=0.02)
+    # cbar.set_label("Regressed value")
+
+    if title is not None:
+        fig.suptitle(title, y=1.02)
+
+    if savepath is not None:
+        fig.savefig(savepath, bbox_inches="tight")
+
+    return fig, axes
