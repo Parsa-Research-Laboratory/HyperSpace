@@ -37,7 +37,8 @@ from hyperspace.core import (
     PositionalInversionModule,
     CleanupModule,
     MemoryStorageModule,
-    RegressionModule
+    RegressionModule,
+    cleanup
 )
 
 def create_spline(points: List[Tuple[int, int]], num_samples: int) -> np.ndarray:
@@ -394,6 +395,12 @@ def run_full_benchmark(
     regression_method: str = 'codebook',
     seed: int = 42,
     scratch_dir: str = './scratch',
+    global_positions: torch.Tensor = None,
+    global_values: torch.Tensor = None,
+    train_positions: torch.Tensor = None,
+    train_values: torch.Tensor = None,
+    test_positions: torch.Tensor = None,
+    test_values: torch.Tensor = None,
 ) -> Dict:
     """Run complete benchmark for one configuration."""
     print(f"\n{'='*80}")
@@ -425,31 +432,8 @@ def run_full_benchmark(
     # create scratch directory
     if not os.path.exists(scratch_dir):
         os.makedirs(scratch_dir)
-
-    positions, values = generate_spline_terrain(resolution)
-    positions = torch.from_numpy(positions).to(device)
-    values = torch.from_numpy(values).to(device)  # Dummy values for testing
-
-    # plot the terrain for visualization
-    import matplotlib.pyplot as plt
-    plt.scatter(positions[:, 0].cpu(), positions[:, 1].cpu(), c=values.cpu(), cmap='viridis')
-    plt.colorbar(label='Cost')
-    plt.title(f'Terrain')
-    plt.xlabel('X')
-    plt.ylabel('Y')
-    plt.savefig(os.path.join(scratch_dir, f'terrain_res{resolution}.png'))
-    plt.close()
-    
-    # Split train/test
-    train_pos, train_vals, test_pos, test_vals = split_train_test(
-        positions, values, train_ratio=0.8, seed=0
-    )
-    
-    print(f"\n📊 Dataset Statistics:")
-    print(f"     ├─ Train samples: {len(train_pos):,}")
-    print(f"     ├─ Test samples:  {len(test_pos):,}")
-    print(f"     ├─ Train value range: [{train_vals.min():.2f}, {train_vals.max():.2f}]")
-    print(f"     └─ Test value range:  [{test_vals.min():.2f}, {test_vals.max():.2f}]")
+    else:
+        raise FileExistsError(f"Scratch directory already exists: {scratch_dir}")
     
     results = {
         'backend': backend_name,
@@ -457,8 +441,8 @@ def run_full_benchmark(
         'vector_dim': vector_dim,
         'cleanup_method': cleanup_method,
         'regression_method': regression_method,
-        'n_train': len(train_pos),
-        'n_test': len(test_pos),
+        'n_train': len(train_positions),
+        'n_test': len(test_positions),
     }
 
     # ------------------------------
@@ -466,196 +450,374 @@ def run_full_benchmark(
     # ------------------------------
     pe_module = PositionalEncoderModule(backend)
     ve_module = ValueEncoderModule(backend)
-    global_pi_module = PositionalInversionModule(backend, positions)
+    global_pi_module = PositionalInversionModule(backend, global_positions)
+    train_pi_module = PositionalInversionModule(backend, train_positions)
+    test_pi_module = PositionalInversionModule(backend, test_positions)
 
     value_axis = torch.linspace(0.0, 12.0, steps=200).to(device).unsqueeze(1)
     value_codebook, _ = ve_module(value_axis)
 
-    cleanup_module = CleanupModule(
-        backend,
-        codebook=value_codebook,
-        method=cleanup_method
-    )
+    if cleanup_method in ['resonator', 'modern_hopfield']:
+        cleanup_module = CleanupModule(
+            backend,
+            codebook=value_codebook,
+            method=cleanup_method
+        )
+    else:
+        cleanup_module = None
+
     memory_module = MemoryStorageModule(backend)
 
     regression_module = RegressionModule(backend, value_codebook, value_axis)
 
-    # -------------------------------
-    # 1. Encoding Phase
-    # -------------------------------
+    # ------------------------------
+    # 1. Positional Encoding Phase
+    # ------------------------------
     print(f"\n{'─'*80}")
-    print("⚙️  [1/5] ENCODING PHASE")
+    print("⚙️  [1/12] ENCODING PHASE")
     print(f"{'─'*80}")
-    print(f"     Encoding {len(train_pos):,} training samples...")
-    
-    encoding_start = time.perf_counter()
+    print(f"     Encoding {len(train_positions):,} training samples...")
 
-    pe_train, _ = pe_module(train_pos)
-    ve_train, _ = ve_module(train_vals.unsqueeze(1))
-    start_memory, _ = memory_module(
-        p_vectors=pe_train,
-        v_vectors=ve_train
-    )
+    pe_start = time.perf_counter()
+
+    pe_train, _ = pe_module(train_positions)
 
     torch.cuda.synchronize() if torch.cuda.is_available() else None
-    encoding_end = time.perf_counter()
-    encoding_time = encoding_end - encoding_start
-    encoding_time_per_sample = encoding_time / train_vals.shape[0]
-    
-    results['encoding'] = {
-        'total_encoding': encoding_time,
-        'per_sample': encoding_time_per_sample
-    }
-    
-    print(f"     ├─ Total time:   {encoding_time:.3f}s")
-    print(f"     ├─ Per sample:   {encoding_time_per_sample*1000:.2f}ms")
+    pe_end = time.perf_counter()
+    pe_time = pe_end - pe_start
+    pe_time_per_sample = pe_time / train_positions.shape[0]
+
+    print(f"     ├─ Total time:   {pe_time:.3f}s")
+    print(f"     ├─ Per sample:   {pe_time_per_sample*1000:.2f}ms")
     print(f"     └─ ✓ Complete")
 
-    # ------------------------------
-    # 2. Global Decoding
-    # -------------------------------
-    print(f"\n{'─'*80}")
-    print("🔍 [2/5] GLOBAL DECODING PHASE")
-    print(f"{'─'*80}")
-    print(f"     Decoding all {len(positions):,} positions...")
-    
-    decoding_start = time.perf_counter()
+    results['positional_encoding'] = {
+        'total_time': pe_time,
+        'per_sample': pe_time_per_sample
+    }
 
-    global_decoded_vecs, _ = global_pi_module(start_memory)
-    global_decoded_vecs, _ = cleanup_module(
-        global_decoded_vecs,
-        num_iters=cleanup_iterations,
-    )
-    global_predictions, _ = regression_module(global_decoded_vecs)
-    global_predictions = global_predictions.squeeze(-1)
+    # ------------------------------
+    # 2. Value Encoding Phase
+    # ------------------------------
+    print(f"\n{'─'*80}")
+    print("⚙️  [2/12] VALUE ENCODING PHASE")
+    print(f"{'─'*80}")
+    print(f"     Encoding {len(train_values):,} training values...")
+
+    ve_start = time.perf_counter()
+
+    ve_train, _ = ve_module(train_values.unsqueeze(1))
 
     torch.cuda.synchronize() if torch.cuda.is_available() else None
-    decoding_end = time.perf_counter()
-    decoding_time = decoding_end - decoding_start
-    global_mse = compute_mse(global_predictions, values)
+    ve_end = time.perf_counter()
+    ve_time = ve_end - ve_start
+    ve_time_per_sample = ve_time / train_values.shape[0]
 
-    results['global_decoding'] = {
-        'total_decoding': decoding_time,
-        'per_sample': decoding_time / positions.shape[0],
+    print(f"     ├─ Total time:   {ve_time:.3f}s")
+    print(f"     ├─ Per sample:   {ve_time_per_sample*1000:.2f}ms")
+    print(f"     └─ ✓ Complete")
+
+    results['value_encoding'] = {
+        'total_time': ve_time,
+        'per_sample': ve_time_per_sample
+    }
+
+    # ------------------------------
+    # 3. Memory Storage Phase
+    # ------------------------------
+    print(f"\n{'─'*80}")
+    print("⚙️  [3/12] MEMORY STORAGE PHASE")
+    print(f"{'─'*80}")
+    print(f"     Binding and bundling {len(train_positions):,} samples into memory...")
+
+    mem_start = time.perf_counter()
+
+    memory, _ = memory_module(pe_train, ve_train)
+
+    torch.cuda.synchronize() if torch.cuda.is_available() else None
+    mem_end = time.perf_counter()
+    mem_time = mem_end - mem_start
+    mem_time_per_sample = mem_time / train_positions.shape[0]
+
+    print(f"     ├─ Total time:   {mem_time:.3f}s")
+    print(f"     ├─ Per sample:   {mem_time_per_sample*1000:.2f}ms")
+    print(f"     └─ ✓ Complete")
+
+    results['memory_storage'] = {
+        'total_time': mem_time,
+        'per_sample': mem_time_per_sample
+    }
+
+    # -------------------------------------
+    # 4. Global Positional Inversion Phase
+    # -------------------------------------
+    print(f"\n{'─'*80}")
+    print("🔍 [4/12] GLOBAL POSITIONAL INVERSION PHASE")
+    print(f"{'─'*80}")
+    print(f"     Decoding all {len(global_positions):,} positions...")
+
+    global_pi_start = time.perf_counter()
+
+    global_decoded_vecs, _ = global_pi_module(memory)
+
+    torch.cuda.synchronize() if torch.cuda.is_available() else None
+    global_pi_end = time.perf_counter()
+    global_pi_time = global_pi_end - global_pi_start
+    global_pi_time_per_sample = global_pi_time / global_positions.shape[0]
+
+    print(f"     ├─ Total time:   {global_pi_time:.3f}s")
+    print(f"     ├─ Per sample:   {global_pi_time_per_sample*1000:.2f}ms")
+    print(f"     └─ ✓ Complete")
+
+    results['global_positional_inversion'] = {
+        'total_time': global_pi_time,
+        'per_sample': global_pi_time_per_sample
+    }
+
+    # ---------------------------------------
+    # 5. Training Positional Inversion Phase
+    # ---------------------------------------
+    print(f"\n{'─'*80}")
+    print("🔍 [5/12] TRAINING POSITIONAL INVERSION PHASE")
+    print(f"{'─'*80}")
+    print(f"     Decoding {len(train_positions):,} training positions...")
+
+    train_pi_start = time.perf_counter()
+    train_decoded_vecs, _ = train_pi_module(memory)
+    torch.cuda.synchronize() if torch.cuda.is_available() else None
+    train_pi_end = time.perf_counter()
+    train_pi_time = train_pi_end - train_pi_start
+    train_pi_time_per_sample = train_pi_time / train_positions.shape[0]
+    print(f"     ├─ Total time:   {train_pi_time:.3f}s")
+    print(f"     ├─ Per sample:   {train_pi_time_per_sample*1000:.2f}ms")
+    print(f"     └─ ✓ Complete")
+
+    results['train_positional_inversion'] = {
+        'total_time': train_pi_time,
+        'per_sample': train_pi_time_per_sample
+    }
+
+    # ---------------------------------------
+    # 6. Testing Positional Inversion Phase
+    # ---------------------------------------
+    print(f"\n{'─'*80}")
+    print("🔍 [6/12] TESTING POSITIONAL INVERSION PHASE")
+    print(f"{'─'*80}")
+    print(f"     Decoding {len(test_positions):,} testing positions...")
+
+    test_pi_start = time.perf_counter()
+    test_decoded_vecs, _ = test_pi_module(memory)
+    torch.cuda.synchronize() if torch.cuda.is_available() else None
+    test_pi_end = time.perf_counter()
+    test_pi_time = test_pi_end - test_pi_start
+    test_pi_time_per_sample = test_pi_time / test_positions.shape[0]
+    print(f"     ├─ Total time:   {test_pi_time:.3f}s")
+    print(f"     ├─ Per sample:   {test_pi_time_per_sample*1000:.2f}ms")
+    print(f"     └─ ✓ Complete")
+    
+    results['test_positional_inversion'] = {
+        'total_time': test_pi_time,
+        'per_sample': test_pi_time_per_sample
+    }
+
+    # ---------------------------------------
+    # Global Cleanup
+    # ---------------------------------------
+    print(f"\n{'─'*80}")
+    print(f"🧹 [7/12] GLOBAL CLEANUP PHASE")
+    print(f"{'─'*80}")
+
+    if cleanup_module is None:
+        print(f"     Skipping cleanup phase (method: none)...")
+
+        global_decoded_vecs_cleaned = global_decoded_vecs
+
+    else:
+        print(f"     Cleaning up decoded vectors using {cleanup_method} method with {cleanup_iterations} iterations...")
+
+        cleanup_start = time.perf_counter()
+
+        global_decoded_vecs_cleaned, _ = cleanup_module(
+            global_decoded_vecs,
+            num_iters=cleanup_iterations
+        )
+
+        torch.cuda.synchronize() if torch.cuda.is_available() else None
+        cleanup_end = time.perf_counter()
+        cleanup_time = cleanup_end - cleanup_start
+        cleanup_time_per_sample = cleanup_time / global_decoded_vecs.shape[0]
+
+        print(f"     ├─ Total time:   {cleanup_time:.3f}s")
+        print(f"     ├─ Per sample:   {cleanup_time_per_sample*1000:.2f}ms")
+        print(f"     └─ ✓ Complete")
+
+    results['global_cleanup'] = {
+        'total_time': cleanup_time if cleanup_module is not None else 0.0,
+        'per_sample': cleanup_time_per_sample if cleanup_module is not None else 0.0
+    }
+
+    # ---------------------------------------
+    # Training Cleanup
+    # ---------------------------------------
+    print(f"\n{'─'*80}")
+    print(f"🧹 [8/12] TRAINING CLEANUP PHASE")
+    print(f"{'─'*80}")
+
+    if cleanup_module is None:
+        print(f"     Skipping cleanup phase (method: none)...")
+
+        train_decoded_vecs_cleaned = train_decoded_vecs
+    else:
+        print(f"     Cleaning up decoded vectors using {cleanup_method} method with {cleanup_iterations} iterations...")
+
+        cleanup_start = time.perf_counter()
+
+        train_decoded_vecs_cleaned, _ = cleanup_module(
+            train_decoded_vecs,
+            num_iters=cleanup_iterations
+        )
+
+        torch.cuda.synchronize() if torch.cuda.is_available() else None
+        cleanup_end = time.perf_counter()
+        cleanup_time = cleanup_end - cleanup_start
+        cleanup_time_per_sample = cleanup_time / train_decoded_vecs.shape[0]
+
+        print(f"     ├─ Total time:   {cleanup_time:.3f}s")
+        print(f"     ├─ Per sample:   {cleanup_time_per_sample*1000:.2f}ms")
+        print(f"     └─ ✓ Complete")
+
+    results['train_cleanup'] = {
+        'total_time': cleanup_time if cleanup_module is not None else 0.0,
+        'per_sample': cleanup_time_per_sample if cleanup_module is not None else 0.0
+    }
+
+    # ---------------------------------------
+    # Testing Cleanup
+    # ---------------------------------------
+    print(f"\n{'─'*80}")
+    print(f"🧹 [9/12] TESTING CLEANUP PHASE")
+    print(f"{'─'*80}")
+
+    if cleanup_module is None:
+        print(f"     Skipping cleanup phase (method: none)...")
+
+        test_decoded_vecs_cleaned = test_decoded_vecs
+    else:
+        print(f"     Cleaning up decoded vectors using {cleanup_method} method with {cleanup_iterations} iterations...")
+
+        cleanup_start = time.perf_counter()
+
+        test_decoded_vecs_cleaned, _ = cleanup_module(
+            test_decoded_vecs,
+            num_iters=cleanup_iterations
+        )
+
+        torch.cuda.synchronize() if torch.cuda.is_available() else None
+        cleanup_end = time.perf_counter()
+        cleanup_time = cleanup_end - cleanup_start
+        cleanup_time_per_sample = cleanup_time / test_decoded_vecs.shape[0]
+
+        print(f"     ├─ Total time:   {cleanup_time:.3f}s")
+        print(f"     ├─ Per sample:   {cleanup_time_per_sample*1000:.2f}ms")
+        print(f"     └─ ✓ Complete")
+
+    results['test_cleanup'] = {
+        'total_time': cleanup_time if cleanup_module is not None else 0.0,
+        'per_sample': cleanup_time_per_sample if cleanup_module is not None else 0.0
+    }
+
+    # ---------------------------------------
+    # Global Regression
+    # ---------------------------------------
+    print(f"\n{'─'*80}")
+    print(f"📈 [10/12] GLOBAL REGRESSION PHASE")
+    print(f"{'─'*80}")
+    print(f"     Regressing cleaned vectors to values using {regression_method} method...")
+
+    regression_start = time.perf_counter()
+
+    global_predictions, _ = regression_module(global_decoded_vecs_cleaned)
+    global_predictions = global_predictions.squeeze(-1)
+
+    regression_end = time.perf_counter()
+    regression_time = regression_end - regression_start
+    regression_time_per_sample = regression_time / global_decoded_vecs_cleaned.shape[0]
+
+    global_mse = compute_mse(global_predictions, global_values)
+
+    results['global_regression'] = {
+        'total_time': regression_time,
+        'per_sample': regression_time_per_sample,
         'global_mse': global_mse
     }
-    results['global_rmse'] = global_mse
 
-    print(f"     ├─ Total time:   {decoding_time:.3f}s")
-    print(f"     ├─ Per sample:   {(decoding_time / positions.shape[0])*1000:.2f}ms")
+    print(f"     ├─ Total time:   {regression_time:.3f}s")
+    print(f"     ├─ Per sample:   {regression_time_per_sample*1000:.2f}ms")
     print(f"     ├─ Global MSE:   {global_mse:.4f}")
     print(f"     └─ ✓ Complete")
 
-    # --------------------------------
-    # 3. Saving Visualizations
-    # --------------------------------
+    # ---------------------------------------
+    # Training Regression
+    # ---------------------------------------
     print(f"\n{'─'*80}")
-    print("📊 [3/5] SAVING VISUALIZATIONS")
+    print(f"📈 [11/12] TRAINING REGRESSION PHASE")
     print(f"{'─'*80}")
-    print(f"     Generating visualization plots...")
-    
-    fig, axs = plt.subplots(1, 2, figsize=(12, 5))
+    print(f"     Regressing {len(train_decoded_vecs_cleaned):,} training vectors to values using {regression_method} method...")
 
-    N = np.sqrt(len(positions)).astype(int)
+    training_regression_start = time.perf_counter()
 
-    # plot the ground truth for visualization as image
-    axs[0].imshow(values.reshape(N, N).cpu().detach(), cmap='viridis', origin='lower')
-    axs[0].set_title(f'Ground Truth Values')
-    axs[0].set_xlabel('X')
-    axs[0].set_ylabel('Y')
-    # plot the global predictions for visualization as image
-    axs[1].imshow(global_predictions.reshape(N, N).cpu().detach(), cmap='viridis', origin='lower')
-    axs[1].set_title(f'Global Decoding Predictions')
-    axs[1].set_xlabel('X')
-    axs[1].set_ylabel('Y')
-    
-    plot_filename = f'global_decoding_res{resolution}_D{vector_dim}_{backend_name}.png'
-    plt.savefig(os.path.join(scratch_dir, plot_filename))
-    plt.close()
-    
-    print(f"     ├─ Saved: {plot_filename}")
-    print(f"     └─ ✓ Complete")
-
-    # ------------------------------
-    # 4. Training Set Decoding
-    # -------------------------------
-    print(f"\n{'─'*80}")
-    print("📝 [4/5] TRAINING SET DECODING")
-    print(f"{'─'*80}")
-    print(f"     Decoding {len(train_pos):,} training positions...")
-
-    train_pi_module = PositionalInversionModule(backend, train_pos)
-    
-    decoding_start = time.perf_counter()
-
-    train_decoded_vecs, _ = train_pi_module(start_memory)
-    train_decoded_vecs, _ = cleanup_module(
-        train_decoded_vecs,
-        num_iters=cleanup_iterations
-    )
-    train_predictions, _ = regression_module(train_decoded_vecs)
+    train_predictions, _ = regression_module(train_decoded_vecs_cleaned)
     train_predictions = train_predictions.squeeze(-1)
 
     torch.cuda.synchronize() if torch.cuda.is_available() else None
-    decoding_end = time.perf_counter()
-    decoding_time = decoding_end - decoding_start
-    train_mse = compute_mse(train_predictions, train_vals)
+    training_regression_end = time.perf_counter()
+    training_regression_time = training_regression_end - training_regression_start
+    training_regression_time_per_sample = training_regression_time / train_decoded_vecs_cleaned.shape[0]
 
-    results['train_decoding'] = {
-        'total_decoding': decoding_time,
-        'per_sample': decoding_time / train_pos.shape[0],
+    train_mse = compute_mse(train_predictions, train_values)
+
+    results['training_regression'] = {
+        'total_time': training_regression_time,
+        'per_sample': training_regression_time_per_sample,
         'train_mse': train_mse
     }
-    results['train_mse'] = train_mse
 
-    print(f"     ├─ Total time:   {decoding_time:.3f}s")
-    print(f"     ├─ Per sample:   {(decoding_time / train_pos.shape[0])*1000:.2f}ms")
+    print(f"     ├─ Total time:   {training_regression_time:.3f}s")
+    print(f"     ├─ Per sample:   {training_regression_time_per_sample*1000:.2f}ms")
     print(f"     ├─ Train MSE:    {train_mse:.4f}")
     print(f"     └─ ✓ Complete")
 
-    # ------------------------------
-    # 5. Testing Set Decoding
-    # -------------------------------
+    # ---------------------------------------
+    # Testing Regression
+    # ---------------------------------------
     print(f"\n{'─'*80}")
-    print("🧪 [5/5] TESTING SET DECODING")
+    print(f"📈 [12/12] TESTING REGRESSION PHASE")
     print(f"{'─'*80}")
-    print(f"     Decoding {len(test_pos):,} testing positions...")
+    print(f"     Regressing {len(test_decoded_vecs_cleaned):,} test vectors to values using {regression_method} method...")
 
-    test_pi_module = PositionalInversionModule(backend, test_pos)
-    
-    decoding_start = time.perf_counter()
+    test_regression_start = time.perf_counter()
 
-    test_decoded_vecs, _ = test_pi_module(start_memory)
-    test_decoded_vecs, _ = cleanup_module(
-        test_decoded_vecs,
-        num_iters=cleanup_iterations
-    )
-    test_predictions, _ = regression_module(test_decoded_vecs)
+    test_predictions, _ = regression_module(test_decoded_vecs_cleaned)
     test_predictions = test_predictions.squeeze(-1)
 
     torch.cuda.synchronize() if torch.cuda.is_available() else None
-    decoding_end = time.perf_counter()
-    decoding_time = decoding_end - decoding_start
-    test_mse = compute_mse(test_predictions, test_vals)
+    test_regression_end = time.perf_counter()
+    test_regression_time = test_regression_end - test_regression_start
+    test_regression_time_per_sample = test_regression_time / test_decoded_vecs_cleaned.shape[0]
 
-    results['test_decoding'] = {
-        'total_decoding': decoding_time,
-        'per_sample': decoding_time / test_pos.shape[0],
+    test_mse = compute_mse(test_predictions, test_values)
+
+    results['test_regression'] = {
+        'total_time': test_regression_time,
+        'per_sample': test_regression_time_per_sample,
         'test_mse': test_mse
     }
-    results['test_mse'] = test_mse
 
-    print(f"     ├─ Total time:   {decoding_time:.3f}s")
-    print(f"     ├─ Per sample:   {(decoding_time / test_pos.shape[0])*1000:.2f}ms")
+    print(f"     ├─ Total time:   {test_regression_time:.3f}s")
+    print(f"     ├─ Per sample:   {test_regression_time_per_sample*1000:.2f}ms")
     print(f"     ├─ Test MSE:     {test_mse:.4f}")
     print(f"     └─ ✓ Complete")
 
-    print(f"\n{'='*80}")
-    print(f"✅ BENCHMARK COMPLETE: {backend_name}")
-    print(f"   Total Encoding Time: {encoding_time:.3f}s")
-    print(f"   Global MSE:  {global_mse:.4f}")
-    print(f"   Train MSE:   {train_mse:.4f}")
-    print(f"   Test MSE:    {test_mse:.4f}")
     print(f"{'='*80}\n")
 
     return {**results}
@@ -666,6 +828,7 @@ def main():
     vector_dim: int = 8096
     vector_length_scale: float = 2.0
     resolution: float = 0.028
+    cleanup_iterations: int = 3
 
     print(f"🚀 Starting benchmark on device: {device}")
 
@@ -716,6 +879,45 @@ def main():
     print(f"     ├─ Train value range: [{train_vals.min():.2f}, {train_vals.max():.2f}]")
     print(f"     └─ Test value range:  [{test_vals.min():.2f}, {test_vals.max():.2f}]")
     
+    backend_options: List[str] = ['HRR', 'FHRR']
+    cleanup_methods: List[str] = ['none', 'resonator', 'modern_hopfield']
+    regression_methods: List[str] = ['codebook', 'neural']
+
+    backend_options: List[str] = ['HRR']
+    cleanup_methods: List[str] = ['resonator']
+    regression_methods: List[str] = ['codebook']
+
+    all_results = []
+
+    for backend_name in backend_options:
+        for cleanup_method in cleanup_methods:
+            for regression_method in regression_methods:
+
+                print(f"\n{'#'*80}")
+                print(f"🚀 Running benchmark for {backend_name} | Cleanup: {cleanup_method} | Regression: {regression_method}")
+                print(f"{'#'*80}\n")
+
+                result = run_full_benchmark(
+                    backend_name=backend_name,
+                    resolution=resolution,
+                    vector_dim=vector_dim,
+                    vector_length_scale=vector_length_scale,
+                    device=device,
+                    cleanup_method=cleanup_method,
+                    cleanup_iterations=cleanup_iterations,
+                    regression_method=regression_method,
+                    seed=42,
+                    scratch_dir=str(results_dir / f"{backend_name}_{cleanup_method}_{regression_method}"),
+                    global_positions=positions,
+                    global_values=values,
+                    train_positions=train_pos,
+                    train_values=train_vals,
+                    test_positions=test_pos,
+                    test_values=test_vals
+                )
+                all_results.append(result)
+    
+
 
 if __name__ == '__main__':
     main()
