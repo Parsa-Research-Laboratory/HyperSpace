@@ -402,6 +402,7 @@ def run_full_benchmark(
     train_values: torch.Tensor = None,
     test_positions: torch.Tensor = None,
     test_values: torch.Tensor = None,
+    temperature: float = 0.1
 ) -> Dict:
     """Run complete benchmark for one configuration."""
     print(f"\n{'='*80}")
@@ -638,10 +639,17 @@ def run_full_benchmark(
 
         cleanup_start = time.perf_counter()
 
-        global_decoded_vecs_cleaned, _ = cleanup_module(
-            global_decoded_vecs,
-            num_iters=cleanup_iterations
-        )
+        if "hopfield" in cleanup_method:
+            global_decoded_vecs_cleaned, _ = cleanup_module(
+                global_decoded_vecs,
+                num_iters=cleanup_iterations,
+                temperature=temperature
+            )
+        else:
+            global_decoded_vecs_cleaned, _ = cleanup_module(
+                global_decoded_vecs,
+                num_iters=cleanup_iterations
+            )
 
         torch.cuda.synchronize() if torch.cuda.is_available() else None
         cleanup_end = time.perf_counter()
@@ -673,10 +681,17 @@ def run_full_benchmark(
 
         cleanup_start = time.perf_counter()
 
-        train_decoded_vecs_cleaned, _ = cleanup_module(
-            train_decoded_vecs,
-            num_iters=cleanup_iterations
-        )
+        if "hopfield" in cleanup_method:
+            train_decoded_vecs_cleaned, _ = cleanup_module(
+                train_decoded_vecs,
+                num_iters=cleanup_iterations,
+                temperature=temperature
+            )
+        else:
+            train_decoded_vecs_cleaned, _ = cleanup_module(
+                train_decoded_vecs,
+                num_iters=cleanup_iterations
+            )
 
         torch.cuda.synchronize() if torch.cuda.is_available() else None
         cleanup_end = time.perf_counter()
@@ -708,10 +723,17 @@ def run_full_benchmark(
 
         cleanup_start = time.perf_counter()
 
-        test_decoded_vecs_cleaned, _ = cleanup_module(
-            test_decoded_vecs,
-            num_iters=cleanup_iterations
-        )
+        if "hopfield" in cleanup_method:
+            test_decoded_vecs_cleaned, _ = cleanup_module(
+                test_decoded_vecs,
+                num_iters=cleanup_iterations,
+                temperature=temperature
+            )
+        else:
+            test_decoded_vecs_cleaned, _ = cleanup_module(
+                test_decoded_vecs,
+                num_iters=cleanup_iterations
+            )
 
         torch.cuda.synchronize() if torch.cuda.is_available() else None
         cleanup_end = time.perf_counter()
