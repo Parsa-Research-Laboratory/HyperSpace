@@ -8,6 +8,7 @@ Usage:
     python benchmark_hrr_fhrr.py --output results.json
 """
 
+import json
 import os
 import math
 import matplotlib.pyplot as plt
@@ -820,6 +821,41 @@ def run_full_benchmark(
 
     print(f"{'='*80}\n")
 
+    # Save results to JSON
+    results_path = os.path.join(scratch_dir, "benchmark_results.json")
+    with open(results_path, 'w') as f:
+        json.dump(results, f, indent=4)
+
+    # Save predictions and targets for test set
+    test_results_path = os.path.join(scratch_dir, "test_predictions.npz")
+    np.savez(test_results_path, predictions=test_predictions.cpu().numpy(), targets=test_values.cpu().numpy())
+
+    # Save predictions and targets for training set
+    train_results_path = os.path.join(scratch_dir, "train_predictions.npz")
+    np.savez(train_results_path, predictions=train_predictions.cpu().numpy(), targets=train_values.cpu().numpy())
+
+    # Save global predictions and targets
+    global_results_path = os.path.join(scratch_dir, "global_predictions.npz")
+    np.savez(global_results_path, predictions=global_predictions.cpu().numpy(), targets=global_values.cpu().numpy())
+
+    # Plot the global predictions vs targets as images
+    N = int(math.sqrt(global_positions.shape[0]))
+    pred_grid = global_predictions.cpu().numpy().reshape(N, N)
+    target_grid = global_values.cpu().numpy().reshape(N, N)
+    plt.figure(figsize=(6, 6))
+    plt.imshow(pred_grid, cmap="viridis", origin="lower")
+    plt.colorbar(label="Predicted Value")
+    plt.title("Global Predictions")
+    plt.savefig(os.path.join(scratch_dir, "global_predictions.png"))
+    plt.close()
+
+    plt.figure(figsize=(6, 6))
+    plt.imshow(target_grid, cmap="viridis", origin="lower")
+    plt.colorbar(label="Target Value")
+    plt.title("Global Targets")
+    plt.savefig(os.path.join(scratch_dir, "global_targets.png"))
+    plt.close()
+
     return {**results}
 
 
@@ -882,6 +918,7 @@ def main():
     backend_options: List[str] = ['HRR', 'FHRR']
     cleanup_methods: List[str] = ['none', 'resonator', 'modern_hopfield']
     regression_methods: List[str] = ['codebook', 'neural']
+    seed_options: List[int] = [0, 42, 123]
 
     backend_options: List[str] = ['HRR']
     cleanup_methods: List[str] = ['resonator']
@@ -892,30 +929,31 @@ def main():
     for backend_name in backend_options:
         for cleanup_method in cleanup_methods:
             for regression_method in regression_methods:
+                for seed in seed_options:
 
-                print(f"\n{'#'*80}")
-                print(f"🚀 Running benchmark for {backend_name} | Cleanup: {cleanup_method} | Regression: {regression_method}")
-                print(f"{'#'*80}\n")
+                    print(f"\n{'#'*80}")
+                    print(f"🚀 Running benchmark for {backend_name} | Cleanup: {cleanup_method} | Regression: {regression_method} | Seed: {seed}")
+                    print(f"{'#'*80}\n")
 
-                result = run_full_benchmark(
-                    backend_name=backend_name,
-                    resolution=resolution,
-                    vector_dim=vector_dim,
-                    vector_length_scale=vector_length_scale,
-                    device=device,
-                    cleanup_method=cleanup_method,
-                    cleanup_iterations=cleanup_iterations,
-                    regression_method=regression_method,
-                    seed=42,
-                    scratch_dir=str(results_dir / f"{backend_name}_{cleanup_method}_{regression_method}"),
-                    global_positions=positions,
-                    global_values=values,
-                    train_positions=train_pos,
-                    train_values=train_vals,
-                    test_positions=test_pos,
-                    test_values=test_vals
-                )
-                all_results.append(result)
+                    result = run_full_benchmark(
+                        backend_name=backend_name,
+                        resolution=resolution,
+                        vector_dim=vector_dim,
+                        vector_length_scale=vector_length_scale,
+                        device=device,
+                        cleanup_method=cleanup_method,
+                        cleanup_iterations=cleanup_iterations,
+                        regression_method=regression_method,
+                        seed=42,
+                        scratch_dir=str(results_dir / f"{backend_name}_{cleanup_method}_{regression_method}_seed={seed}"),
+                        global_positions=positions,
+                        global_values=values,
+                        train_positions=train_pos,
+                        train_values=train_vals,
+                        test_positions=test_pos,
+                        test_values=test_vals
+                    )
+                    all_results.append(result)
     
 
 
