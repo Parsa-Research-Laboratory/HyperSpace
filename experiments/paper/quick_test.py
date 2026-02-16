@@ -19,6 +19,7 @@ VECTOR_LENGTH_SCALE = 2.0
 RESOLUTION = 0.028
 CLEANUP_METHOD = 'modern_hopfield'
 CLEANUP_ITERS = 3
+REGRESSION_METHOD = 'neural'  # 'codebook' or 'neural'
 
 
 # -----------------------------------
@@ -61,7 +62,8 @@ for vector_dim in VECTOR_DIMS:
         train_values=train_vals,
         test_positions=test_pos,
         test_values=test_vals,
-        scratch_dir="scratch/hrr_test"  # Save intermediate results for debugging
+        scratch_dir="scratch/hrr_test",  # Save intermediate results for debugging,
+        regression_method=REGRESSION_METHOD
     )
     all_results['HRR'].append(results_hrr)
     
@@ -81,7 +83,8 @@ for vector_dim in VECTOR_DIMS:
         train_values=train_vals,
         test_positions=test_pos,
         test_values=test_vals,
-        scratch_dir="scratch/fhrr_test"  # Save intermediate results for debugging
+        scratch_dir="scratch/fhrr_test",  # Save intermediate results for debugging
+        regression_method=REGRESSION_METHOD
     )
     all_results['FHRR'].append(results_fhrr)
 

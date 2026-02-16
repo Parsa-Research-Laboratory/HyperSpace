@@ -152,94 +152,6 @@ def split_train_test(
     return (positions[train_idx], values[train_idx],
             positions[test_idx], values[test_idx])
 
-
-def time_function(func, *args, **kwargs) -> Tuple[Any, float]:
-    """Time a function call and return (result, elapsed_time)."""
-    torch.cuda.synchronize() if torch.cuda.is_available() else None
-    start = time.perf_counter()
-    result = func(*args, **kwargs)
-    torch.cuda.synchronize() if torch.cuda.is_available() else None
-    elapsed = time.perf_counter() - start
-    return result, elapsed
-
-
-def benchmark_encoding(
-    backend,
-    positions: torch.Tensor,
-    values: torch.Tensor,
-    device: str
-) -> Tuple[torch.Tensor, Dict[str, float]]:
-    """Benchmark memory storage (encoding) phase - BATCHED for fair comparison."""
-    positions = positions.to(device)
-    values = values.to(device)
-    
-    timings = {}
-    
-    # Time full encoding process using batch operations
-    total_start = time.perf_counter()
-    
-    # Batch positional encoding: (N, 2) → (N, D)
-    pos_vecs, _ = backend.positional_encoding(positions)
-    
-    # Batch value encoding: (N,) → (N, 1) → (N, D)
-    val_vecs, _ = backend.value_encoding(values.unsqueeze(1))
-    
-    # Batch bind (pairwise): (N, D) × (N, D) → (N, D)
-    bound_vecs, _ = backend.bind(pos_vecs, val_vecs)
-    
-    # List bundle (reduce batch): (N, D) → (D)
-    memory, _ = backend.bundle(bound_vecs, None)
-    
-    torch.cuda.synchronize() if torch.cuda.is_available() else None
-    total_time = time.perf_counter() - total_start
-    
-    timings['total_encoding'] = total_time
-    timings['per_sample'] = total_time / len(positions)
-    
-    # Normalize memory
-    memory, _ = backend.normalize(memory)
-    
-    return memory, timings
-
-
-
-
-
-def benchmark_query(
-    backend,
-    memory: torch.Tensor,
-    query_positions: torch.Tensor,
-    device: str,
-    num_queries: int = 100
-) -> Tuple[torch.Tensor, Dict[str, float]]:
-    """Benchmark query (positional inversion) phase - BATCHED for fair comparison."""
-    query_positions = query_positions.to(device)
-    memory = memory.to(device)
-    
-    timings = {}
-    
-    # Time batched query operations
-    start = time.perf_counter()
-    
-    # Batch positional encoding: (Q, 2) → (Q, D)
-    pos_vecs, _ = backend.positional_encoding(query_positions)
-    
-    # Batch invert: (Q, D) → (Q, D)
-    pos_inv, _ = backend.invert(pos_vecs)
-    
-    # Single-to-batch bind: (D) with (Q, D) → (Q, D)
-    decoded_batch, _ = backend.bind(memory, pos_inv)
-    
-    torch.cuda.synchronize() if torch.cuda.is_available() else None
-    total_time = time.perf_counter() - start
-    
-    timings['total_query'] = total_time
-    timings['per_query'] = total_time / query_positions.shape[0]
-    timings['std_query'] = 0.0  # No per-query variation in batched mode
-    
-    return decoded_batch, timings
-
-
 def build_codebook(backend, k: int = 64, device: str = 'cpu', min_value: float = 1.0, max_value: float = 11.0, spacing: float = 0.1) -> torch.Tensor:
     """Build uniform codebook for cleanup using arange with fixed spacing (matching notebook).
     
@@ -261,104 +173,6 @@ def build_codebook(backend, k: int = 64, device: str = 'cpu', min_value: float =
     
     codebook = torch.stack(codebook_vecs).to(device)
     return codebook
-
-
-def benchmark_cleanup(
-    backend,
-    decoded_vecs: torch.Tensor,
-    codebook: torch.Tensor,
-    method: str = 'resonator',
-    num_iterations: int = 4,
-    device: str = 'cpu'
-) -> Tuple[torch.Tensor, Dict[str, float]]:
-    """Benchmark cleanup phase with configurable method.
-    
-    Args:
-        backend: The backend instance
-        decoded_vecs: Vectors to clean up
-        codebook: Codebook for cleanup
-        method: Cleanup method - 'none', 'resonator', or 'modern_hopfield'
-        num_iterations: Number of cleanup iterations
-        device: Device to run on
-    """
-    decoded_vecs = decoded_vecs.to(device)
-    codebook = codebook.to(device)
-    
-    timings = {}
-    
-    if method == 'none':
-        # No cleanup - return vectors as-is
-        timings['total_cleanup'] = 0.0
-        timings['per_query'] = 0.0
-        timings['per_iteration'] = 0.0
-        return decoded_vecs, timings
-    
-    # Time cleanup iterations
-    start = time.perf_counter()
-    
-    cleaned = decoded_vecs.clone()
-    if method == 'resonator':
-        cleaned, _ = backend._resonator_cleanup(cleaned, codebook, num_iters=num_iterations)
-    elif method == 'modern_hopfield':  
-        cleaned, _ = backend._hopfield_cleanup(cleaned, codebook, num_iters=num_iterations)
-    else:
-        raise ValueError(f"Unknown cleanup method: {method}")
-    
-    torch.cuda.synchronize() if torch.cuda.is_available() else None
-    total_time = time.perf_counter() - start
-    
-    timings['total_cleanup'] = total_time
-    timings['per_query'] = total_time / len(decoded_vecs)
-    timings['per_iteration'] = total_time / (len(decoded_vecs) * num_iterations)
-    
-    return cleaned, timings
-
-
-def benchmark_regression_codebook(
-    backend,
-    cleaned_vecs: torch.Tensor,
-    codebook: torch.Tensor,
-    device: str,
-    temperature: float = 1.0,
-    min_value: float = 1.0,
-    max_value: float = 11.0
-) -> Tuple[torch.Tensor, Dict[str, float]]:
-    """Benchmark codebook-based regression.
-    
-    Args:
-        backend: The backend instance
-        cleaned_vecs: Cleaned vectors to regress
-        codebook: Codebook vectors
-        device: Device to use
-        temperature: Temperature for softmax
-        min_value: Minimum value in data range
-        max_value: Maximum value in data range
-    """
-    cleaned_vecs = cleaned_vecs.to(device)
-    codebook = codebook.to(device)
-    
-    timings = {}
-    
-    start = time.perf_counter()
-    
-    # Compute similarities
-    sims, _ = backend.similarity(cleaned_vecs, codebook, mode='all_pairs')
-    
-    # Softmax
-    weights = torch.softmax(sims / temperature, dim=1)
-    
-    # Expectation over codebook values
-    codebook_values = torch.linspace(min_value, max_value, len(codebook)).to(device)
-    predictions = (weights * codebook_values).sum(dim=1)
-    
-    torch.cuda.synchronize() if torch.cuda.is_available() else None
-    total_time = time.perf_counter() - start
-    
-    timings['total_regression'] = total_time
-    timings['per_query'] = total_time / len(cleaned_vecs)
-    
-    return predictions, timings
-
 
 def compute_mse(predictions: torch.Tensor, targets: torch.Tensor) -> float:
     """Compute MSE between predictions and targets."""
@@ -470,7 +284,132 @@ def run_full_benchmark(
 
     memory_module = MemoryStorageModule(backend)
 
-    regression_module = RegressionModule(backend, value_codebook, value_axis)
+    regression_module = RegressionModule(backend, value_codebook, value_axis, method=regression_method)
+
+    if regression_method == 'neural':
+        num_samples = value_axis.shape[0]
+        sample_idxs: np.ndarray = np.arange(0, num_samples - 1)
+        np.random.shuffle(sample_idxs)
+
+        num_test_samples: int = int(num_samples * 0.8)
+        network_Train_vectors = value_codebook[sample_idxs[num_test_samples:]]
+        network_Test_vectors = value_codebook[sample_idxs[:num_test_samples]]
+        network_Train_outputs = value_axis[sample_idxs[num_test_samples:]]
+        network_Test_outputs = value_axis[sample_idxs[:num_test_samples]]
+
+        print(f"[Network Training] Num Samples: {num_samples}")
+        print(f"[Network Training] Num Train Vectors: {network_Train_vectors.shape[0]}")
+        print(f"[Network Training] Num Test Vectors: {network_Test_vectors.shape[0]}")
+        print(f"[Network Training] Num Train Outputs: {network_Train_outputs.shape[0]}")
+        print(f"[Network Training] Num Test Outputs: {network_Test_outputs.shape[0]}")
+        print()
+        print(f"[Network Training] Train Output Range: {torch.min(network_Train_outputs):.4f} to {torch.max(network_Train_outputs):.4f}.")
+        print(f"[Network Training] Test Output Range: {torch.min(network_Test_outputs):.4f} to {torch.max(network_Test_outputs):.4f}.")
+
+        # ----------------------------------------
+        # normalize the training and testing data
+        # ----------------------------------------
+        y_train = network_Train_outputs.float()
+        y_test  = network_Test_outputs.float()
+
+        # compute stats on TRAIN ONLY
+        y_mean = y_train.mean()
+        y_std  = y_train.std(unbiased=False).clamp_min(1e-8)  # avoid divide-by-zero
+
+        # normalize
+        y_train_norm = (y_train - y_mean) / y_std
+        y_test_norm  = (y_test  - y_mean) / y_std
+
+        # helpers for later
+        def denorm(y_norm: torch.Tensor) -> torch.Tensor:
+            return y_norm * y_std + y_mean
+
+        print("[Network Training] Train norm range:", y_train_norm.min().item(), "to", y_train_norm.max().item())
+        print("[Network Training] Test  norm range:", y_test_norm.min().item(),  "to", y_test_norm.max().item())
+
+        from hyperspace.core.regression.models import DenseLinearModel
+
+        regression_model = DenseLinearModel(
+            # feature_dim=vector_dim if not torch.is_complex(network_Train_vectors) else 2 * vector_dim,
+            feature_dim=network_Train_vectors.shape[-1],
+            value_dim=1,
+            num_layers=2,
+            hidden_size=512,
+            hidden_act=nn.ReLU(),
+        )
+
+        # ------------------------------------------
+        # train and validate the regression network
+        # ------------------------------------------
+        optimizer = torch.optim.Adam(
+            regression_model.parameters(),
+            lr=1e-3
+        )
+        loss_func = nn.MSELoss()
+
+        train_losses: list = []
+        test_losses: list = []
+
+        num_epochs: int = 1000
+        noise_std = 0.05
+
+        def prepare_complex_input(v: torch.Tensor) -> torch.Tensor:
+            """Flatten complex vectors for neural network input."""
+            real_part = torch.real(v)
+            imag_part = torch.imag(v)
+            return imag_part
+            return torch.cat([real_part, imag_part], dim=-1)
+
+        for i in range(num_epochs):
+            # ---------
+            # Training
+            # ---------
+            regression_model.train()
+
+            # check if the vectors are complex and prepare input accordingly
+            if torch.is_complex(network_Train_vectors):
+                inputs_flat = prepare_complex_input(network_Train_vectors)
+            else:
+                inputs_flat = network_Train_vectors
+
+            noise = noise_std * torch.randn_like(inputs_flat)
+            noisy_inputs = inputs_flat + noise
+
+            outputs = regression_model(noisy_inputs)
+            train_loss = loss_func(outputs, y_train_norm)
+
+            train_loss.backward()
+            optimizer.step()
+            optimizer.zero_grad()
+
+            train_losses.append(train_loss.item())
+
+            # -----------
+            # Evaluation
+            # -----------
+            regression_model.eval()
+
+            with torch.no_grad():
+
+                if torch.is_complex(network_Test_vectors):
+                    test_inputs_flat = prepare_complex_input(network_Test_vectors)
+                else:
+                    test_inputs_flat = network_Test_vectors
+
+                outputs = regression_model(test_inputs_flat)
+                val_loss = loss_func(outputs, y_test_norm)
+                test_losses.append(val_loss.item())
+
+        plt.figure(figsize=(5, 3))
+        plt.plot(train_losses, label="Train")
+        plt.plot(test_losses, label="Test")
+        plt.title("Training and Testing Losses")
+        plt.xlabel("Epoch")
+        plt.ylabel("Loss")
+        plt.legend()
+        plt.savefig(os.path.join(scratch_dir, "regression_training.png"), bbox_inches="tight")
+
+        regression_module.load_neural_network(regression_model)
 
     # ------------------------------
     # 1. Positional Encoding Phase
@@ -759,12 +698,19 @@ def run_full_benchmark(
 
     regression_start = time.perf_counter()
 
+    if torch.is_complex(global_decoded_vecs_cleaned) and regression_method == 'neural':
+        global_decoded_vecs_cleaned = prepare_complex_input(global_decoded_vecs_cleaned)
+
     global_predictions, _ = regression_module(global_decoded_vecs_cleaned)
     global_predictions = global_predictions.squeeze(-1)
+
+    if regression_method == 'neural':
+        global_predictions = denorm(global_predictions).detach()
 
     regression_end = time.perf_counter()
     regression_time = regression_end - regression_start
     regression_time_per_sample = regression_time / global_decoded_vecs_cleaned.shape[0]
+
 
     global_mse = compute_mse(global_predictions, global_values)
 
@@ -789,8 +735,18 @@ def run_full_benchmark(
 
     training_regression_start = time.perf_counter()
 
+    if torch.is_complex(train_decoded_vecs_cleaned) and regression_method == 'neural':
+        train_decoded_vecs_cleaned = prepare_complex_input(train_decoded_vecs_cleaned)
+
     train_predictions, _ = regression_module(train_decoded_vecs_cleaned)
     train_predictions = train_predictions.squeeze(-1)
+
+    print(f"     [Debug] Train predictions before denorm: min={train_predictions.min().item():.4f}, max={train_predictions.max().item():.4f}")
+
+    if regression_method == 'neural':
+        train_predictions = denorm(train_predictions).detach()
+
+    print(f"     [Debug] Train predictions after denorm: min={train_predictions.min().item():.4f}, max={train_predictions.max().item():.4f}")
 
     torch.cuda.synchronize() if torch.cuda.is_available() else None
     training_regression_end = time.perf_counter()
@@ -820,8 +776,15 @@ def run_full_benchmark(
 
     test_regression_start = time.perf_counter()
 
+    if torch.is_complex(test_decoded_vecs_cleaned) and regression_method == 'neural':
+        test_decoded_vecs_cleaned = prepare_complex_input(test_decoded_vecs_cleaned)
+
     test_predictions, _ = regression_module(test_decoded_vecs_cleaned)
     test_predictions = test_predictions.squeeze(-1)
+
+    if regression_method == 'neural':
+        test_predictions = denorm(test_predictions)
+        test_predictions = test_predictions.detach()
 
     torch.cuda.synchronize() if torch.cuda.is_available() else None
     test_regression_end = time.perf_counter()
