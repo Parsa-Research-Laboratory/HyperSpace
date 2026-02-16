@@ -8,11 +8,12 @@ Usage:
     python benchmark_hrr_fhrr.py --output results.json
 """
 
-import argparse
-import json
 import os
-import time
+import math
+import matplotlib.pyplot as plt
 from pathlib import Path
+import shutil
+import time
 from typing import Dict, List, Tuple, Any
 
 import numpy as np
@@ -661,104 +662,60 @@ def run_full_benchmark(
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Benchmark HRR vs FHRR backends')
-    parser.add_argument('--output', type=str, default='benchmark_results.json',
-                        help='Output JSON file for results')
-    parser.add_argument('--device', type=str, default='cpu',
-                        help='Device to run on (cpu/cuda)')
-    parser.add_argument('--resolutions', type=float, nargs='+',
-                        default=[0.01, 0.02, 0.03, 0.04, 0.05],
-                        help='Grid resolutions to test')
-    parser.add_argument('--vector-dims', type=int, nargs='+',
-                        default=[1024, 2048, 4096, 8192],
-                        help='Vector dimensions to test')
-    parser.add_argument('--cleanup-method', type=str, default='resonator',
-                        choices=['none', 'resonator', 'modern_hopfield'],
-                        help='Cleanup method to use')
-    parser.add_argument('--cleanup-iters', type=int, default=2,
-                        help='Number of cleanup iterations (notebook uses 2)')
-    parser.add_argument('--regression-method', type=str, default='codebook',
-                        choices=['codebook', 'neural'],
-                        help='Regression method to use')
-    parser.add_argument('--seed', type=int, default=42,
-                        help='Random seed')
-    
-    args = parser.parse_args()
-    
-    # Run benchmarks
-    all_results = []
-    
-    for resolution in args.resolutions:
-        for vector_dim in args.vector_dims:
-            # Benchmark HRR
-            hrr_results = run_full_benchmark(
-                'HRR',
-                resolution=resolution,
-                vector_dim=vector_dim,
-                vector_length_scale=2.0,
-                device=args.device,
-                cleanup_method=args.cleanup_method,
-                cleanup_iterations=args.cleanup_iters,
-                regression_method=args.regression_method,
-                seed=args.seed
-            )
-            all_results.append(hrr_results)
-            
-            # Benchmark FHRR
-            fhrr_results = run_full_benchmark(
-                'FHRR',
-                resolution=resolution,
-                vector_dim=vector_dim,
-                vector_length_scale=2.0,
-                device=args.device,
-                cleanup_method=args.cleanup_method,
-                cleanup_iterations=args.cleanup_iters,
-                regression_method=args.regression_method,
-                seed=args.seed
-            )
-            all_results.append(fhrr_results)
-    
-    # Save results
-    output_path = Path(args.output)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    
-    with open(output_path, 'w') as f:
-        json.dump(all_results, f, indent=2)
-    
-    print(f"\n{'='*60}")
-    print(f"Results saved to: {output_path}")
-    print(f"{'='*60}")
-    
-    # Print comparison table
-    print("\n\n" + "="*100)
-    print("COMPARISON SUMMARY")
-    print("="*100)
-    print(f"Cleanup: {all_results[0]['cleanup_method']} | Regression: {all_results[0]['regression_method']}")
-    print("="*100)
-    print(f"{'Configuration':<25} {'Backend':<10} {'Encode(s)':<15} {'Decode(s)':<15} {'Global MSE':<15}")
-    print("="*100)
-    
-    for i in range(0, len(all_results), 2):
-        hrr = all_results[i]
-        fhrr = all_results[i+1]
-        
-        config = f"Res:{int(1000*hrr['resolution'])}x{int(1000*hrr['resolution'])} D:{hrr['vector_dim']}"
-        
-        # HRR results
-        print(f"{config:<25} {'HRR':<10} {hrr['encoding']['total_encoding']:<15.3f} {hrr['global_decoding']['total_decoding']:<15.3f} {hrr['global_rmse']:<15.4f}")
-        
-        # FHRR results
-        print(f"{'':<25} {'FHRR':<10} {fhrr['encoding']['total_encoding']:<15.3f} {fhrr['global_decoding']['total_decoding']:<15.3f} {fhrr['global_rmse']:<15.4f}")
-        
-        # Speedup comparison
-        speedup_encode = hrr['encoding']['total_encoding'] / fhrr['encoding']['total_encoding']
-        speedup_decode = hrr['global_decoding']['total_decoding'] / fhrr['global_decoding']['total_decoding']
-        
-        print(f"{'':<25} {'Speedup':<10} {speedup_encode:<15.2f}× {speedup_decode:<15.2f}× {'':<15}")
-        print("-"*100)
-    
-    print("="*100)
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    vector_dim: int = 8096
+    vector_length_scale: float = 2.0
+    resolution: float = 0.028
 
+    print(f"🚀 Starting benchmark on device: {device}")
+
+    # ---------------------------
+    # Generate results directory
+    # ---------------------------
+    results_dir = Path("./results")
+
+    if results_dir.exists():
+        shutil.rmtree(results_dir)  # delete entire directory tree
+
+    results_dir.mkdir(parents=True, exist_ok=False)
+
+    # -----------------------------------
+    # Generate terrain and save as image
+    # -----------------------------------
+    positions, values = generate_spline_terrain(resolution)
+    positions = torch.from_numpy(positions).to(device)
+    values = torch.from_numpy(values).to(device)  # Dummy values for testing
+
+    # plot the terrain for visualization
+    n = values.shape[0]
+    resolution = int(math.sqrt(n))
+    grid = values.cpu().reshape(resolution, resolution)
+
+    plt.figure()
+    plt.imshow(
+        grid,
+        cmap="viridis",
+        origin="lower",   # important so (0,0) is bottom-left
+        interpolation="nearest"
+    )
+    plt.colorbar(label="Cost")
+    plt.title("Terrain")
+    plt.xlabel("X")
+    plt.ylabel("Y")
+    plt.savefig(results_dir / f"terrain_res{resolution}.png")
+    plt.close()
+
+    # Split train/test
+    train_pos, train_vals, test_pos, test_vals = split_train_test(
+        positions, values, train_ratio=0.8, seed=0
+    )
+    
+    print(f"\n📊 Dataset Statistics:")
+    print(f"     ├─ Train samples: {len(train_pos):,}")
+    print(f"     ├─ Test samples:  {len(test_pos):,}")
+    print(f"     ├─ Train value range: [{train_vals.min():.2f}, {train_vals.max():.2f}]")
+    print(f"     └─ Test value range:  [{test_vals.min():.2f}, {test_vals.max():.2f}]")
+    
 
 if __name__ == '__main__':
     main()
