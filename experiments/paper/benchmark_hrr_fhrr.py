@@ -330,8 +330,8 @@ def run_full_benchmark(
         from hyperspace.core.regression.models import DenseLinearModel
 
         regression_model = DenseLinearModel(
-            # feature_dim=vector_dim if not torch.is_complex(network_Train_vectors) else 2 * vector_dim,
-            feature_dim=network_Train_vectors.shape[-1],
+            feature_dim=vector_dim if not torch.is_complex(network_Train_vectors) else 2 * vector_dim,
+            # feature_dim=network_Train_vectors.shape[-1],
             value_dim=1,
             num_layers=2,
             hidden_size=512,
@@ -351,13 +351,13 @@ def run_full_benchmark(
         test_losses: list = []
 
         num_epochs: int = 1000
-        noise_std = 0.05
+        noise_std = 0.1
 
         def prepare_complex_input(v: torch.Tensor) -> torch.Tensor:
             """Flatten complex vectors for neural network input."""
             real_part = torch.real(v)
             imag_part = torch.imag(v)
-            return imag_part
+            # return imag_part.float()
             return torch.cat([real_part, imag_part], dim=-1)
 
         for i in range(num_epochs):
@@ -705,7 +705,9 @@ def run_full_benchmark(
     global_predictions = global_predictions.squeeze(-1)
 
     if regression_method == 'neural':
+        print(f"Before Denorm: {torch.min(global_predictions)} - {torch.max(global_predictions)}")
         global_predictions = denorm(global_predictions).detach()
+        print(f"After Denorm: {torch.min(global_predictions)} - {torch.max(global_predictions)}")
 
     regression_end = time.perf_counter()
     regression_time = regression_end - regression_start

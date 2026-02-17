@@ -202,8 +202,8 @@ class RegressionModule(BaseModule):
         if v.ndim not in [1, 2]:
             raise ValueError(f"Expected v to be a 1D or 2D Tensor; got shape {v.shape}")
         
-        if v.shape[-1] != self.backend.vector_dim:
-            raise ValueError(f"Expected dimensionality of v to match the backend; got {v.shape[-1]} and {self.backend.vector_dim}")
+        # if v.shape[-1] != self.backend.vector_dim:
+        #     raise ValueError(f"Expected dimensionality of v to match the backend; got {v.shape[-1]} and {self.backend.vector_dim}")
         
         # --------------------------------------------------------
         # check if the appropriate modules are loaded for runtime
@@ -317,11 +317,11 @@ class RegressionModule(BaseModule):
         if not self.network_needed:
             raise ValueError("A network is being loaded when not needed.")
         
-        _validate_model(
-            model=model,
-            feature_dim=self.backend.vector_dim,
-            value_dim=self.backend.value_dim
-        )
+        # _validate_model(
+        #     model=model,
+        #     feature_dim=self.backend.vector_dim,
+        #     value_dim=self.backend.value_dim
+        # )
         
         self.model: nn.Module = model
         self.network_ready = True
