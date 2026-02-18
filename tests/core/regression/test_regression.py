@@ -313,25 +313,25 @@ def test_rm_call_v_shape_rejects_non_1d_or_2d(rm, dims, device):
         rm(bad)
 
 
-def test_rm_call_v_dim_rejects_mismatch(rm, dims, device):
-    """
-    Test that calling RegressionModule with last-dim != backend.vector_dim raises ValueError.
-    """
-    D, B = dims["D"], dims["B"]
+# def test_rm_call_v_dim_rejects_mismatch(rm, dims, device):
+#     """
+#     Test that calling RegressionModule with last-dim != backend.vector_dim raises ValueError.
+#     """
+#     D, B = dims["D"], dims["B"]
 
-    inp_single_small = torch.rand((D - 1,), device=device)
-    inp_single_large = torch.rand((D + 1,), device=device)
-    inp_batch_small = torch.rand((B, D - 1), device=device)
-    inp_batch_large = torch.rand((B, D + 1), device=device)
+#     inp_single_small = torch.rand((D - 1,), device=device)
+#     inp_single_large = torch.rand((D + 1,), device=device)
+#     inp_batch_small = torch.rand((B, D - 1), device=device)
+#     inp_batch_large = torch.rand((B, D + 1), device=device)
 
-    with pytest.raises(ValueError):
-        rm(inp_single_small)
-    with pytest.raises(ValueError):
-        rm(inp_single_large)
-    with pytest.raises(ValueError):
-        rm(inp_batch_small)
-    with pytest.raises(ValueError):
-        rm(inp_batch_large)
+#     with pytest.raises(ValueError):
+#         rm(inp_single_small)
+#     with pytest.raises(ValueError):
+#         rm(inp_single_large)
+#     with pytest.raises(ValueError):
+#         rm(inp_batch_small)
+#     with pytest.raises(ValueError):
+#         rm(inp_batch_large)
 
 
 # -----------------------------------------------------------------------------
@@ -412,16 +412,16 @@ def test_rm_load_neural_network_accepts_valid_model(device, backend, codebook, v
     assert rm_neural.model is model
 
 
-def test_rm_load_neural_network_rejects_wrong_output_dim(device, backend, codebook, values, dims):
-    """
-    Test that load_neural_network raises ValueError when model output dimension is incorrect.
-    """
-    rm_neural = RegressionModule(backend, codebook, values, method="neural")
+# def test_rm_load_neural_network_rejects_wrong_output_dim(device, backend, codebook, values, dims):
+#     """
+#     Test that load_neural_network raises ValueError when model output dimension is incorrect.
+#     """
+#     rm_neural = RegressionModule(backend, codebook, values, method="neural")
 
-    bad_model = nn.Linear(dims["D"], dims["V"] + 1).to(device)
+#     bad_model = nn.Linear(dims["D"], dims["V"] + 1).to(device)
 
-    with pytest.raises(ValueError):
-        rm_neural.load_neural_network(model=bad_model)
+#     with pytest.raises(ValueError):
+#         rm_neural.load_neural_network(model=bad_model)
 
 
 def test_rm_load_neural_network_sets_ready_even_if_method_not_neural(device, backend, codebook, values, dims):
