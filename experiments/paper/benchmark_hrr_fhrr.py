@@ -127,9 +127,21 @@ def generate_spline_terrain(downscale_factor: float = 0.01) -> Tuple[np.ndarray,
     X = torch.from_numpy(X).float()
     y = torch.from_numpy(y).float()
 
+    # ========================================================================
+    # CRITICAL FIX: Shift positions to avoid identity vectors at origin (0,0)
+    # ========================================================================
+    # When position = 0, fractional power encoding gives: basis^(0/length_scale) = basis^0 = 1 (identity)
+    # This causes complete loss of positional information at the origin
+    # Shifting by 1.0 gives minimum power of 1.0/2.0 = 0.5, which is well-defined
+    POSITION_OFFSET = 2.0
+    X = X + POSITION_OFFSET
+    # Now positions range from [1, 1000] instead of [0, 999]
+    # This eliminates identity vector artifacts in lower-left corner
+    # ========================================================================
+
     y_norm = (y - y.min()) / (y.max() - y.min())
     y_norm = y_norm * 10  # Scale to [0, 10] range
-    y_norm += 1
+    y_norm += 2
     # y_norm = y_norm.unsqueeze(-1)
 
     return X.numpy(), y_norm.numpy()
@@ -199,6 +211,92 @@ def get_memory_footprint(backend, memory: torch.Tensor, codebook: torch.Tensor =
     return footprint
 
 
+def generate_pipeline_noise_samples(
+    backend,
+    clean_vectors: torch.Tensor,
+    clean_values: torch.Tensor,
+    num_superposition: int = 5,
+    device: str = 'cpu',
+    cleanup_module = None,
+    cleanup_iterations: int = 3,
+    temperature: float = 0.1
+) -> torch.Tensor:
+    """
+    Generate training samples with realistic pipeline noise by running vectors
+    through the full bind-bundle-unbind-cleanup cycle.
+    
+    This simulates the actual noise that occurs during memory operations,
+    which is especially important for FHRR where complex arithmetic creates
+    structured noise patterns.
+    
+    Args:
+        backend: The backend instance (HRR or FHRR)
+        clean_vectors: Clean encoded vectors (B, D)
+        clean_values: Corresponding scalar values (B, 1)
+        num_superposition: Number of other memories to bundle with (simulates interference)
+        device: Device to use
+        cleanup_module: Cleanup module to apply (must match inference cleanup)
+        cleanup_iterations: Number of cleanup iterations to apply
+        temperature: Temperature for Hopfield cleanup (if using modern_hopfield method)
+    
+    Returns:
+        Noisy vectors after pipeline operations (B, D)
+    """
+    print(f"     Generating realistic pipeline noise samples...")
+    print(f"     ├─ Simulating {num_superposition} interfering memories per sample")
+    if cleanup_module is not None:
+        print(f"     ├─ Applying cleanup ({cleanup_module.method}, {cleanup_iterations} iters)")
+    
+    noisy_vectors = []
+    
+    for i in range(len(clean_vectors)):
+        # 1. Start with clean value encoding
+        v = clean_vectors[i]
+        
+        # 2. Bind with a random position
+        p, _ = backend.positional_encoding(torch.randn(1, 2).to(device) * 50 + 50)
+        pv, _ = backend.bind(v, p.squeeze(0))
+        
+        # 3. Simulate superposition by bundling with other random memories
+        for _ in range(num_superposition):
+            # Create random interfering memory
+            random_val = torch.rand(1, 1).to(device) * 10 + 1  # Random value in [1, 11]
+            random_pos = torch.randn(1, 2).to(device) * 50 + 50  # Random position
+            
+            other_v, _ = backend.value_encoding(random_val)
+            other_p, _ = backend.positional_encoding(random_pos)
+            other_pv, _ = backend.bind(other_v.squeeze(0), other_p.squeeze(0))
+            
+            # Bundle interfering memory
+            pv, _ = backend.bundle(pv, other_pv)
+        
+        # 4. Unbind to recover (noisy) value vector
+        p_inv, _ = backend.invert(p.squeeze(0))
+        v_noisy, _ = backend.bind(pv, p_inv)
+        
+        # 5. Apply cleanup (CRITICAL: must match inference pipeline)
+        if cleanup_module is not None:
+            v_noisy_batch = v_noisy.unsqueeze(0)  # Add batch dimension for cleanup
+            if "hopfield" in cleanup_module.method:
+                v_noisy_cleaned, _ = cleanup_module(
+                    v_noisy_batch,
+                    num_iters=cleanup_iterations,
+                    temperature=temperature
+                )
+            else:
+                v_noisy_cleaned, _ = cleanup_module(
+                    v_noisy_batch,
+                    num_iters=cleanup_iterations
+                )
+            v_noisy = v_noisy_cleaned.squeeze(0)  # Remove batch dimension
+        
+        noisy_vectors.append(v_noisy)
+    
+    result = torch.stack(noisy_vectors)
+    print(f"     └─ Generated {len(result)} noisy training samples")
+    return result
+
+
 def run_full_benchmark(
     backend_name: str,
     resolution: float = 0.01,
@@ -216,7 +314,9 @@ def run_full_benchmark(
     train_values: torch.Tensor = None,
     test_positions: torch.Tensor = None,
     test_values: torch.Tensor = None,
-    temperature: float = 0.1
+    temperature: float = 0.1,
+    use_pipeline_noise: bool = None,
+    num_superposition: int = 5
 ) -> Dict:
     """Run complete benchmark for one configuration."""
     print(f"\n{'='*80}")
@@ -287,17 +387,52 @@ def run_full_benchmark(
     regression_module = RegressionModule(backend, value_codebook, value_axis, method=regression_method)
 
     if regression_method == 'neural':
+        # Determine noise type based on backend if not specified
+        # Use pipeline noise for both HRR and FHRR when cleanup is enabled for fair comparison
+        if use_pipeline_noise is None:
+            use_pipeline_noise = (cleanup_module is not None)
+        
+        noise_type = "pipeline" if use_pipeline_noise else "gaussian"
+        print(f"\n[Network Training] Using {noise_type} noise for {backend_name}")
+        if use_pipeline_noise and cleanup_module is not None:
+            print(f"[Network Training] Pipeline includes cleanup: {cleanup_method} ({cleanup_iterations} iters)")
+        
         num_samples = value_axis.shape[0]
         sample_idxs: np.ndarray = np.arange(0, num_samples - 1)
         np.random.shuffle(sample_idxs)
 
-        num_test_samples: int = int(num_samples * 0.8)
+        num_test_samples: int = int(num_samples * 0.2)  # Fixed: was 0.8, should be 0.2 for 20% test
         network_Train_vectors = value_codebook[sample_idxs[num_test_samples:]]
         network_Test_vectors = value_codebook[sample_idxs[:num_test_samples]]
         network_Train_outputs = value_axis[sample_idxs[num_test_samples:]]
         network_Test_outputs = value_axis[sample_idxs[:num_test_samples]]
 
-        print(f"[Network Training] Num Samples: {num_samples}")
+        # Generate realistic pipeline noise samples if using FHRR
+        if use_pipeline_noise:
+            print(f"\n[Network Training] Generating pipeline-realistic training data...")
+            network_Train_vectors = generate_pipeline_noise_samples(
+                backend=backend,
+                clean_vectors=network_Train_vectors,
+                clean_values=network_Train_outputs,
+                num_superposition=num_superposition,
+                device=device,
+                cleanup_module=cleanup_module,
+                cleanup_iterations=cleanup_iterations,
+                temperature=temperature
+            )
+            network_Test_vectors = generate_pipeline_noise_samples(
+                backend=backend,
+                clean_vectors=network_Test_vectors,
+                clean_values=network_Test_outputs,
+                num_superposition=num_superposition,
+                device=device,
+                cleanup_module=cleanup_module,
+                cleanup_iterations=cleanup_iterations,
+                temperature=temperature
+            )
+            print(f"[Network Training] Pipeline noise samples generated")
+
+        print(f"\n[Network Training] Num Samples: {num_samples}")
         print(f"[Network Training] Num Train Vectors: {network_Train_vectors.shape[0]}")
         print(f"[Network Training] Num Test Vectors: {network_Test_vectors.shape[0]}")
         print(f"[Network Training] Num Train Outputs: {network_Train_outputs.shape[0]}")
@@ -329,12 +464,39 @@ def run_full_benchmark(
 
         from hyperspace.core.regression.models import DenseLinearModel
 
+        # ========================================================================
+        # FAIR COMPARISON: Equalize parameter counts between HRR and FHRR
+        # ========================================================================
+        # FHRR has 2x input features (real + imag), so we reduce hidden size by ~2x
+        # to keep total parameter count similar to HRR
+        
+        feature_dim = vector_dim if not torch.is_complex(network_Train_vectors) else 2 * vector_dim
+        
+        if backend_name == 'HRR':
+            hidden_size = 512
+        elif backend_name == 'FHRR':
+            # Reduce hidden size to compensate for 2x input features
+            hidden_size = 256
+        else:
+            hidden_size = 512  # default
+        
+        # Calculate actual parameter counts
+        layer1_params = feature_dim * hidden_size + hidden_size
+        layer2_params = hidden_size * 1 + 1
+        total_params = layer1_params + layer2_params
+        
+        print(f"\n[Network Architecture] Backend: {backend_name}")
+        print(f"[Network Architecture] Input features: {feature_dim:,}")
+        print(f"[Network Architecture] Hidden size: {hidden_size}")
+        print(f"[Network Architecture] Total parameters: {total_params:,}")
+        print(f"[Network Architecture]   Layer 1: {layer1_params:,}")
+        print(f"[Network Architecture]   Layer 2: {layer2_params:,}")
+
         regression_model = DenseLinearModel(
-            feature_dim=vector_dim if not torch.is_complex(network_Train_vectors) else 2 * vector_dim,
-            # feature_dim=network_Train_vectors.shape[-1],
+            feature_dim=feature_dim,
             value_dim=1,
             num_layers=2,
-            hidden_size=512,
+            hidden_size=hidden_size,
             hidden_act=nn.ReLU(),
         )
 
@@ -351,7 +513,9 @@ def run_full_benchmark(
         test_losses: list = []
 
         num_epochs: int = 1000
-        noise_std = 0.1
+        # Use smaller Gaussian noise when training with pipeline noise (since it's already noisy)
+        noise_std = 0.05 if use_pipeline_noise else 0.1
+        print(f"[Network Training] Additional Gaussian noise std: {noise_std}")
 
         def prepare_complex_input(v: torch.Tensor) -> torch.Tensor:
             """Flatten complex vectors for neural network input."""
