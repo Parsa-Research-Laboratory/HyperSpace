@@ -1069,11 +1069,11 @@ def main():
     backend_options: List[str] = ['HRR', 'FHRR']
     cleanup_methods: List[str] = ['none', 'resonator', 'modern_hopfield']
     regression_methods: List[str] = ['codebook', 'neural']
-    seed_options: List[int] = [0, 42, 123]
+    seed_options: List[int] = [0, 1, 2, 3, 4, 5]
 
-    backend_options: List[str] = ['HRR']
-    cleanup_methods: List[str] = ['resonator']
-    regression_methods: List[str] = ['codebook']
+    # backend_options: List[str] = ['HRR']
+    # cleanup_methods: List[str] = ['resonator']
+    # regression_methods: List[str] = ['codebook']
 
     all_results = []
 
