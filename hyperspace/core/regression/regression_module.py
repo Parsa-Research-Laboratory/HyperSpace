@@ -222,7 +222,9 @@ class RegressionModule(BaseModule):
         # --------------------
         if self.method == "neural":
             assert self.model is not None
-            return self.model(v), {}
+            with torch.no_grad():
+                out = self.model(v)
+            return out, {}
 
         # method == "codebook"
         return self._codebook_attention_decode(v), {}
