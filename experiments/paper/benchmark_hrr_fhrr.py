@@ -359,6 +359,7 @@ def run_full_benchmark(
         'regression_method': regression_method,
         'n_train': len(train_positions),
         'n_test': len(test_positions),
+        'training_time': 0.0
     }
 
     # ------------------------------
@@ -492,6 +493,31 @@ def run_full_benchmark(
         print(f"[Network Architecture]   Layer 1: {layer1_params:,}")
         print(f"[Network Architecture]   Layer 2: {layer2_params:,}")
 
+        train_losses: list = []
+        test_losses: list = []
+
+        num_epochs: int = 1000
+        # Use smaller Gaussian noise when training with pipeline noise (since it's already noisy)
+        noise_std = 0.05 if use_pipeline_noise else 0.1
+        print(f"[Network Training] Additional Gaussian noise std: {noise_std}")
+
+        def prepare_complex_input(v: torch.Tensor) -> torch.Tensor:
+            """Flatten complex vectors for neural network input."""
+            real_part = torch.real(v)
+            imag_part = torch.imag(v)
+            # return imag_part.float()
+            return torch.cat([real_part, imag_part], dim=-1)
+        
+        # check if the vectors are complex and prepare input accordingly
+        if torch.is_complex(network_Train_vectors):
+            inputs_flat = prepare_complex_input(network_Train_vectors)
+        else:
+            inputs_flat = network_Train_vectors
+
+        training_time_total = 0.0
+
+        timer = time.perf_counter()
+
         regression_model = DenseLinearModel(
             feature_dim=feature_dim,
             value_dim=1,
@@ -509,32 +535,16 @@ def run_full_benchmark(
         )
         loss_func = nn.MSELoss()
 
-        train_losses: list = []
-        test_losses: list = []
-
-        num_epochs: int = 1000
-        # Use smaller Gaussian noise when training with pipeline noise (since it's already noisy)
-        noise_std = 0.05 if use_pipeline_noise else 0.1
-        print(f"[Network Training] Additional Gaussian noise std: {noise_std}")
-
-        def prepare_complex_input(v: torch.Tensor) -> torch.Tensor:
-            """Flatten complex vectors for neural network input."""
-            real_part = torch.real(v)
-            imag_part = torch.imag(v)
-            # return imag_part.float()
-            return torch.cat([real_part, imag_part], dim=-1)
+        training_time_total += time.perf_counter() - timer
 
         for i in range(num_epochs):
+
+            timer = time.perf_counter()
+
             # ---------
             # Training
             # ---------
             regression_model.train()
-
-            # check if the vectors are complex and prepare input accordingly
-            if torch.is_complex(network_Train_vectors):
-                inputs_flat = prepare_complex_input(network_Train_vectors)
-            else:
-                inputs_flat = network_Train_vectors
 
             noise = noise_std * torch.randn_like(inputs_flat)
             noisy_inputs = inputs_flat + noise
@@ -545,6 +555,8 @@ def run_full_benchmark(
             train_loss.backward()
             optimizer.step()
             optimizer.zero_grad()
+
+            training_time_total += time.perf_counter() - timer
 
             train_losses.append(train_loss.item())
 
@@ -574,6 +586,8 @@ def run_full_benchmark(
         plt.savefig(os.path.join(scratch_dir, "regression_training.png"), bbox_inches="tight")
 
         regression_module.load_neural_network(regression_model)
+
+        results['training_time'] = training_time_total
 
     # ------------------------------
     # 1. Positional Encoding Phase
@@ -873,6 +887,7 @@ def run_full_benchmark(
         global_predictions = denorm(global_predictions).detach()
         print(f"After Denorm: {torch.min(global_predictions)} - {torch.max(global_predictions)}")
 
+    torch.cuda.synchronize() if torch.cuda.is_available() else None
     regression_end = time.perf_counter()
     regression_time = regression_end - regression_start
     regression_time_per_sample = regression_time / global_decoded_vecs_cleaned.shape[0]
