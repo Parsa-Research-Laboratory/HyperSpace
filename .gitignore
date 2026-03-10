@@ -209,3 +209,4 @@ __marimo__/
 # Local dependency directories
 scratch/
 results/
+**/.DS_store
