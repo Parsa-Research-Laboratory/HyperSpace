@@ -255,15 +255,10 @@ class RegressionModule(BaseModule):
                 f"Device mismatch: v={v2.device}, codebook={self.codebook.device}, x_values={self.values.device}"
             )
 
-        B = v2.shape[0]
-
-        sims_rows = []
-        for i in range(B):
-            # (D,) vs (C,D) -> (C,)  (backend sees this as (D,) vs (B,D))
-            s_i, _ = self.backend.similarity(v2[i], self.codebook)   # (C,)
-            sims_rows.append(s_i)
-
-        sims = torch.stack(sims_rows, dim=0)  # (B,C)
+        # Optimized: use all_pairs mode for vectorized similarity computation
+        # (B, D) vs (C, D) -> (B, C) in single operation
+        # Note: mode parameter is supported by HRR/FHRR backends (not in base class signature)
+        sims, _ = self.backend.similarity(v2, self.codebook, mode="all_pairs")  # type: ignore[call-arg]
 
         weights = torch.softmax(sims / self.temperature, dim=-1)     # (B,C)
 
