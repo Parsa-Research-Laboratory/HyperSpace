@@ -19,7 +19,7 @@ VECTOR_LENGTH_SCALE = 2.0
 RESOLUTION = 0.028
 CLEANUP_METHOD = 'modern_hopfield'
 CLEANUP_ITERS = 3
-REGRESSION_METHOD = 'neural'  # 'codebook' or 'neural'
+REGRESSION_METHOD = 'codebook'  # 'codebook' or 'neural'
 
 
 # -----------------------------------
