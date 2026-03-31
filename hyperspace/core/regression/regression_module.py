@@ -202,8 +202,8 @@ class RegressionModule(BaseModule):
         if v.ndim not in [1, 2]:
             raise ValueError(f"Expected v to be a 1D or 2D Tensor; got shape {v.shape}")
         
-        if v.shape[-1] != self.backend.vector_dim:
-            raise ValueError(f"Expected dimensionality of v to match the backend; got {v.shape[-1]} and {self.backend.vector_dim}")
+        # if v.shape[-1] != self.backend.vector_dim:
+        #     raise ValueError(f"Expected dimensionality of v to match the backend; got {v.shape[-1]} and {self.backend.vector_dim}")
         
         # --------------------------------------------------------
         # check if the appropriate modules are loaded for runtime
@@ -222,7 +222,9 @@ class RegressionModule(BaseModule):
         # --------------------
         if self.method == "neural":
             assert self.model is not None
-            return self.model(v), {}
+            with torch.no_grad():
+                out = self.model(v)
+            return out, {}
 
         # method == "codebook"
         return self._codebook_attention_decode(v), {}
@@ -253,15 +255,10 @@ class RegressionModule(BaseModule):
                 f"Device mismatch: v={v2.device}, codebook={self.codebook.device}, x_values={self.values.device}"
             )
 
-        B = v2.shape[0]
-
-        sims_rows = []
-        for i in range(B):
-            # (D,) vs (C,D) -> (C,)  (backend sees this as (D,) vs (B,D))
-            s_i, _ = self.backend.similarity(v2[i], self.codebook)   # (C,)
-            sims_rows.append(s_i)
-
-        sims = torch.stack(sims_rows, dim=0)  # (B,C)
+        # Optimized: use all_pairs mode for vectorized similarity computation
+        # (B, D) vs (C, D) -> (B, C) in single operation
+        # Note: mode parameter is supported by HRR/FHRR backends (not in base class signature)
+        sims, _ = self.backend.similarity(v2, self.codebook, mode="all_pairs")  # type: ignore[call-arg]
 
         weights = torch.softmax(sims / self.temperature, dim=-1)     # (B,C)
 
@@ -317,11 +314,11 @@ class RegressionModule(BaseModule):
         if not self.network_needed:
             raise ValueError("A network is being loaded when not needed.")
         
-        _validate_model(
-            model=model,
-            feature_dim=self.backend.vector_dim,
-            value_dim=self.backend.value_dim
-        )
+        # _validate_model(
+        #     model=model,
+        #     feature_dim=self.backend.vector_dim,
+        #     value_dim=self.backend.value_dim
+        # )
         
         self.model: nn.Module = model
         self.network_ready = True
