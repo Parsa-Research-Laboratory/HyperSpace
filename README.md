@@ -34,7 +34,6 @@ The framework implements Holographic Reduced Representations (HRR) using Fourier
   - `PositionalInversionModule` - Decodes positions from memory vectors
   - `CleanupModule` - Refines noisy hypervectors using resonator or Hopfield networks
   - `RegressionModule` - Recovers continuous values from hypervectors
-- **⚡ Performance Optimized**: Leverages `torch.compile` for accelerated computation and supports both CPU and GPU execution
 - **🔄 Batched Operations**: Efficient batched processing for encoding, binding, bundling, and similarity computations
 - **🧪 Research-Ready**: Built for experimentation with VSAs on continuous spatial tasks like function approximation and spatial memory
 
