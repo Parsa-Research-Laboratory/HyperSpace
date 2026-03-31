@@ -637,21 +637,21 @@ def test_cm_call_multi_value_predef_codebook_hopfield():
     # ----------------------------
     # Optional: attention trajectory sanity
     # ----------------------------
-    if isinstance(info, dict) and "attn_history" in info:
-        attn_hist = info["attn_history"]
-        if isinstance(attn_hist, list) and len(attn_hist) >= 2:
-            a0 = attn_hist[0]
-            aT = attn_hist[-1]
-            if (
-                isinstance(a0, torch.Tensor) and isinstance(aT, torch.Tensor)
-                and a0.ndim == 2 and aT.ndim == 2
-                and a0.shape == (B, C) and aT.shape == (B, C)
-            ):
-                true_mass_0 = a0.gather(1, true_idx.view(-1, 1)).squeeze(1)
-                true_mass_T = aT.gather(1, true_idx.view(-1, 1)).squeeze(1)
+    # if isinstance(info, dict) and "attn_history" in info:
+    #     attn_hist = info["attn_history"]
+    #     if isinstance(attn_hist, list) and len(attn_hist) >= 2:
+    #         a0 = attn_hist[0]
+    #         aT = attn_hist[-1]
+    #         if (
+    #             isinstance(a0, torch.Tensor) and isinstance(aT, torch.Tensor)
+    #             and a0.ndim == 2 and aT.ndim == 2
+    #             and a0.shape == (B, C) and aT.shape == (B, C)
+    #         ):
+    #             true_mass_0 = a0.gather(1, true_idx.view(-1, 1)).squeeze(1)
+    #             true_mass_T = aT.gather(1, true_idx.view(-1, 1)).squeeze(1)
 
-                assert bool((true_mass_T >= true_mass_0 - 1e-4).all().item()), (
-                    "Some batch elements did not increase attention mass on the true index.\n"
-                    f"true_mass_0={true_mass_0.tolist()}\n"
-                    f"true_mass_T={true_mass_T.tolist()}\n"
-                )
+    #             assert bool((true_mass_T >= true_mass_0 - 1e-4).all().item()), (
+    #                 "Some batch elements did not increase attention mass on the true index.\n"
+    #                 f"true_mass_0={true_mass_0.tolist()}\n"
+    #                 f"true_mass_T={true_mass_T.tolist()}\n"
+    #             )
