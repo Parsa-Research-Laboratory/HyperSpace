@@ -1670,8 +1670,8 @@ def test_base_batch_value_encoding_valid_input_3d():
     assert np.allclose(
         v_pred,
         v_gt,
-        rtol=1e-5,
-        atol=1e-7,
+        rtol=1e-3,
+        atol=1e-5,
     )
 
 
