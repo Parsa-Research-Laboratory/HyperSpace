@@ -76,14 +76,20 @@ memory_vector, _ = memory(
     prev_memory=prev_memory
 )
 
-# Create regression module for decoding
+# Create regression module for decoding values
 codebook, _ = backend.value_encoding(Y)
 regressor = RegressionModule(backend=backend, codebook=codebook, values=Y)
 
 # Query the memory at a position and retrieve the value
 query_pos = torch.tensor([[0.5]])  # Query at x=0.5
 query_vector, _ = pos_encoder(query_pos)
-predicted_value, _ = regressor(query_vector)
+
+# Unbind the query position from memory to retrieve the associated value vector
+query_inv, _ = backend.invert(query_vector)
+retrieved_vector, _ = backend.bind(query_inv, memory_vector)
+
+# Decode the retrieved value vector back to a continuous value
+predicted_value, _ = regressor(retrieved_vector)
 
 print(f"Predicted value at x=0.5: {predicted_value.item():.2f}")
 ```
